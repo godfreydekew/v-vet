@@ -2,8 +2,18 @@ import axios from 'axios';
 
 export const TOKEN_KEY = 'vvet_token';
 
+const configuredBackendUrl = import.meta.env.VITE_BACKEND_URL;
+
+const normalizedBackendUrl = configuredBackendUrl
+  ? configuredBackendUrl.replace(/\/+$/, '')
+  : null;
+
+const apiBaseUrl = normalizedBackendUrl
+  ? `${normalizedBackendUrl}/api/v1`
+  : '/api/v1';
+
 export const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: apiBaseUrl,
 });
 
 // Attach stored JWT on every outgoing request
