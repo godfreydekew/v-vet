@@ -1,9 +1,20 @@
+import uuid
 from typing import Any
 
 from sqlmodel import Session, select
 
 from app.core.security import get_password_hash, verify_password
-from app.models import User, UserCreate, UserUpdate
+from app.models import (
+    Farm,
+    FarmBase,
+    FarmUpdate,
+    Livestock,
+    LivestockCreate,
+    LivestockUpdate,
+    User,
+    UserCreate,
+    UserUpdate,
+)
 
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
@@ -36,6 +47,53 @@ def get_user_by_email(*, session: Session, email: str) -> User | None:
     return session_user
 
 
+# ---------------------------------------------------------------------------
+# Farm
+# ---------------------------------------------------------------------------
+
+
+def create_farm(*, session: Session, farm_in: FarmBase, farmer_id: uuid.UUID) -> Farm:
+    farm = Farm.model_validate(farm_in, update={"farmer_id": farmer_id})
+    session.add(farm)
+    session.commit()
+    session.refresh(farm)
+    return farm
+
+
+def update_farm(*, session: Session, db_farm: Farm, farm_in: FarmUpdate) -> Farm:
+    farm_data = farm_in.model_dump(exclude_unset=True)
+    db_farm.sqlmodel_update(farm_data)
+    session.add(db_farm)
+    session.commit()
+    session.refresh(db_farm)
+    return db_farm
+
+
+# ---------------------------------------------------------------------------
+# Livestock
+# ---------------------------------------------------------------------------
+
+
+def create_livestock(*, session: Session, livestock_in: LivestockCreate) -> Livestock:
+    livestock = Livestock.model_validate(livestock_in)
+    session.add(livestock)
+    session.commit()
+    session.refresh(livestock)
+    return livestock
+
+
+def update_livestock(
+    *, session: Session, db_livestock: Livestock, livestock_in: LivestockUpdate
+) -> Livestock:
+    data = livestock_in.model_dump(exclude_unset=True)
+    db_livestock.sqlmodel_update(data)
+    session.add(db_livestock)
+    session.commit()
+    session.refresh(db_livestock)
+    return db_livestock
+
+
+# ---------------------------------------------------------------------------
 # Dummy hash to use for timing attack prevention when user is not found
 # This is an Argon2 hash of a random password, used to ensure constant-time comparison
 DUMMY_HASH = "$argon2id$v=19$m=65536,t=3,p=4$MjQyZWE1MzBjYjJlZTI0Yw$YTU4NGM5ZTZmYjE2NzZlZjY0ZWY3ZGRkY2U2OWFjNjk"
