@@ -27,8 +27,12 @@ class UserBase(SQLModel):
     full_name: str | None = Field(default=None, max_length=255)
     phone_number: str | None = Field(default=None, max_length=255)
     address: str | None = Field(default=None, max_length=255)
-    added_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
-    updated_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    added_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True))
+    )
+    updated_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True))
+    )
 
 
 # ---------------------------------------------------------------------------

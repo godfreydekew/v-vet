@@ -63,9 +63,15 @@ class VetRequest(VetRequestBase, table=True):
         default_factory=_utcnow,
         sa_column=Column(DateTime(timezone=True)),
     )
-    assigned_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
-    completed_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
-    updated_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    assigned_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True))
+    )
+    completed_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True))
+    )
+    updated_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True))
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -56,7 +56,9 @@ class VetProfile(VetProfileBase, table=True):
         default_factory=_utcnow,
         sa_column=Column(DateTime(timezone=True)),
     )
-    updated_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    updated_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True))
+    )
 
 
 # ---------------------------------------------------------------------------
