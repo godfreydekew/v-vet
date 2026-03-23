@@ -2,9 +2,8 @@ import uuid
 from datetime import date, datetime, timezone
 from typing import Literal
 
-from sqlalchemy import DateTime
+from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
-
 
 AdministeredBy = Literal["farmer", "vet", "other"]
 
@@ -17,6 +16,7 @@ def _utcnow() -> datetime:
 # Base — shared columns across all vaccination schemas
 # ---------------------------------------------------------------------------
 
+
 class VaccinationBase(SQLModel):
     vaccine_name: str = Field(max_length=150)
     date_given: date
@@ -28,6 +28,7 @@ class VaccinationBase(SQLModel):
 # ---------------------------------------------------------------------------
 # Write schemas (input)
 # ---------------------------------------------------------------------------
+
 
 class VaccinationCreate(VaccinationBase):
     livestock_id: uuid.UUID
@@ -46,21 +47,23 @@ class VaccinationUpdate(SQLModel):
 # Database table model
 # ---------------------------------------------------------------------------
 
+
 class Vaccination(VaccinationBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     livestock_id: uuid.UUID = Field(foreign_key="livestock.id")
     logged_by: uuid.UUID = Field(foreign_key="user.id")
     # Literal → str: SQLAlchemy doesn't understand Literal types.
-    administered_by: str
+    administered_by: str  # type: ignore[assignment]
     created_at: datetime = Field(
         default_factory=_utcnow,
-        sa_type=DateTime(timezone=True),
+        sa_column=Column(DateTime(timezone=True)),
     )
 
 
 # ---------------------------------------------------------------------------
 # Read schemas (output)
 # ---------------------------------------------------------------------------
+
 
 class VaccinationPublic(VaccinationBase):
     id: uuid.UUID

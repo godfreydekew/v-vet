@@ -2,9 +2,8 @@ import uuid
 from datetime import date, datetime, timezone
 from typing import Literal
 
-from sqlalchemy import DateTime
+from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
-
 
 Species = Literal["cattle", "sheep", "goat", "poultry", "pig", "other"]
 Gender = Literal["male", "female", "unknown"]
@@ -18,6 +17,7 @@ def _utcnow() -> datetime:
 # ---------------------------------------------------------------------------
 # Base — shared columns across all livestock schemas
 # ---------------------------------------------------------------------------
+
 
 class LivestockBase(SQLModel):
     name: str | None = Field(default=None, max_length=100)
@@ -35,6 +35,7 @@ class LivestockBase(SQLModel):
 # ---------------------------------------------------------------------------
 # Write schemas (input)
 # ---------------------------------------------------------------------------
+
 
 class LivestockCreate(LivestockBase):
     farm_id: uuid.UUID
@@ -57,23 +58,25 @@ class LivestockUpdate(SQLModel):
 # Database table model
 # ---------------------------------------------------------------------------
 
+
 class Livestock(LivestockBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     farm_id: uuid.UUID = Field(foreign_key="farm.id")
     # Literal → str: SQLAlchemy doesn't understand Literal types.
-    species: str
-    gender: str | None = None
-    health_status: str = "healthy"
+    species: str  # type: ignore[assignment]
+    gender: str | None = None  # type: ignore[assignment]
+    health_status: str = "healthy"  # type: ignore[assignment]
     created_at: datetime = Field(
         default_factory=_utcnow,
-        sa_type=DateTime(timezone=True),
+        sa_column=Column(DateTime(timezone=True)),
     )
-    updated_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
+    updated_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
 
 
 # ---------------------------------------------------------------------------
 # Read schemas (output)
 # ---------------------------------------------------------------------------
+
 
 class LivestockPublic(LivestockBase):
     id: uuid.UUID

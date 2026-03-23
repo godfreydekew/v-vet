@@ -6,7 +6,14 @@
 
 from sqlmodel import SQLModel
 
-from app.models.farm import Farm, FarmBase, FarmCreate, FarmPublic, FarmsPublic, FarmUpdate
+from app.models.farm import (
+    Farm,
+    FarmBase,
+    FarmCreate,
+    FarmPublic,
+    FarmsPublic,
+    FarmUpdate,
+)
 from app.models.health_observation import (
     HealthObservation,
     HealthObservationBase,

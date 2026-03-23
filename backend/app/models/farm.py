@@ -2,9 +2,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import Literal
 
-from sqlalchemy import DateTime
+from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
-
 
 FarmType = Literal["livestock", "dairy", "poultry", "mixed", "crop"]
 
@@ -16,6 +15,7 @@ def _utcnow() -> datetime:
 # ---------------------------------------------------------------------------
 # Base — shared columns across all farm schemas
 # ---------------------------------------------------------------------------
+
 
 class FarmBase(SQLModel):
     name: str = Field(max_length=150)
@@ -31,6 +31,7 @@ class FarmBase(SQLModel):
 # ---------------------------------------------------------------------------
 # Write schemas (input)
 # ---------------------------------------------------------------------------
+
 
 class FarmCreate(FarmBase):
     farmer_id: uuid.UUID
@@ -51,21 +52,23 @@ class FarmUpdate(SQLModel):
 # Database table model
 # ---------------------------------------------------------------------------
 
+
 class Farm(FarmBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     farmer_id: uuid.UUID = Field(foreign_key="user.id")
     # Literal → str: SQLAlchemy doesn't understand Literal types.
-    farm_type: str
+    farm_type: str  # type: ignore[assignment]
     created_at: datetime = Field(
         default_factory=_utcnow,
-        sa_type=DateTime(timezone=True),
+        sa_column=Column(DateTime(timezone=True)),
     )
-    updated_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
+    updated_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
 
 
 # ---------------------------------------------------------------------------
 # Read schemas (output)
 # ---------------------------------------------------------------------------
+
 
 class FarmPublic(FarmBase):
     id: uuid.UUID

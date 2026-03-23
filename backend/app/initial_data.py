@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from sqlmodel import Session
 
@@ -10,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-DEMO_USERS = [
+DEMO_USERS: list[dict[str, Any]] = [
     {
         "external_id": "vet-1",
         "email": "vet@vvet.com",
@@ -49,7 +50,9 @@ DEMO_USERS = [
 
 def seed_demo_users(session: Session) -> None:
     for user_data in DEMO_USERS:
-        existing_user = crud.get_user_by_email(session=session, email=user_data["email"])
+        existing_user = crud.get_user_by_email(
+            session=session, email=user_data["email"]
+        )
         if existing_user:
             logger.info("Demo user already exists: %s", user_data["email"])
             continue
@@ -81,7 +84,7 @@ def init() -> None:
 def main() -> None:
     logger.info("Creating initial data")
     init()
-    
+
     logger.info("Initial data created")
 
 

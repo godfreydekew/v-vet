@@ -2,9 +2,8 @@ import uuid
 from datetime import date, datetime, timezone
 from typing import Literal
 
-from sqlalchemy import DateTime
+from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
-
 
 ResponseType = Literal["accept", "accept_supplement", "rediagnose"]
 ConfidenceLevel = Literal["low", "medium", "high"]
@@ -17,6 +16,7 @@ def _utcnow() -> datetime:
 # ---------------------------------------------------------------------------
 # Base — shared columns across all vet response schemas
 # ---------------------------------------------------------------------------
+
 
 class VetResponseBase(SQLModel):
     response_type: ResponseType
@@ -33,6 +33,7 @@ class VetResponseBase(SQLModel):
 # ---------------------------------------------------------------------------
 # Write schemas (input)
 # ---------------------------------------------------------------------------
+
 
 class VetResponseCreate(VetResponseBase):
     vet_request_id: uuid.UUID
@@ -55,6 +56,7 @@ class VetResponseUpdate(SQLModel):
 # Database table model
 # ---------------------------------------------------------------------------
 
+
 class VetResponse(VetResponseBase, table=True):
     __tablename__ = "vet_response"
 
@@ -62,17 +64,18 @@ class VetResponse(VetResponseBase, table=True):
     vet_request_id: uuid.UUID = Field(foreign_key="vet_request.id", unique=True)
     vet_id: uuid.UUID = Field(foreign_key="user.id")
     # Literal → str: SQLAlchemy doesn't understand Literal types.
-    response_type: str
-    confidence_level: str = "high"
+    response_type: str  # type: ignore[assignment]
+    confidence_level: str = "high"  # type: ignore[assignment]
     responded_at: datetime = Field(
         default_factory=_utcnow,
-        sa_type=DateTime(timezone=True),
+        sa_column=Column(DateTime(timezone=True)),
     )
 
 
 # ---------------------------------------------------------------------------
 # Read schemas (output)
 # ---------------------------------------------------------------------------
+
 
 class VetResponsePublic(VetResponseBase):
     id: uuid.UUID

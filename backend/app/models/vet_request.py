@@ -2,9 +2,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import Literal
 
-from sqlalchemy import DateTime
+from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
-
 
 RequestStatus = Literal["pending", "assigned", "in_review", "completed", "cancelled"]
 UrgencyLevel = Literal["low", "medium", "high", "emergency"]
@@ -18,6 +17,7 @@ def _utcnow() -> datetime:
 # Base — shared columns across all vet request schemas
 # ---------------------------------------------------------------------------
 
+
 class VetRequestBase(SQLModel):
     urgency: UrgencyLevel = "medium"
     farmer_notes: str | None = Field(default=None)
@@ -26,6 +26,7 @@ class VetRequestBase(SQLModel):
 # ---------------------------------------------------------------------------
 # Write schemas (input)
 # ---------------------------------------------------------------------------
+
 
 class VetRequestCreate(VetRequestBase):
     livestock_id: uuid.UUID
@@ -46,6 +47,7 @@ class VetRequestUpdate(SQLModel):
 # Database table model
 # ---------------------------------------------------------------------------
 
+
 class VetRequest(VetRequestBase, table=True):
     __tablename__ = "vet_request"
 
@@ -56,19 +58,20 @@ class VetRequest(VetRequestBase, table=True):
     vet_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")
     # Literal → str: SQLAlchemy doesn't understand Literal types.
     status: str = "pending"
-    urgency: str = "medium"
+    urgency: str = "medium"  # type: ignore[assignment]
     submitted_at: datetime = Field(
         default_factory=_utcnow,
-        sa_type=DateTime(timezone=True),
+        sa_column=Column(DateTime(timezone=True)),
     )
-    assigned_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
-    completed_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
-    updated_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
+    assigned_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    completed_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    updated_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
 
 
 # ---------------------------------------------------------------------------
 # Read schemas (output)
 # ---------------------------------------------------------------------------
+
 
 class VetRequestPublic(VetRequestBase):
     id: uuid.UUID
