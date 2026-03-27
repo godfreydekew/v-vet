@@ -38,9 +38,7 @@ export default function DesktopSidebar() {
       {/* Logo */}
       <div className="p-6 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
-            V
-          </div>
+          <img src="/logo.png" alt="V-Vet" className="w-9 h-9 rounded-xl object-cover" />
           <div>
             <h1 className="text-lg font-bold text-foreground leading-tight">V-Vet</h1>
             <p className="text-[10px] text-muted-foreground tracking-wide">Livestock health intelligence</p>

@@ -2,9 +2,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { fetchFarms } from '@/lib/services/farms.service';
 import { fetchLivestock } from '@/lib/services/livestock.service';
+import { fetchVetRequests } from '@/lib/services/vetRequests.service';
 import EmptyState from '@/components/EmptyState';
 import { Link } from 'react-router-dom';
-import { ChevronRight, AlertTriangle, Stethoscope, Loader2 } from 'lucide-react';
+import { ChevronRight, AlertTriangle, Stethoscope, Loader2, ClipboardList } from 'lucide-react';
 
 const HEALTH_COLORS: Record<string, string> = {
   healthy: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
@@ -45,6 +46,15 @@ export default function FarmerDashboard() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const firstName = (user?.full_name ?? user?.email ?? '').split(' ')[0];
+
+  const vetRequestsQuery = useQuery({
+    queryKey: ['vet-requests'],
+    queryFn: () => fetchVetRequests({ limit: 100 }),
+  });
+
+  const openRequests = (vetRequestsQuery.data?.data ?? []).filter(
+    (r) => r.status !== 'completed' && r.status !== 'cancelled'
+  );
 
   const isLoading = farmsQuery.isLoading || livestockQuery.isLoading;
 
@@ -155,6 +165,48 @@ export default function FarmerDashboard() {
                       >
                         {animal.health_status}
                       </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Open Vet Requests */}
+          {openRequests.length > 0 && (
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                  <ClipboardList size={18} className="text-primary" /> Open Vet Requests
+                </h2>
+                <Link to="/vet-requests" className="text-sm text-primary font-medium flex items-center gap-1 hover:underline transition-colors">
+                  View All <ChevronRight size={14} />
+                </Link>
+              </div>
+              <div className="space-y-2">
+                {openRequests.slice(0, 3).map((req) => (
+                  <Link
+                    key={req.id}
+                    to={`/vet-requests/${req.id}`}
+                    className="block bg-card rounded-xl border border-border p-4 hover:border-primary/30 hover:shadow-sm transition-all duration-150"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-foreground">
+                        {new Date(req.submitted_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                      <div className="flex gap-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${
+                          req.urgency === 'emergency' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                          : req.urgency === 'high' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                          : req.urgency === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                        }`}>
+                          {req.urgency}
+                        </span>
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-accent text-foreground capitalize">
+                          {req.status.replace('_', ' ')}
+                        </span>
+                      </div>
                     </div>
                   </Link>
                 ))}

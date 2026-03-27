@@ -1,77 +1,129 @@
 import { useState } from 'react';
-import { vetRequests, getAnimalById, getUserById, demoUsers } from '@/data/mockData';
-import { UrgencyBadge, CaseStatusBadge } from '@/components/StatusBadge';
+import { useQuery } from '@tanstack/react-query';
+import { fetchVetRequests } from '@/lib/services/vetRequests.service';
+import { fetchLivestockById } from '@/lib/services/livestock.service';
 import EmptyState from '@/components/EmptyState';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ShieldCheck } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { ShieldCheck, Loader2 } from 'lucide-react';
 
-const statusFilters = ['All', 'Pending', 'Assigned', 'In Review', 'Completed'] as const;
+const STATUS_FILTERS = ['All', 'assigned', 'in_review', 'completed', 'cancelled'] as const;
+
+const STATUS_LABELS: Record<string, string> = {
+  All: 'All',
+  assigned: 'Assigned',
+  in_review: 'In Review',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+};
+
+const URGENCY_COLORS: Record<string, string> = {
+  low: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  high: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  emergency: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  assigned: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  in_review: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  cancelled: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+};
+
+function fmt(date: string) {
+  return new Date(date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function AnimalCell({ livestockId }: { livestockId: string }) {
+  const { data } = useQuery({
+    queryKey: ['livestock', livestockId],
+    queryFn: () => fetchLivestockById(livestockId),
+  });
+  if (!data) return <span className="text-muted-foreground text-sm">—</span>;
+  return (
+    <div>
+      <p className="font-medium text-sm text-foreground">
+        {data.name ?? 'Unnamed'}{data.tag_number ? ` (${data.tag_number})` : ''}
+      </p>
+      <p className="text-xs text-muted-foreground capitalize">{data.species}</p>
+    </div>
+  );
+}
 
 export default function AdminRequests() {
-  const { toast } = useToast();
   const [filter, setFilter] = useState<string>('All');
-  const [assignOpen, setAssignOpen] = useState(false);
-  const filtered = filter === 'All' ? vetRequests : vetRequests.filter(r => r.status === filter);
-  const availableVets = demoUsers.filter(u => u.role === 'vet' && u.availability === 'Available');
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['vet-requests'],
+    queryFn: () => fetchVetRequests({ limit: 500 }),
+  });
+
+  const requests = data?.data ?? [];
+  const filtered = filter === 'All' ? requests : requests.filter((r) => r.status === filter);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 md:px-8 md:py-10 space-y-6">
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">Verification Requests</h1>
-        <p className="text-sm text-muted-foreground mt-1">{vetRequests.length} total request{vetRequests.length !== 1 ? 's' : ''}</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          {requests.length} total request{requests.length !== 1 ? 's' : ''}
+        </p>
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        {statusFilters.map(s => (
-          <button key={s} onClick={() => setFilter(s)} className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-150 ${filter === s ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent text-muted-foreground hover:text-foreground hover:bg-accent/80'}`}>{s}</button>
+        {STATUS_FILTERS.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setFilter(s)}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-150 ${
+              filter === s
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'bg-accent text-muted-foreground hover:text-foreground hover:bg-accent/80'
+            }`}
+          >
+            {STATUS_LABELS[s]}
+          </button>
         ))}
       </div>
 
-      {filtered.length === 0 ? (
-        <EmptyState icon={ShieldCheck} title="No requests found" description="Adjust your filters or wait for new submissions." />
+      {isLoading ? (
+        <div className="flex justify-center py-16">
+          <Loader2 size={26} className="animate-spin text-muted-foreground" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={ShieldCheck}
+          title="No requests found"
+          description="Adjust your filters or wait for new submissions."
+        />
       ) : (
         <div className="space-y-2">
-          {filtered.map(r => {
-            const animal = getAnimalById(r.animalId);
-            const farmer = getUserById(r.farmerId);
-            const vet = r.vetId ? getUserById(r.vetId) : null;
-            return (
-              <div key={r.id} className="bg-card rounded-xl border border-border p-4 hover:shadow-sm transition-shadow duration-150">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm text-foreground">{animal?.name} ({animal?.tagNumber})</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{animal?.species} · {farmer?.name} · {r.dateSubmitted}</p>
-                    {vet && <p className="text-xs text-primary mt-0.5 font-medium">Assigned to: {vet.name}</p>}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <UrgencyBadge urgency={r.urgency} />
-                    <CaseStatusBadge status={r.status} />
-                    {r.status === 'Pending' && !r.vetId && (
-                      <Button size="sm" variant="outline" onClick={() => setAssignOpen(true)}>Assign</Button>
-                    )}
-                  </div>
+          {filtered.map((r) => (
+            <div
+              key={r.id}
+              className="bg-card rounded-xl border border-border p-4 hover:shadow-sm transition-shadow duration-150"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <AnimalCell livestockId={r.livestock_id} />
+                  <p className="text-xs text-muted-foreground mt-1">{fmt(r.submitted_at)}</p>
+                  {r.farmer_notes && (
+                    <p className="text-xs text-muted-foreground mt-1 truncate max-w-sm">{r.farmer_notes}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${URGENCY_COLORS[r.urgency]}`}>
+                    {r.urgency}
+                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[r.status] ?? 'bg-accent text-foreground'}`}>
+                    {STATUS_LABELS[r.status] ?? r.status}
+                  </span>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
-
-      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Assign Vet</DialogTitle></DialogHeader>
-          <div className="space-y-2">
-            {availableVets.length === 0 ? <p className="text-sm text-muted-foreground py-4 text-center">No vets currently available</p> : availableVets.map(v => (
-              <button key={v.id} onClick={() => { toast({ title: `Assigned to ${v.name}` }); setAssignOpen(false); }} className="w-full bg-accent rounded-xl p-4 text-left hover:bg-primary/10 transition-colors duration-150">
-                <p className="font-medium text-sm text-foreground">{v.name}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{v.specialisations?.join(', ')} · {v.yearsExperience} years</p>
-              </button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
