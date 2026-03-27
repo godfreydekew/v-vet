@@ -28,6 +28,18 @@ from app.utils import generate_new_account_email, send_email
 router = APIRouter(prefix="/users", tags=["users"])
 
 
+@router.get("/vets", response_model=UsersPublic)
+def list_vets(session: SessionDep, current_user: CurrentUser) -> Any:
+    """List all active vet users. Accessible to any authenticated user so farmers can pick a vet."""
+    vets = session.exec(
+        select(User)
+        .where(col(User.role) == "vet")
+        .where(col(User.is_active) == True)  # noqa: E712
+        .order_by(col(User.full_name))
+    ).all()
+    return UsersPublic(data=list(vets), count=len(vets))
+
+
 @router.get(
     "/",
     dependencies=[Depends(get_current_active_superuser)],

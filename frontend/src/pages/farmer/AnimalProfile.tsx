@@ -25,6 +25,12 @@ import {
   type AdministeredBy,
   type VaccinationCreatePayload,
 } from '@/lib/services/livestock.service';
+import {
+  createVetRequest,
+  type UrgencyLevel,
+  type VetRequestSubmitPayload,
+} from '@/lib/services/vetRequests.service';
+import { fetchVets } from '@/lib/services/users.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,7 +59,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Pencil, Trash2, Loader2, Plus, Thermometer, Heart, Wind, Clock } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, Loader2, Plus, Thermometer, Heart, Wind, Clock, Stethoscope } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // ---------------------------------------------------------------------------
@@ -444,6 +450,104 @@ function LogVaccinationDialog({ open, onOpenChange, livestockId, onSaved }: {
 }
 
 // ---------------------------------------------------------------------------
+// Submit vet request dialog
+// ---------------------------------------------------------------------------
+
+function SubmitVetRequestDialog({
+  open, onOpenChange, animal,
+}: {
+  open: boolean; onOpenChange: (v: boolean) => void; animal: Livestock;
+}) {
+  const { toast } = useToast();
+  const [form, setForm] = useState<Omit<VetRequestSubmitPayload, 'livestock_id'>>({
+    vet_id: '',
+    urgency: 'medium',
+    farmer_notes: '',
+  });
+
+  const vetsQuery = useQuery({
+    queryKey: ['vets'],
+    queryFn: fetchVets,
+    enabled: open,
+  });
+
+  const mutation = useMutation({
+    mutationFn: () => createVetRequest({ ...form, livestock_id: animal.id }),
+    onSuccess: () => {
+      toast({ title: 'Vet request submitted.' });
+      onOpenChange(false);
+      setForm({ vet_id: '', urgency: 'medium', farmer_notes: '' });
+    },
+    onError: (err) => toast({ title: getApiError(err), variant: 'destructive' }),
+  });
+
+  const vets = vetsQuery.data?.data ?? [];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Submit Vet Request</DialogTitle></DialogHeader>
+        <div className="bg-accent rounded-lg px-4 py-3 text-sm font-medium text-foreground">
+          {animal.name ?? 'Unnamed'} {animal.tag_number ? `(${animal.tag_number})` : ''}
+        </div>
+        <form onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Choose a Vet *</Label>
+            <Select
+              value={form.vet_id}
+              onValueChange={(v) => setForm((p) => ({ ...p, vet_id: v }))}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={vetsQuery.isLoading ? 'Loading vets…' : 'Select a vet'} />
+              </SelectTrigger>
+              <SelectContent>
+                {vets.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    {v.full_name ?? v.email}
+                  </SelectItem>
+                ))}
+                {vets.length === 0 && !vetsQuery.isLoading && (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">No vets available</div>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Urgency Level *</Label>
+            <Select value={form.urgency} onValueChange={(v) => setForm((p) => ({ ...p, urgency: v as UrgencyLevel }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="emergency">Emergency</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Describe what you've noticed</Label>
+            <Textarea
+              placeholder="What are the symptoms? When did it start?"
+              rows={4}
+              value={form.farmer_notes ?? ''}
+              onChange={(e) => setForm((p) => ({ ...p, farmer_notes: e.target.value || null }))}
+            />
+          </div>
+          <div className="flex gap-2 justify-end pt-1">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" disabled={mutation.isPending || !form.vet_id}>
+              {mutation.isPending && <Loader2 size={15} className="animate-spin mr-2" />}
+              Submit Request
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main page
 // ---------------------------------------------------------------------------
 
@@ -455,6 +559,7 @@ export default function AnimalProfile() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [vetRequestOpen, setVetRequestOpen] = useState(false);
   const [obsOpen, setObsOpen] = useState(false);
   const [treatOpen, setTreatOpen] = useState(false);
   const [vaxOpen, setVaxOpen] = useState(false);
@@ -560,7 +665,10 @@ export default function AnimalProfile() {
             <span className={`text-sm px-3 py-1 rounded-full font-medium capitalize ${HEALTH_COLORS[animal.health_status]}`}>
               • {animal.health_status}
             </span>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" className="gap-1.5" onClick={() => setVetRequestOpen(true)}>
+                <Stethoscope size={14} /> Submit Vet Request
+              </Button>
               <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => setEditOpen(true)}>
                 <Pencil size={14} /> Edit
               </Button>
@@ -719,6 +827,13 @@ export default function AnimalProfile() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Vet request dialog */}
+      <SubmitVetRequestDialog
+        open={vetRequestOpen}
+        onOpenChange={setVetRequestOpen}
+        animal={animal}
+      />
 
       {/* Edit dialog */}
       {editOpen && (

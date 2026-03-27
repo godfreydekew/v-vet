@@ -71,6 +71,7 @@ from app.models.vet_request import (
     VetRequestCreate,
     VetRequestPublic,
     VetRequestsPublic,
+    VetRequestSubmit,
     VetRequestUpdate,
 )
 from app.models.vet_response import (
@@ -146,6 +147,7 @@ __all__ = [
     "VetRequestCreate",
     "VetRequestPublic",
     "VetRequestsPublic",
+    "VetRequestSubmit",
     "VetRequestUpdate",
     # VetResponse
     "VetResponse",

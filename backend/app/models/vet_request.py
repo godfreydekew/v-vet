@@ -34,6 +34,15 @@ class VetRequestCreate(VetRequestBase):
     farmer_id: uuid.UUID
 
 
+class VetRequestSubmit(SQLModel):
+    """Body accepted from the farmer when submitting a new vet request."""
+
+    livestock_id: uuid.UUID
+    vet_id: uuid.UUID
+    urgency: UrgencyLevel = "medium"
+    farmer_notes: str | None = None
+
+
 class VetRequestUpdate(SQLModel):
     status: RequestStatus | None = None
     urgency: UrgencyLevel | None = None

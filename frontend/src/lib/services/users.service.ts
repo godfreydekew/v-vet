@@ -80,3 +80,9 @@ export async function updateUserById(userId: string, payload: Partial<UserCreate
   const { data } = await api.patch<User>(`/users/${userId}`, payload);
   return data;
 }
+
+/** Any authenticated user — list all active vets (for vet picker). */
+export async function fetchVets(): Promise<UsersListResponse> {
+  const { data } = await api.get<UsersListResponse>('/users/vets');
+  return data;
+}

@@ -1,18 +1,61 @@
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { getRequestsByVet, getAnimalById, getUserById } from '@/data/mockData';
-import { UrgencyBadge, CaseStatusBadge } from '@/components/StatusBadge';
+import { useQuery } from '@tanstack/react-query';
+import { fetchVetRequests } from '@/lib/services/vetRequests.service';
+import { fetchLivestockById } from '@/lib/services/livestock.service';
 import EmptyState from '@/components/EmptyState';
 import { Link } from 'react-router-dom';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, Loader2 } from 'lucide-react';
 
-const statusFilters = ['All', 'Assigned', 'In Review', 'Completed'] as const;
+const STATUS_FILTERS = ['All', 'assigned', 'in_review', 'completed'] as const;
+
+const STATUS_LABELS: Record<string, string> = {
+  All: 'All',
+  assigned: 'Assigned',
+  in_review: 'In Review',
+  completed: 'Completed',
+};
+
+const URGENCY_COLORS: Record<string, string> = {
+  low: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  high: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  emergency: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  assigned: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  in_review: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+};
+
+function fmt(date: string) {
+  return new Date(date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function AnimalSummary({ livestockId }: { livestockId: string }) {
+  const { data } = useQuery({
+    queryKey: ['livestock', livestockId],
+    queryFn: () => fetchLivestockById(livestockId),
+  });
+  if (!data) return <span className="text-muted-foreground">Loading…</span>;
+  return (
+    <span>
+      {data.name ?? 'Unnamed'}{data.tag_number ? ` (${data.tag_number})` : ''}
+      <span className="text-muted-foreground capitalize"> · {data.species}</span>
+    </span>
+  );
+}
 
 export default function CaseQueue() {
-  const { user } = useAuth();
-  const cases = getRequestsByVet(user?.id || '');
   const [filter, setFilter] = useState<string>('All');
-  const filtered = filter === 'All' ? cases : cases.filter(c => c.status === filter);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['vet-requests'],
+    queryFn: () => fetchVetRequests({ limit: 200 }),
+  });
+
+  const cases = data?.data ?? [];
+  const filtered = filter === 'All' ? cases : cases.filter((c) => c.status === filter);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 md:px-8 md:py-10 space-y-6">
@@ -22,33 +65,54 @@ export default function CaseQueue() {
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        {statusFilters.map(s => (
-          <button key={s} onClick={() => setFilter(s)} className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-150 ${filter === s ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent text-muted-foreground hover:text-foreground hover:bg-accent/80'}`}>{s}</button>
+        {STATUS_FILTERS.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setFilter(s)}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-150 ${
+              filter === s
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'bg-accent text-muted-foreground hover:text-foreground hover:bg-accent/80'
+            }`}
+          >
+            {STATUS_LABELS[s]}
+          </button>
         ))}
       </div>
 
-      {filtered.length === 0 ? (
+      {isLoading ? (
+        <div className="flex justify-center py-16">
+          <Loader2 size={26} className="animate-spin text-muted-foreground" />
+        </div>
+      ) : filtered.length === 0 ? (
         <EmptyState icon={ClipboardList} title="No cases found" description="Cases assigned to you will appear here." />
       ) : (
         <div className="space-y-2">
-          {filtered.map(c => {
-            const animal = getAnimalById(c.animalId);
-            const farmer = getUserById(c.farmerId);
-            return (
-              <Link key={c.id} to={`/vet/cases/${c.id}`} className="block bg-card rounded-xl border border-border p-4 hover:border-primary/30 hover:shadow-sm transition-all duration-150">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-sm text-foreground">{animal?.name} ({animal?.tagNumber})</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{animal?.species} · {farmer?.name} · {c.dateSubmitted}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <UrgencyBadge urgency={c.urgency} />
-                    <CaseStatusBadge status={c.status} />
-                  </div>
+          {filtered.map((c) => (
+            <Link
+              key={c.id}
+              to={`/vet/cases/${c.id}`}
+              className="block bg-card rounded-xl border border-border p-4 hover:border-primary/30 hover:shadow-sm transition-all duration-150"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm text-foreground">
+                    <AnimalSummary livestockId={c.livestock_id} />
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{fmt(c.submitted_at)}</p>
                 </div>
-              </Link>
-            );
-          })}
+                <div className="flex gap-2">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${URGENCY_COLORS[c.urgency]}`}>
+                    {c.urgency}
+                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[c.status] ?? ''}`}>
+                    {STATUS_LABELS[c.status] ?? c.status}
+                  </span>
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
       )}
     </div>
