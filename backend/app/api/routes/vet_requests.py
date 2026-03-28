@@ -68,7 +68,6 @@ def list_vet_requests(
             .offset(skip)
             .limit(limit)
         ).all()
-        count = len(items)
     elif current_user.role == "vet":
         items = session.exec(
             select(VetRequest)
@@ -77,7 +76,6 @@ def list_vet_requests(
             .offset(skip)
             .limit(limit)
         ).all()
-        count = len(items)
     else:
         items = session.exec(
             select(VetRequest)
@@ -86,9 +84,29 @@ def list_vet_requests(
             .offset(skip)
             .limit(limit)
         ).all()
-        count = len(items)
 
-    return VetRequestsPublic(data=list(items), count=count)
+    # Single batch lookup for livestock — avoids N+1 on the frontend
+    livestock_ids = list({item.livestock_id for item in items})
+    livestock_map: dict[uuid.UUID, Livestock] = {}
+    if livestock_ids:
+        for ls in session.exec(
+            select(Livestock).where(col(Livestock.id).in_(livestock_ids))
+        ).all():
+            livestock_map[ls.id] = ls  # type: ignore[index]
+
+    enriched = []
+    for item in items:
+        ls = livestock_map.get(item.livestock_id)
+        enriched.append(
+            VetRequestPublic(
+                **item.model_dump(),
+                livestock_name=ls.name if ls else None,
+                livestock_tag=ls.tag_number if ls else None,
+                livestock_species=ls.species if ls else None,
+            )
+        )
+
+    return VetRequestsPublic(data=enriched, count=len(enriched))
 
 
 # ---------------------------------------------------------------------------

@@ -30,6 +30,7 @@ class LivestockBase(SQLModel):
     acquired_date: date | None = None
     health_status: HealthStatus = "healthy"
     notes: str | None = Field(default=None)
+    image_url: str | None = Field(default=None)
 
 
 # ---------------------------------------------------------------------------
@@ -52,6 +53,7 @@ class LivestockUpdate(SQLModel):
     acquired_date: date | None = None
     health_status: HealthStatus | None = None
     notes: str | None = None
+    image_url: str | None = None
 
 
 # ---------------------------------------------------------------------------
