@@ -1,94 +1,133 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { getRequestsByVet, getAnimalById, getFarmById, getUserById, vetRequests, demoUsers } from '@/data/mockData';
-import { UrgencyBadge, CaseStatusBadge } from '@/components/StatusBadge';
+import { useQuery } from '@tanstack/react-query';
+import { fetchVetRequests } from '@/lib/services/vetRequests.service';
 import EmptyState from '@/components/EmptyState';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, ClipboardList } from 'lucide-react';
+import { AlertTriangle, ClipboardList, Loader2 } from 'lucide-react';
+
+const URGENCY_COLORS: Record<string, string> = {
+  low: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  high: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  emergency: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+};
 
 export default function VetDashboard() {
   const { user } = useAuth();
-  const myCases = getRequestsByVet(user?.id || '');
-  const activeCases = myCases.filter(c => c.status !== 'Completed');
-  const completedThisMonth = myCases.filter(c => c.status === 'Completed').length;
-  const emergencyHigh = activeCases.filter(c => c.urgency === 'Emergency' || c.urgency === 'High');
-  const followUps = myCases.filter(c => c.vetResponse?.followUpRequired && c.vetResponse?.followUpDate);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['vet-requests'],
+    queryFn: () => fetchVetRequests({ limit: 200 }),
+  });
+
+  const allCases = data?.data ?? [];
+  const activeCases = allCases.filter((c) => c.status !== 'completed' && c.status !== 'cancelled');
+  const completedCases = allCases.filter((c) => c.status === 'completed');
+  const urgentCases = activeCases.filter((c) => c.urgency === 'high' || c.urgency === 'emergency');
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const firstName = (user?.full_name ?? user?.email ?? '').split(' ')[0];
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 md:px-8 md:py-10 space-y-8">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">{greeting}, {user?.full_name ?? user?.email} 🩺</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">
+          {greeting}, {firstName}
+        </h1>
         <p className="text-sm text-muted-foreground mt-1">Your case overview for today.</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { label: 'Total Cases', value: myCases.length, color: 'text-foreground' },
-          { label: 'Pending Review', value: activeCases.length, color: 'text-warning' },
-          { label: 'Completed', value: completedThisMonth, color: 'text-success' },
-          { label: 'Follow-ups', value: followUps.length, color: 'text-primary' },
-        ].map(s => (
-          <div key={s.label} className="bg-card rounded-xl border border-border p-5 hover:shadow-sm transition-shadow duration-150">
-            <p className={`text-3xl font-bold ${s.color} tracking-tight`}>{s.value}</p>
-            <p className="text-xs text-muted-foreground mt-1.5 font-medium">{s.label}</p>
+      {isLoading ? (
+        <div className="flex justify-center py-16">
+          <Loader2 size={28} className="animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <>
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {[
+              { label: 'Total Cases', value: allCases.length, color: 'text-foreground' },
+              { label: 'Active', value: activeCases.length, color: 'text-yellow-600 dark:text-yellow-400' },
+              { label: 'Completed', value: completedCases.length, color: 'text-green-600 dark:text-green-400' },
+            ].map((s) => (
+              <div key={s.label} className="bg-card rounded-xl border border-border p-5 hover:shadow-sm transition-shadow duration-150">
+                <p className={`text-3xl font-bold ${s.color} tracking-tight`}>{s.value}</p>
+                <p className="text-xs text-muted-foreground mt-1.5 font-medium">{s.label}</p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {emergencyHigh.length > 0 && (
-        <section>
-          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <AlertTriangle size={18} className="text-danger" /> Emergency & High Priority
-          </h2>
-          <div className="space-y-2">
-            {emergencyHigh.map(c => {
-              const animal = getAnimalById(c.animalId);
-              const farm = animal ? getFarmById(animal.farmId) : null;
-              const farmer = getUserById(c.farmerId);
-              return (
-                <Link key={c.id} to={`/vet/cases/${c.id}`} className="block bg-card rounded-xl border border-danger/30 p-4 hover:border-danger/50 hover:shadow-sm transition-all duration-150">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-sm text-foreground">{animal?.name} ({animal?.tagNumber})</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{animal?.species} · {farmer?.name} · {farm?.name}</p>
+          {/* Urgent cases */}
+          {urgentCases.length > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                <AlertTriangle size={18} className="text-orange-500" /> High Priority
+              </h2>
+              <div className="space-y-2">
+                {urgentCases.map((c) => (
+                  <Link
+                    key={c.id}
+                    to={`/vet/cases/${c.id}`}
+                    className="block bg-card rounded-xl border border-orange-500/30 p-4 hover:border-orange-500/50 hover:shadow-sm transition-all duration-150"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-sm text-foreground">
+                          {c.livestock_name ?? 'Unnamed'}
+                          {c.livestock_tag && <span className="text-muted-foreground"> ({c.livestock_tag})</span>}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5 capitalize">{c.livestock_species}</p>
+                      </div>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize ${URGENCY_COLORS[c.urgency]}`}>
+                        {c.urgency}
+                      </span>
                     </div>
-                    <UrgencyBadge urgency={c.urgency} />
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Active cases */}
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-foreground">Active Cases</h2>
+              <Link to="/vet/cases" className="text-sm text-primary font-medium hover:underline">
+                View All
+              </Link>
+            </div>
+            {activeCases.length === 0 ? (
+              <EmptyState icon={ClipboardList} title="No active cases" description="Assigned cases will appear here." />
+            ) : (
+              <div className="space-y-2">
+                {activeCases.slice(0, 5).map((c) => (
+                  <Link
+                    key={c.id}
+                    to={`/vet/cases/${c.id}`}
+                    className="block bg-card rounded-xl border border-border p-4 hover:border-primary/30 hover:shadow-sm transition-all duration-150"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-sm text-foreground">
+                          {c.livestock_name ?? 'Unnamed'}
+                          {c.livestock_tag && <span className="text-muted-foreground"> ({c.livestock_tag})</span>}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5 capitalize">
+                          {c.livestock_species} · {new Date(c.submitted_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                        </p>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${URGENCY_COLORS[c.urgency]}`}>
+                        {c.urgency}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+        </>
       )}
-
-      <section>
-        <h2 className="text-lg font-semibold text-foreground mb-4">All Active Cases</h2>
-        {activeCases.length === 0 ? (
-          <EmptyState icon={ClipboardList} title="No active cases" description="Assigned cases will appear here when they arrive." />
-        ) : (
-          <div className="space-y-2">
-            {activeCases.map(c => {
-              const animal = getAnimalById(c.animalId);
-              return (
-                <Link key={c.id} to={`/vet/cases/${c.id}`} className="block bg-card rounded-xl border border-border p-4 hover:border-primary/30 hover:shadow-sm transition-all duration-150">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-sm text-foreground">{animal?.name} ({animal?.tagNumber})</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{c.dateSubmitted}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <UrgencyBadge urgency={c.urgency} />
-                      <CaseStatusBadge status={c.status} />
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </section>
     </div>
   );
 }

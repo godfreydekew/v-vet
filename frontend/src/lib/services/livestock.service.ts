@@ -17,6 +17,7 @@ export interface Livestock {
   acquired_date: string | null;
   health_status: HealthStatus;
   notes: string | null;
+  image_url: string | null;
   created_at: string;
   updated_at: string | null;
 }
@@ -51,6 +52,7 @@ export interface LivestockUpdatePayload {
   acquired_date?: string | null;
   health_status?: HealthStatus;
   notes?: string | null;
+  image_url?: string | null;
 }
 
 export async function fetchLivestock(params?: { skip?: number; limit?: number }): Promise<LivestocksListResponse> {

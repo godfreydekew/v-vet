@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchVetRequests } from '@/lib/services/vetRequests.service';
-import { fetchLivestockById } from '@/lib/services/livestock.service';
 import EmptyState from '@/components/EmptyState';
 import { Link } from 'react-router-dom';
 import { Stethoscope, Loader2 } from 'lucide-react';
+
 
 const STATUS_FILTERS = ['All', 'assigned', 'in_review', 'completed', 'cancelled'] as const;
 
@@ -35,19 +35,6 @@ function fmt(date: string) {
   return new Date(date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function AnimalName({ livestockId }: { livestockId: string }) {
-  const { data } = useQuery({
-    queryKey: ['livestock', livestockId],
-    queryFn: () => fetchLivestockById(livestockId),
-  });
-  if (!data) return <span className="text-muted-foreground">—</span>;
-  return (
-    <span>
-      {data.name ?? 'Unnamed'}{data.tag_number ? ` (${data.tag_number})` : ''}
-      <span className="text-muted-foreground capitalize"> · {data.species}</span>
-    </span>
-  );
-}
 
 export default function FarmerVetRequests() {
   const [filter, setFilter] = useState<string>('All');
@@ -105,7 +92,9 @@ export default function FarmerVetRequests() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium text-sm text-foreground">
-                    <AnimalName livestockId={req.livestock_id} />
+                    {req.livestock_name ?? 'Unnamed'}
+                    {req.livestock_tag && <span className="text-muted-foreground"> ({req.livestock_tag})</span>}
+                    {req.livestock_species && <span className="text-muted-foreground capitalize"> · {req.livestock_species}</span>}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">{fmt(req.submitted_at)}</p>
                 </div>

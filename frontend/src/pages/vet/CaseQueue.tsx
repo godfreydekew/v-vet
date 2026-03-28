@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchVetRequests } from '@/lib/services/vetRequests.service';
-import { fetchLivestockById } from '@/lib/services/livestock.service';
 import EmptyState from '@/components/EmptyState';
 import { Link } from 'react-router-dom';
 import { ClipboardList, Loader2 } from 'lucide-react';
@@ -30,20 +29,6 @@ const STATUS_COLORS: Record<string, string> = {
 
 function fmt(date: string) {
   return new Date(date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function AnimalSummary({ livestockId }: { livestockId: string }) {
-  const { data } = useQuery({
-    queryKey: ['livestock', livestockId],
-    queryFn: () => fetchLivestockById(livestockId),
-  });
-  if (!data) return <span className="text-muted-foreground">Loading…</span>;
-  return (
-    <span>
-      {data.name ?? 'Unnamed'}{data.tag_number ? ` (${data.tag_number})` : ''}
-      <span className="text-muted-foreground capitalize"> · {data.species}</span>
-    </span>
-  );
 }
 
 export default function CaseQueue() {
@@ -98,7 +83,9 @@ export default function CaseQueue() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium text-sm text-foreground">
-                    <AnimalSummary livestockId={c.livestock_id} />
+                    {c.livestock_name ?? 'Unnamed'}
+                    {c.livestock_tag && <span className="text-muted-foreground"> ({c.livestock_tag})</span>}
+                    {c.livestock_species && <span className="text-muted-foreground capitalize"> · {c.livestock_species}</span>}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">{fmt(c.submitted_at)}</p>
                 </div>

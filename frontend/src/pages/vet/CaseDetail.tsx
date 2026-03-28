@@ -163,13 +163,22 @@ export default function CaseDetail() {
       {/* Animal + request summary */}
       <div className="bg-card rounded-xl border border-border p-6">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold text-foreground">
-              {animal ? `${animal.name ?? 'Unnamed'} ${animal.tag_number ? `(${animal.tag_number})` : ''}` : '—'}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1 capitalize">
-              {[animal?.species, animal?.breed, farm?.name].filter(Boolean).join(' · ')}
-            </p>
+          <div className="flex gap-4">
+            {animal?.image_url && (
+              <img
+                src={animal.image_url}
+                alt={animal.name ?? 'Animal photo'}
+                className="w-20 h-20 rounded-xl object-cover shrink-0 border border-border"
+              />
+            )}
+            <div>
+              <h1 className="text-xl font-bold text-foreground">
+                {animal ? `${animal.name ?? 'Unnamed'} ${animal.tag_number ? `(${animal.tag_number})` : ''}` : '—'}
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1 capitalize">
+                {[animal?.species, animal?.breed, farm?.name].filter(Boolean).join(' · ')}
+              </p>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2 items-start">
             <span className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize ${URGENCY_COLORS[req.urgency]}`}>
