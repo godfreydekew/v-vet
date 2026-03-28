@@ -6,5 +6,5 @@ if [ -z "$1" ]; then
 fi
 
 cd "$(dirname "$0")/.."
-.venv/bin/alembic revision --autogenerate -m "Describe what changed"
+.venv/bin/alembic revision --autogenerate -m "$1"
 .venv/bin/alembic upgrade head
