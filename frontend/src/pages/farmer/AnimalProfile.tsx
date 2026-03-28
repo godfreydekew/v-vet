@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getApiError } from '@/lib/api';
@@ -59,9 +59,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Pencil, Trash2, Loader2, Plus, Thermometer, Heart, Wind, Clock, Stethoscope, ImagePlus, X, ZoomIn } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, Loader2, Plus, Thermometer, Heart, Wind, Clock, Stethoscope } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { uploadLivestockImage, deleteLivestockImage } from '@/lib/s3';
+import AnimalPhoto from '@/components/AnimalPhoto';
 
 // ---------------------------------------------------------------------------
 // Constants & helpers
@@ -561,10 +561,6 @@ export default function AnimalProfile() {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [vetRequestOpen, setVetRequestOpen] = useState(false);
-  const [imageUploading, setImageUploading] = useState(false);
-  const [imageDeleting, setImageDeleting] = useState(false);
-  const [zoomOpen, setZoomOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [obsOpen, setObsOpen] = useState(false);
   const [treatOpen, setTreatOpen] = useState(false);
   const [vaxOpen, setVaxOpen] = useState(false);
@@ -609,40 +605,6 @@ export default function AnimalProfile() {
     },
     onError: (err) => toast({ title: getApiError(err), variant: 'destructive' }),
   });
-
-  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || !id) return;
-    setImageUploading(true);
-    try {
-      const url = await uploadLivestockImage(id, file);
-      await updateLivestock(id, { image_url: url });
-      queryClient.invalidateQueries({ queryKey: ['livestock', id] });
-      toast({ title: 'Image uploaded.' });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error('[S3 upload]', err);
-      toast({ title: `Upload failed: ${msg}`, variant: 'destructive' });
-    } finally {
-      setImageUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  }
-
-  async function handleImageDelete() {
-    if (!id || !animal?.image_url) return;
-    setImageDeleting(true);
-    try {
-      await deleteLivestockImage(animal.image_url);
-      await updateLivestock(id, { image_url: null });
-      queryClient.invalidateQueries({ queryKey: ['livestock', id] });
-      toast({ title: 'Image removed.' });
-    } catch {
-      toast({ title: 'Delete failed. Please try again.', variant: 'destructive' });
-    } finally {
-      setImageDeleting(false);
-    }
-  }
 
   if (animalQuery.isLoading) {
     return <div className="flex justify-center py-20"><Loader2 size={28} className="animate-spin text-muted-foreground" /></div>;
@@ -755,84 +717,11 @@ export default function AnimalProfile() {
             )}
           </div>
 
-          {/* Photo */}
-          <div className="bg-card rounded-xl border border-border p-5">
-            <p className="text-sm font-medium text-foreground mb-3">Photo</p>
-            {animal.image_url ? (
-              <div className="relative group">
-                <img
-                  src={animal.image_url}
-                  alt={animal.name ?? 'Animal photo'}
-                  className="w-full max-h-72 object-cover rounded-lg cursor-pointer"
-                  onClick={() => setZoomOpen(true)}
-                />
-                <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg bg-black/30">
-                  <button
-                    type="button"
-                    title="Zoom image"
-                    onClick={() => setZoomOpen(true)}
-                    className="p-2 bg-black/60 rounded-full text-white hover:bg-black/80 transition-colors"
-                  >
-                    <ZoomIn size={18} />
-                  </button>
-                  <button
-                    type="button"
-                    title="Remove image"
-                    onClick={handleImageDelete}
-                    disabled={imageDeleting}
-                    className="p-2 bg-black/60 rounded-full text-white hover:bg-red-600/80 transition-colors"
-                  >
-                    {imageDeleting ? <Loader2 size={18} className="animate-spin" /> : <X size={18} />}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={imageUploading}
-                className="w-full border-2 border-dashed border-border rounded-lg p-8 flex flex-col items-center gap-2 text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
-              >
-                {imageUploading
-                  ? <Loader2 size={24} className="animate-spin" />
-                  : <ImagePlus size={24} />}
-                <span className="text-sm">{imageUploading ? 'Uploading…' : 'Upload a photo'}</span>
-                <span className="text-xs">JPG, PNG or WebP</span>
-              </button>
-            )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              aria-label="Upload animal photo"
-              title="Upload animal photo"
-              className="hidden"
-              onChange={handleImageUpload}
-            />
-          </div>
-
-          {/* Zoom overlay */}
-          {zoomOpen && animal.image_url && (
-            <div
-              className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-              onClick={() => setZoomOpen(false)}
-            >
-              <button
-                type="button"
-                title="Close"
-                className="absolute top-4 right-4 p-2 text-white hover:text-gray-300 transition-colors"
-                onClick={() => setZoomOpen(false)}
-              >
-                <X size={24} />
-              </button>
-              <img
-                src={animal.image_url}
-                alt={animal.name ?? 'Animal photo'}
-                className="max-w-full max-h-full object-contain rounded-lg"
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
-          )}
+          <AnimalPhoto
+            livestockId={id!}
+            animalName={animal.name}
+            imageUrl={animal.image_url}
+          />
         </TabsContent>
 
         {/* Health tab */}
