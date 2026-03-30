@@ -12,6 +12,7 @@ import ResetPassword from "@/pages/ResetPassword";
 import LandingPage from "@/pages/LandingPage";
 import NotFound from "@/pages/NotFound";
 import { Loader2 } from "lucide-react";
+import { Analytics } from "@vercel/analytics/react";
 
 // Farmer pages
 import FarmerDashboard from "@/pages/farmer/Dashboard";
@@ -124,6 +125,7 @@ function App() {
               <AppRoutes />
             </BrowserRouter>
           </AuthProvider>
+          <Analytics />
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
