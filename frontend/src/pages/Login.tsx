@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Sun, Moon, Eye, EyeOff } from "lucide-react";
@@ -154,9 +154,9 @@ export default function Login() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in…" : "Sign In"}
             </Button>
-            <p className="text-center text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+            <Link to="/forgot-password" className="block text-center text-xs text-muted-foreground hover:text-foreground transition-colors">
               Forgot password?
-            </p>
+            </Link>
           </div>
         </form>
 

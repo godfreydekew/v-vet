@@ -38,3 +38,18 @@ export async function fetchCurrentUser(): Promise<User> {
 export function clearSession(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
+
+/**
+ * Request a password reset email. Always resolves (backend never reveals
+ * whether the email exists — same response either way).
+ */
+export async function requestPasswordReset(email: string): Promise<void> {
+  await api.post(`/password-recovery/${encodeURIComponent(email)}`);
+}
+
+/**
+ * Complete the password reset using the token from the email link.
+ */
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  await api.post('/reset-password/', { token, new_password: newPassword });
+}
