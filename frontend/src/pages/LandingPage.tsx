@@ -184,19 +184,6 @@ export default function LandingPage() {
               />
             </div>
             {/* Floating card */}
-            <div className="absolute -bottom-4 left-6 bg-card rounded-xl shadow-lg border border-border px-4 py-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-success/15 flex items-center justify-center">
-                <Heart size={16} className="text-success" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  8 animals thriving
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  All herds healthy today
-                </p>
-              </div>
-            </div>
           </motion.div>
         </motion.div>
       </section>
