@@ -8,6 +8,15 @@ from sqlmodel import Field, SQLModel
 Species = Literal["cattle", "sheep", "goat", "poultry", "pig", "other"]
 Gender = Literal["male", "female", "unknown"]
 HealthStatus = Literal["healthy", "sick", "recovering", "deceased"]
+LifecycleStatus = Literal[
+    "active",
+    "sold",
+    "deceased",
+    "transferred",
+    "slaughtered",
+    "missing",
+    "other",
+]
 
 
 def _utcnow() -> datetime:
@@ -29,6 +38,7 @@ class LivestockBase(SQLModel):
     date_of_birth: date | None = None
     acquired_date: date | None = None
     health_status: HealthStatus = "healthy"
+    lifecycle_status: LifecycleStatus = "active"
     notes: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
 
@@ -52,6 +62,7 @@ class LivestockUpdate(SQLModel):
     date_of_birth: date | None = None
     acquired_date: date | None = None
     health_status: HealthStatus | None = None
+    lifecycle_status: LifecycleStatus | None = None
     notes: str | None = None
     image_url: str | None = None
 
@@ -68,6 +79,7 @@ class Livestock(LivestockBase, table=True):
     species: str  # type: ignore[assignment]
     gender: str | None = None  # type: ignore[assignment]
     health_status: str = "healthy"  # type: ignore[assignment]
+    lifecycle_status: str = "active"  # type: ignore[assignment]
     created_at: datetime = Field(
         default_factory=_utcnow,
         sa_column=Column(DateTime(timezone=True)),

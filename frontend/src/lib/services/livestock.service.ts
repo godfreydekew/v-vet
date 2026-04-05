@@ -3,6 +3,7 @@ import { api } from '@/lib/api';
 export type Species = 'cattle' | 'sheep' | 'goat' | 'poultry' | 'pig' | 'other';
 export type Gender = 'male' | 'female' | 'unknown';
 export type HealthStatus = 'healthy' | 'sick' | 'recovering' | 'deceased';
+export type LifecycleStatus = 'active' | 'sold' | 'deceased' | 'transferred' | 'slaughtered' | 'missing' | 'other';
 
 export interface Livestock {
   id: string;
@@ -16,6 +17,7 @@ export interface Livestock {
   date_of_birth: string | null;
   acquired_date: string | null;
   health_status: HealthStatus;
+  lifecycle_status: LifecycleStatus;
   notes: string | null;
   image_url: string | null;
   created_at: string;
@@ -38,6 +40,7 @@ export interface LivestockCreatePayload {
   date_of_birth?: string | null;
   acquired_date?: string | null;
   health_status?: HealthStatus;
+  lifecycle_status?: LifecycleStatus;
   notes?: string | null;
 }
 
@@ -51,6 +54,7 @@ export interface LivestockUpdatePayload {
   date_of_birth?: string | null;
   acquired_date?: string | null;
   health_status?: HealthStatus;
+  lifecycle_status?: LifecycleStatus;
   notes?: string | null;
   image_url?: string | null;
 }
