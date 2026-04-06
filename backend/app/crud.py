@@ -4,6 +4,7 @@ from typing import Any
 from sqlmodel import Session, col, select
 
 from app.core.security import get_password_hash, verify_password
+from app.ai.gemma import analyze_livestock_image
 from app.models import (
     Farm,
     FarmBase,
@@ -117,6 +118,17 @@ def list_livestock_images(
     ).all()
 
 
+def get_livestock_image_by_url(
+    *, session: Session, livestock_id: uuid.UUID, image_url: str
+) -> LivestockImage | None:
+    return session.exec(
+        select(LivestockImage).where(
+            LivestockImage.livestock_id == livestock_id,
+            LivestockImage.image_url == image_url,
+        )
+    ).first()
+
+
 def create_livestock_image(
     *,
     session: Session,
@@ -152,6 +164,30 @@ def delete_livestock_image(
     session.delete(image)
     session.commit()
     return True
+
+
+def analyze_and_store_livestock_image(
+    *,
+    session: Session,
+    livestock: Livestock,
+    image: LivestockImage,
+) -> LivestockImage:
+    if image.ai_analysis:
+        return image
+
+    analysis = analyze_livestock_image(
+        image_url=image.image_url,
+        livestock_name=livestock.name,
+        tag_number=livestock.tag_number,
+        breed=livestock.breed,
+        health_status=livestock.health_status,
+        lifecycle_status=livestock.lifecycle_status,
+    )
+    image.ai_analysis = analysis
+    session.add(image)
+    session.commit()
+    session.refresh(image)
+    return image
 
 
 def serialize_livestock(*, session: Session, livestock: Livestock) -> LivestockPublic:
@@ -253,3 +289,9 @@ def authenticate(*, session: Session, email: str, password: str) -> User | None:
         session.commit()
         session.refresh(db_user)
     return db_user
+
+
+def get_all_active_users(*, session: Session) -> list[User]:
+    """Get all active users in the system."""
+    statement = select(User).where(User.is_active == True)
+    return session.exec(statement).all()

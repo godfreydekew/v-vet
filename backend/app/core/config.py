@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
+    
+    GEMMA_BASE_URL: HttpUrl | None = None
+    GEMMA_MODEL: str | None = None
+    GEMMA_MAX_TOKENS: int = 2048
+    GEMMA_API_KEY: str | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property

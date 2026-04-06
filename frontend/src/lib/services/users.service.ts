@@ -30,6 +30,11 @@ export interface UpdatePasswordPayload {
   new_password: string;
 }
 
+export interface BroadcastEmailPayload {
+  subject: string;
+  message: string;
+}
+
 export interface UsersListResponse {
   data: User[];
   count: number;
@@ -84,5 +89,11 @@ export async function updateUserById(userId: string, payload: Partial<UserCreate
 /** Any authenticated user — list all active vets (for vet picker). */
 export async function fetchVets(): Promise<UsersListResponse> {
   const { data } = await api.get<UsersListResponse>('/users/vets');
+  return data;
+}
+
+/** Superuser — send broadcast email to all active users. */
+export async function sendBroadcastEmail(payload: BroadcastEmailPayload): Promise<{ message: string }> {
+  const { data } = await api.post<{ message: string }>('/utils/broadcast-email/', payload);
   return data;
 }

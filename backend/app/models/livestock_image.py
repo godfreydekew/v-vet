@@ -25,6 +25,10 @@ class LivestockImageUpdate(SQLModel):
     is_primary: bool | None = None
 
 
+class LivestockImageAnalyzeRequest(SQLModel):
+    image_url: str = Field(max_length=1024)
+
+
 class LivestockImage(LivestockImageBase, table=True):
     __tablename__ = "livestock_image"
 

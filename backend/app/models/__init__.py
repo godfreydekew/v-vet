@@ -34,11 +34,12 @@ from app.models.livestock_image import (
     LivestockImage,
     LivestockImageBase,
     LivestockImageCreate,
+    LivestockImageAnalyzeRequest,
     LivestockImagePublic,
     LivestockImagesPublic,
     LivestockImageUpdate,
 )
-from app.models.shared import Message, NewPassword, Token, TokenPayload
+from app.models.shared import Message, NewPassword, Token, TokenPayload, BroadcastEmailRequest
 from app.models.treatment import (
     Treatment,
     TreatmentBase,
@@ -125,6 +126,7 @@ __all__ = [
     "LivestockImage",
     "LivestockImageBase",
     "LivestockImageCreate",
+    "LivestockImageAnalyzeRequest",
     "LivestockImagePublic",
     "LivestockImagesPublic",
     "LivestockImageUpdate",

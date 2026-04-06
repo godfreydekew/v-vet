@@ -116,6 +116,11 @@ export async function deleteLivestockImageById(livestockId: string, imageId: str
   return res.data;
 }
 
+export async function analyzeLivestockImage(livestockId: string, imageUrl: string): Promise<LivestockImage> {
+  const res = await api.post(`/livestock/${livestockId}/images/analyze`, { image_url: imageUrl });
+  return res.data;
+}
+
 // ---------------------------------------------------------------------------
 // Health Observations
 // ---------------------------------------------------------------------------

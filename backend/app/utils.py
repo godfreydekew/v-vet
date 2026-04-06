@@ -121,3 +121,16 @@ def verify_password_reset_token(token: str) -> str | None:
         return str(decoded_token["sub"])
     except InvalidTokenError:
         return None
+
+
+def generate_broadcast_email(subject: str, message: str) -> EmailData:
+    """Generate a broadcast update email to be sent to all users."""
+    html_content = render_email_template(
+        template_name="send_update.html",
+        context={
+            "project_name": settings.PROJECT_NAME,
+            "subject": subject,
+            "message": message,
+        },
+    )
+    return EmailData(html_content=html_content, subject=subject)

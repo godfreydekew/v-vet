@@ -17,6 +17,7 @@ from app.models import (
     Livestock,
     LivestockCreate,
     LivestockImage,
+    LivestockImageAnalyzeRequest,
     LivestockImageCreate,
     LivestockImagePublic,
     LivestockImagesPublic,
@@ -202,6 +203,31 @@ def add_livestock_image(
     return LivestockImagePublic.model_validate(image)
 
 
+@router.post("/{livestock_id}/images/analyze", response_model=LivestockImagePublic)
+def analyze_livestock_image(
+    *,
+    livestock_id: uuid.UUID,
+    request: LivestockImageAnalyzeRequest,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Any:
+    livestock = _get_livestock_or_404(session, livestock_id)
+    _assert_livestock_owner(session, livestock, current_user)
+    image = crud.get_livestock_image_by_url(
+        session=session,
+        livestock_id=livestock_id,
+        image_url=request.image_url,
+    )
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
+    updated = crud.analyze_and_store_livestock_image(
+        session=session,
+        livestock=livestock,
+        image=image,
+    )
+    return LivestockImagePublic.model_validate(updated)
+
+
 @router.delete("/{livestock_id}/images/{image_id}", response_model=Message)
 def remove_livestock_image(
     livestock_id: uuid.UUID,
@@ -211,6 +237,19 @@ def remove_livestock_image(
 ) -> Any:
     livestock = _get_livestock_or_404(session, livestock_id)
     _assert_livestock_owner(session, livestock, current_user)
+    image = session.exec(
+        select(LivestockImage).where(
+            LivestockImage.id == image_id,
+            LivestockImage.livestock_id == livestock_id,
+        )
+    ).first()
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
+    if image.ai_analysis:
+        raise HTTPException(
+            status_code=409,
+            detail="This image has AI analysis and cannot be deleted yet.",
+        )
     deleted = crud.delete_livestock_image(
         session=session,
         livestock_id=livestock_id,

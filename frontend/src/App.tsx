@@ -38,6 +38,7 @@ import AdminFarms from "@/pages/admin/Farms";
 import AdminLivestock from "@/pages/admin/Livestock";
 import AdminRequests from "@/pages/admin/Requests";
 import AdminSettings from "@/pages/admin/Settings";
+import AdminEmail from "@/pages/admin/Email";
 
 const queryClient = new QueryClient();
 
@@ -64,7 +65,7 @@ function AppRoutes() {
     );
   }
 
-  if (user?.role === 'admin') {
+  if (user?.role === "admin") {
     return (
       <AppLayout>
         <Routes>
@@ -74,6 +75,7 @@ function AppRoutes() {
           <Route path="/admin/farms" element={<AdminFarms />} />
           <Route path="/admin/livestock" element={<AdminLivestock />} />
           <Route path="/admin/requests" element={<AdminRequests />} />
+          <Route path="/admin/email" element={<AdminEmail />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Routes>
@@ -81,7 +83,7 @@ function AppRoutes() {
     );
   }
 
-  if (user?.role === 'vet') {
+  if (user?.role === "vet") {
     return (
       <AppLayout>
         <Routes>
