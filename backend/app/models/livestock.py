@@ -5,6 +5,8 @@ from typing import Literal
 from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
 
+from app.models.livestock_image import LivestockImagePublic
+
 Species = Literal["cattle", "sheep", "goat", "poultry", "pig", "other"]
 Gender = Literal["male", "female", "unknown"]
 HealthStatus = Literal["healthy", "sick", "recovering", "deceased"]
@@ -40,7 +42,6 @@ class LivestockBase(SQLModel):
     health_status: HealthStatus = "healthy"
     lifecycle_status: LifecycleStatus = "active"
     notes: str | None = Field(default=None)
-    image_url: str | None = Field(default=None)
 
 
 # ---------------------------------------------------------------------------
@@ -64,6 +65,7 @@ class LivestockUpdate(SQLModel):
     health_status: HealthStatus | None = None
     lifecycle_status: LifecycleStatus | None = None
     notes: str | None = None
+    # Backward-compatible single-image API field; maps to primary image row.
     image_url: str | None = None
 
 
@@ -99,6 +101,9 @@ class LivestockPublic(LivestockBase):
     farm_id: uuid.UUID
     created_at: datetime
     updated_at: datetime | None = None
+    # Backward-compatible single-image API field for existing clients.
+    image_url: str | None = None
+    images: list[LivestockImagePublic] = Field(default_factory=list)
 
 
 class LivestocksPublic(SQLModel):

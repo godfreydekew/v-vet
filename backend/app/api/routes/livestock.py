@@ -16,6 +16,10 @@ from app.models import (
     HealthObservationsPublic,
     Livestock,
     LivestockCreate,
+    LivestockImage,
+    LivestockImageCreate,
+    LivestockImagePublic,
+    LivestockImagesPublic,
     LivestockPublic,
     LivestocksPublic,
     LivestockUpdate,
@@ -82,7 +86,8 @@ def list_livestock(
         items = session.exec(
             stmt.order_by(col(Livestock.created_at).desc()).offset(skip).limit(limit)
         ).all()
-    return LivestocksPublic(data=list(items), count=count)
+    serialized = crud.serialize_livestock_list(session=session, livestock_items=list(items))
+    return LivestocksPublic(data=serialized, count=count)
 
 
 @router.post("/", response_model=LivestockPublic, status_code=201)
@@ -99,7 +104,8 @@ def create_livestock(
     if not current_user.is_superuser and not current_user.is_admin:
         if farm.farmer_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not enough privileges")
-    return crud.create_livestock(session=session, livestock_in=livestock_in)
+    livestock = crud.create_livestock(session=session, livestock_in=livestock_in)
+    return crud.serialize_livestock(session=session, livestock=livestock)
 
 
 @router.get("/{livestock_id}", response_model=LivestockPublic)
@@ -110,7 +116,7 @@ def get_livestock(
 ) -> Any:
     livestock = _get_livestock_or_404(session, livestock_id)
     _assert_livestock_owner(session, livestock, current_user)
-    return livestock
+    return crud.serialize_livestock(session=session, livestock=livestock)
 
 
 @router.patch("/{livestock_id}", response_model=LivestockPublic)
@@ -123,9 +129,10 @@ def update_livestock(
 ) -> Any:
     livestock = _get_livestock_or_404(session, livestock_id)
     _assert_livestock_owner(session, livestock, current_user)
-    return crud.update_livestock(
+    updated = crud.update_livestock(
         session=session, db_livestock=livestock, livestock_in=livestock_in
     )
+    return crud.serialize_livestock(session=session, livestock=updated)
 
 
 @router.delete("/{livestock_id}", response_model=Message)
@@ -147,6 +154,7 @@ def delete_livestock(
         session.exec(
             delete(Vaccination).where(Vaccination.livestock_id == livestock_id)
         )
+        session.exec(delete(LivestockImage).where(LivestockImage.livestock_id == livestock_id))
         session.exec(delete(Livestock).where(Livestock.id == livestock_id))
         session.commit()
     except IntegrityError:
@@ -159,6 +167,58 @@ def delete_livestock(
         session.rollback()
         raise HTTPException(status_code=500, detail=f"Error deleting animal: {str(e)}")
     return Message(message="Animal deleted successfully")
+
+
+@router.get("/{livestock_id}/images", response_model=LivestockImagesPublic)
+def list_livestock_images(
+    livestock_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Any:
+    livestock = _get_livestock_or_404(session, livestock_id)
+    _assert_livestock_owner(session, livestock, current_user)
+    items = crud.list_livestock_images(session=session, livestock_id=livestock_id)
+    return LivestockImagesPublic(
+        data=[LivestockImagePublic.model_validate(img) for img in items],
+        count=len(items),
+    )
+
+
+@router.post("/{livestock_id}/images", response_model=LivestockImagePublic, status_code=201)
+def add_livestock_image(
+    *,
+    livestock_id: uuid.UUID,
+    image_in: LivestockImageCreate,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Any:
+    livestock = _get_livestock_or_404(session, livestock_id)
+    _assert_livestock_owner(session, livestock, current_user)
+    image = crud.create_livestock_image(
+        session=session,
+        livestock_id=livestock_id,
+        image_in=image_in,
+    )
+    return LivestockImagePublic.model_validate(image)
+
+
+@router.delete("/{livestock_id}/images/{image_id}", response_model=Message)
+def remove_livestock_image(
+    livestock_id: uuid.UUID,
+    image_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+) -> Any:
+    livestock = _get_livestock_or_404(session, livestock_id)
+    _assert_livestock_owner(session, livestock, current_user)
+    deleted = crud.delete_livestock_image(
+        session=session,
+        livestock_id=livestock_id,
+        image_id=image_id,
+    )
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Image not found")
+    return Message(message="Image deleted successfully")
 
 
 # ---------------------------------------------------------------------------

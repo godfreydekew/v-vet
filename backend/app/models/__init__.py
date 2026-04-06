@@ -30,6 +30,14 @@ from app.models.livestock import (
     LivestocksPublic,
     LivestockUpdate,
 )
+from app.models.livestock_image import (
+    LivestockImage,
+    LivestockImageBase,
+    LivestockImageCreate,
+    LivestockImagePublic,
+    LivestockImagesPublic,
+    LivestockImageUpdate,
+)
 from app.models.shared import Message, NewPassword, Token, TokenPayload
 from app.models.treatment import (
     Treatment,
@@ -114,6 +122,12 @@ __all__ = [
     "LivestockPublic",
     "LivestocksPublic",
     "LivestockUpdate",
+    "LivestockImage",
+    "LivestockImageBase",
+    "LivestockImageCreate",
+    "LivestockImagePublic",
+    "LivestockImagesPublic",
+    "LivestockImageUpdate",
     # HealthObservation
     "HealthObservation",
     "HealthObservationBase",

@@ -141,4 +141,5 @@ def list_farm_livestock(
         .offset(skip)
         .limit(limit)
     ).all()
-    return LivestocksPublic(data=list(items), count=count)
+    serialized = crud.serialize_livestock_list(session=session, livestock_items=list(items))
+    return LivestocksPublic(data=serialized, count=count)

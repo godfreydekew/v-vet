@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.core.security import get_password_hash, verify_password
 from app.models import (
@@ -10,6 +10,10 @@ from app.models import (
     FarmUpdate,
     Livestock,
     LivestockCreate,
+    LivestockImage,
+    LivestockImageCreate,
+    LivestockImagePublic,
+    LivestockPublic,
     LivestockUpdate,
     User,
     UserCreate,
@@ -86,11 +90,145 @@ def update_livestock(
     *, session: Session, db_livestock: Livestock, livestock_in: LivestockUpdate
 ) -> Livestock:
     data = livestock_in.model_dump(exclude_unset=True)
+    image_url = data.pop("image_url", None) if "image_url" in data else None
+    image_url_is_set = "image_url" in livestock_in.model_fields_set
     db_livestock.sqlmodel_update(data)
     session.add(db_livestock)
+
+    if image_url_is_set:
+        _upsert_primary_livestock_image(
+            session=session,
+            livestock_id=db_livestock.id,
+            image_url=image_url,
+        )
+
     session.commit()
     session.refresh(db_livestock)
     return db_livestock
+
+
+def list_livestock_images(
+    *, session: Session, livestock_id: uuid.UUID
+) -> list[LivestockImage]:
+    return session.exec(
+        select(LivestockImage)
+        .where(LivestockImage.livestock_id == livestock_id)
+        .order_by(col(LivestockImage.is_primary).desc(), col(LivestockImage.created_at))
+    ).all()
+
+
+def create_livestock_image(
+    *,
+    session: Session,
+    livestock_id: uuid.UUID,
+    image_in: LivestockImageCreate,
+) -> LivestockImage:
+    if image_in.is_primary:
+        images = session.exec(
+            select(LivestockImage).where(LivestockImage.livestock_id == livestock_id)
+        ).all()
+        for img in images:
+            img.is_primary = False
+            session.add(img)
+
+    image = LivestockImage.model_validate(image_in, update={"livestock_id": livestock_id})
+    session.add(image)
+    session.commit()
+    session.refresh(image)
+    return image
+
+
+def delete_livestock_image(
+    *, session: Session, livestock_id: uuid.UUID, image_id: uuid.UUID
+) -> bool:
+    image = session.exec(
+        select(LivestockImage).where(
+            LivestockImage.id == image_id,
+            LivestockImage.livestock_id == livestock_id,
+        )
+    ).first()
+    if not image:
+        return False
+    session.delete(image)
+    session.commit()
+    return True
+
+
+def serialize_livestock(*, session: Session, livestock: Livestock) -> LivestockPublic:
+    images = list_livestock_images(session=session, livestock_id=livestock.id)
+    image_public = [LivestockImagePublic.model_validate(img) for img in images]
+    primary = next((img for img in images if img.is_primary), None)
+    primary = primary or (images[0] if images else None)
+    return LivestockPublic.model_validate(
+        livestock,
+        update={
+            "image_url": primary.image_url if primary else None,
+            "images": image_public,
+        },
+    )
+
+
+def serialize_livestock_list(
+    *, session: Session, livestock_items: list[Livestock]
+) -> list[LivestockPublic]:
+    if not livestock_items:
+        return []
+    ids = [item.id for item in livestock_items]
+    images = session.exec(
+        select(LivestockImage)
+        .where(LivestockImage.livestock_id.in_(ids))
+        .order_by(col(LivestockImage.is_primary).desc(), col(LivestockImage.created_at))
+    ).all()
+
+    by_livestock: dict[uuid.UUID, list[LivestockImage]] = {livestock_id: [] for livestock_id in ids}
+    for img in images:
+        by_livestock.setdefault(img.livestock_id, []).append(img)
+
+    result: list[LivestockPublic] = []
+    for item in livestock_items:
+        item_images = by_livestock.get(item.id, [])
+        image_public = [LivestockImagePublic.model_validate(img) for img in item_images]
+        primary = next((img for img in item_images if img.is_primary), None)
+        primary = primary or (item_images[0] if item_images else None)
+        result.append(
+            LivestockPublic.model_validate(
+                item,
+                update={
+                    "image_url": primary.image_url if primary else None,
+                    "images": image_public,
+                },
+            )
+        )
+    return result
+
+
+def _upsert_primary_livestock_image(
+    *, session: Session, livestock_id: uuid.UUID, image_url: str | None
+) -> None:
+    images = session.exec(
+        select(LivestockImage)
+        .where(LivestockImage.livestock_id == livestock_id)
+        .order_by(col(LivestockImage.is_primary).desc(), col(LivestockImage.created_at))
+    ).all()
+    primary = next((img for img in images if img.is_primary), None)
+    primary = primary or (images[0] if images else None)
+
+    if image_url is None:
+        if primary:
+            session.delete(primary)
+        return
+
+    if primary:
+        primary.image_url = image_url
+        session.add(primary)
+        return
+
+    session.add(
+        LivestockImage.model_validate(
+            LivestockImageCreate(image_url=image_url, ai_analysis=None, is_primary=True),
+            update={"livestock_id": livestock_id},
+        )
+    )
 
 
 # ---------------------------------------------------------------------------

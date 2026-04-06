@@ -5,6 +5,16 @@ export type Gender = 'male' | 'female' | 'unknown';
 export type HealthStatus = 'healthy' | 'sick' | 'recovering' | 'deceased';
 export type LifecycleStatus = 'active' | 'sold' | 'deceased' | 'transferred' | 'slaughtered' | 'missing' | 'other';
 
+export interface LivestockImage {
+  id: string;
+  livestock_id: string;
+  image_url: string;
+  ai_analysis: string | null;
+  is_primary: boolean;
+  created_at: string;
+  updated_at: string | null;
+}
+
 export interface Livestock {
   id: string;
   farm_id: string;
@@ -20,6 +30,7 @@ export interface Livestock {
   lifecycle_status: LifecycleStatus;
   notes: string | null;
   image_url: string | null;
+  images: LivestockImage[];
   created_at: string;
   updated_at: string | null;
 }
@@ -81,6 +92,27 @@ export async function updateLivestock(id: string, payload: LivestockUpdatePayloa
 
 export async function deleteLivestock(id: string): Promise<{ message: string }> {
   const res = await api.delete(`/livestock/${id}`);
+  return res.data;
+}
+
+export interface LivestockImageCreatePayload {
+  image_url: string;
+  ai_analysis?: string | null;
+  is_primary?: boolean;
+}
+
+export async function fetchLivestockImages(livestockId: string): Promise<{ data: LivestockImage[]; count: number }> {
+  const res = await api.get(`/livestock/${livestockId}/images`);
+  return res.data;
+}
+
+export async function addLivestockImage(livestockId: string, payload: LivestockImageCreatePayload): Promise<LivestockImage> {
+  const res = await api.post(`/livestock/${livestockId}/images`, payload);
+  return res.data;
+}
+
+export async function deleteLivestockImageById(livestockId: string, imageId: string): Promise<{ message: string }> {
+  const res = await api.delete(`/livestock/${livestockId}/images/${imageId}`);
   return res.data;
 }
 

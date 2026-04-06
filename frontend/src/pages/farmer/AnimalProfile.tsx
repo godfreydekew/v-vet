@@ -1248,6 +1248,7 @@ export default function AnimalProfile() {
             livestockId={id!}
             animalName={animal.name}
             imageUrl={animal.image_url}
+            images={animal.images}
           />
         </TabsContent>
 
