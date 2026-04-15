@@ -60,6 +60,14 @@ class Settings(BaseSettings):
     GEMMA_MODEL: str | None = None
     GEMMA_MAX_TOKENS: int = 2048
     GEMMA_API_KEY: str | None = None
+    
+    WHATSAPP_APP_ID: str | None = None
+    WHATSAPP_APP_SECRET: str | None = None
+    WHATSAPP_BUSINESS_ACCOUNT_ID: str | None = None
+    WHATSAPP_PHONE_NUMBER_ID: str | None = None
+    WHATSAPP_ACCESS_TOKEN: str | None = None
+    VERIFY_TOKEN: str | None = None
+    CHALLENGE: str | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
