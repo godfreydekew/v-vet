@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     GEMMA_MODEL: str | None = None
     GEMMA_MAX_TOKENS: int = 2048
     GEMMA_API_KEY: str | None = None
+    OPENAI_API_KEY: str | None = None
     
     WHATSAPP_APP_ID: str | None = None
     WHATSAPP_APP_SECRET: str | None = None
