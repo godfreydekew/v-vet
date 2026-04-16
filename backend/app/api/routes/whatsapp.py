@@ -12,8 +12,10 @@ from app.crud import (
 )
 from app.models.whatsapp import WhatsAppMessageCreate, WhatsAppUser, WhatsAppUserCreate
 from app.services.whatsapp import (
+    detect_language_change,
     generate_ai_response,
     get_welcome_message,
+    handle_language_change,
     handle_onboarding,
     send_whatsapp_message,
 )
@@ -86,7 +88,14 @@ def receive_webhook(payload: dict, session: SessionDep) -> dict:
         msg_in=WhatsAppMessageCreate(phone=phone, role="farmer", content=message_body),
     )
 
-    # --- 4. Route: onboarding or AI conversation ---
+    # --- 4. Language change command (available at any time) ---
+    new_language = detect_language_change(message_body)
+    if new_language:
+        reply = handle_language_change(user=user, language=new_language, session=session)
+        _send_and_persist(session=session, user=user, phone=phone, reply=reply)
+        return {"status": "ok"}
+
+    # --- 5. Route: onboarding or AI conversation ---
     if not user.is_fully_onboarded:
         # First message after registration goes straight into onboarding answers.
         # handle_onboarding detects the current step from null fields and saves the answer.
@@ -95,7 +104,7 @@ def receive_webhook(payload: dict, session: SessionDep) -> dict:
         history = get_conversation_history(session=session, phone=phone, limit=20)
         reply = generate_ai_response(message=message_body, history=history, user=user)
 
-    # --- 5. Send and persist the bot reply ---
+    # --- 6. Send and persist the bot reply ---
     _send_and_persist(session=session, user=user, phone=phone, reply=reply)
     return {"status": "ok"}
 

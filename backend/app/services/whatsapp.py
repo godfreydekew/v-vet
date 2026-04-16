@@ -204,6 +204,44 @@ def get_welcome_message() -> str:
     )
 
 
+# ---------------------------------------------------------------------------
+# Language change command
+# ---------------------------------------------------------------------------
+
+SUPPORTED_LANGUAGES = {"english", "shona", "ndebele"}
+
+
+def detect_language_change(message_body: str) -> str | None:
+    """
+    Return the normalised language name if the message is a language-change
+    command, otherwise return None.
+
+    Accepted formats (all case-insensitive):
+      "language english"
+      "language: shona"
+      "shona"          ← bare language name with no other words
+    """
+    text = message_body.strip().lower().rstrip(".")
+
+    # Strip optional "language" keyword and colon prefix.
+    for prefix in ("language:", "language"):
+        if text.startswith(prefix):
+            text = text[len(prefix):].strip()
+            break
+
+    if text in SUPPORTED_LANGUAGES:
+        return text.capitalize()
+    return None
+
+
+def handle_language_change(user: WhatsAppUser, language: str, session: Session) -> str:
+    """Save the new language preference and return a confirmation message."""
+    user.preferred_language = language
+    session.add(user)
+    session.commit()
+    return f"Language updated to {language}. I'll respond in {language} from now on."
+
+
 def get_returning_incomplete_message(user: WhatsAppUser) -> str:
     """
     Message for a user who previously registered but never completed onboarding.
