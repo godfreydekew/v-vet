@@ -90,6 +90,16 @@ from app.models.vet_response import (
     VetResponsePublic,
     VetResponseUpdate,
 )
+from app.models.whatsapp import (
+    WhatsAppMessage,
+    WhatsAppMessageCreate,
+    WhatsAppMessagePublic,
+    WhatsAppMessagesPublic,
+    WhatsAppUser,
+    WhatsAppUserCreate,
+    WhatsAppUserPublic,
+    WhatsAppUserUpdate,
+)
 
 __all__ = [
     # SQLModel
@@ -171,4 +181,13 @@ __all__ = [
     "VetResponseCreate",
     "VetResponsePublic",
     "VetResponseUpdate",
+    # WhatsApp
+    "WhatsAppUser",
+    "WhatsAppUserCreate",
+    "WhatsAppUserPublic",
+    "WhatsAppUserUpdate",
+    "WhatsAppMessage",
+    "WhatsAppMessageCreate",
+    "WhatsAppMessagePublic",
+    "WhatsAppMessagesPublic",
 ]

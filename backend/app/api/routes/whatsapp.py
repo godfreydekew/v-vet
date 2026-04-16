@@ -1,19 +1,29 @@
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import PlainTextResponse
+from sqlmodel import Session
+
+from app.api.deps import SessionDep
 from app.core.config import settings
-from app.core.openai import client as openai_client
-import requests
+from app.crud import (
+    create_whatsapp_user,
+    get_conversation_history,
+    get_whatsapp_user_by_phone,
+    save_whatsapp_message,
+)
+from app.models.whatsapp import WhatsAppMessageCreate, WhatsAppUser, WhatsAppUserCreate
+from app.services.whatsapp import (
+    generate_ai_response,
+    get_welcome_message,
+    handle_onboarding,
+    send_whatsapp_message,
+)
 
 router = APIRouter(tags=["whatsapp"], prefix="/whatsapp")
 
-SYSTEM_PROMPT = (
-    "You are VVet Live, a helpful WhatsApp assistant for cattle farmers and veterinary support. "
-    "Answer questions about cows, cattle, livestock health, feeding, breeding, behavior, injuries, symptoms, "
-    "images, and day-to-day farm care. Keep replies practical, clear, and concise. "
-    "If the user greets you, respond with a brief friendly greeting and ask what they need help with. "
-    "If the question is unclear, ask a focused follow-up question. "
-    "Do not invent facts. If something may need a veterinarian, say so plainly."
-)
+
+# ---------------------------------------------------------------------------
+# Webhook verification (Meta handshake)
+# ---------------------------------------------------------------------------
 
 
 @router.get("/webhook", status_code=200, response_class=PlainTextResponse)
@@ -22,76 +32,100 @@ def verify_webhook(
     hub_verify_token: str = Query(..., alias="hub.verify_token"),
     hub_challenge: str = Query(..., alias="hub.challenge"),
 ) -> str:
-    verify_token = settings.VERIFY_TOKEN    
-    
-    if hub_mode == "subscribe" and hub_verify_token == verify_token:
+    if hub_mode == "subscribe" and hub_verify_token == settings.VERIFY_TOKEN:
         return hub_challenge
-    
     raise HTTPException(status_code=400, detail="Webhook verification failed")
 
+
+# ---------------------------------------------------------------------------
+# Incoming message handler
+# ---------------------------------------------------------------------------
+
+
 @router.post("/webhook", status_code=200)
-def receive_webhook(payload: dict) -> dict:
-    user_message = payload.get("entry", [{}])[0].get("changes", [{}])[0].get("value", {}).get("messages", [{}])[0].get("text", {}).get("body", "")
-    if user_message:
-        print("Received message from user:", user_message)
-        try:
-            ai_response = generate_response_with_ai(user_message)
-            print("Generated AI response:", ai_response)
-            # Here you would extract the sender's phone number from the payload to send the response back
-            sender_phone_number = payload.get("entry", [{}])[0].get("changes", [{}])[0].get("value", {}).get("messages", [{}])[0].get("from", "")
-            if sender_phone_number:
-                send_message_to_user(sender_phone_number, ai_response)
-        except Exception as e:
-            print(f"Error processing webhook: {e}")
-    print("Received WhatsApp webhook:", payload)
-    return {"status": "ok"}
-    
+def receive_webhook(payload: dict, session: SessionDep) -> dict:
+    """
+    Main entry point for all incoming WhatsApp messages.
 
-# Send message to user using WhatsApp API
-@router.post("/send_message", status_code=200)
-def send_message(phone_number: str, message: str) -> None:
-    response = send_message_to_user(phone_number, message)
-
-    if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
-    
-    
-def send_message_to_user(phone_number: str, message: str):
-    if not settings.WHATSAPP_PHONE_NUMBER_ID or not settings.WHATSAPP_ACCESS_TOKEN:
-        raise HTTPException(status_code=500, detail="WhatsApp configuration is missing")
-
-    url = f"https://graph.facebook.com/v25.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
-    data = {
-        "messaging_product": "whatsapp",
-        "to": phone_number,
-        "type": "text",
-        "text": {
-            "body": message
-        }
-    }
-    headers = {
-        "Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}",
-        "Content-Type": "application/json"
-    }
+    Pipeline:
+      1. Extract phone + message body from Meta payload.
+      2. Look up (or create) the WhatsAppUser row.
+      3. Persist the incoming message.
+      4. Route to onboarding OR AI response based on profile completeness.
+      5. Persist the bot reply and send it back via Meta API.
+    """
     try:
-        response = requests.post(url, json=data, headers=headers, timeout=15)
-    except requests.RequestException as exc:
-        raise HTTPException(status_code=502, detail=f"Failed to reach WhatsApp API: {exc}") from exc
+        entry = payload["entry"][0]["changes"][0]["value"]
+        message_obj = entry["messages"][0]
+        phone: str = message_obj["from"]
+        message_body: str = message_obj["text"]["body"]
+    except (KeyError, IndexError):
+        return {"status": "ok"}
 
-    print("WhatsApp API response:", response.status_code, response.text)
-    return response
+    user = get_whatsapp_user_by_phone(session=session, phone=phone)
 
-def generate_response_with_ai(user_message: str) -> str:
-    # Call OpenAI responses API
+    if user is None:
+        user = create_whatsapp_user(
+            session=session,
+            user_in=WhatsAppUserCreate(phone=phone),
+        )
+        # Persist the triggering message before sending welcome.
+        save_whatsapp_message(
+            session=session,
+            user=user,
+            msg_in=WhatsAppMessageCreate(phone=phone, role="farmer", content=message_body),
+        )
+        reply = get_welcome_message()
+        _send_and_persist(session=session, user=user, phone=phone, reply=reply)
+        return {"status": "ok"}
 
-    response = openai_client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_message},
-        ],
-        max_tokens=150,
+    # --- 3. Persist incoming message ---
+    save_whatsapp_message(
+        session=session,
+        user=user,
+        msg_in=WhatsAppMessageCreate(phone=phone, role="farmer", content=message_body),
     )
 
-    ai_message = response.choices[0].message.content.strip()
-    return ai_message
+    # --- 4. Route: onboarding or AI conversation ---
+    if not user.is_fully_onboarded:
+        # First message after registration goes straight into onboarding answers.
+        # handle_onboarding detects the current step from null fields and saves the answer.
+        reply = handle_onboarding(user=user, message_body=message_body, session=session)
+    else:
+        history = get_conversation_history(session=session, phone=phone, limit=20)
+        reply = generate_ai_response(message=message_body, history=history, user=user)
+
+    # --- 5. Send and persist the bot reply ---
+    _send_and_persist(session=session, user=user, phone=phone, reply=reply)
+    return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# Internal helper
+# ---------------------------------------------------------------------------
+
+
+def _send_and_persist(*, session: Session, user: WhatsAppUser, phone: str, reply: str) -> None:
+    """Persist the bot reply and dispatch it via Meta API."""
+    save_whatsapp_message(
+        session=session,
+        user=user,
+        msg_in=WhatsAppMessageCreate(phone=phone, role="assistant", content=reply),
+    )
+    response = send_whatsapp_message(phone=phone, text=reply)
+    if response.status_code != 200:
+        # Log but do not raise — Meta webhook must always get a 200 back.
+        print(f"[WhatsApp] Send failed {response.status_code}: {response.text}")
+
+
+# ---------------------------------------------------------------------------
+# Manual send (admin / testing)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/send_message", status_code=200)
+def send_message(phone_number: str, message: str) -> dict:
+    response = send_whatsapp_message(phone=phone_number, text=message)
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+    return {"status": "sent"}

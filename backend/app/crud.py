@@ -20,6 +20,12 @@ from app.models import (
     UserCreate,
     UserUpdate,
 )
+from app.models.whatsapp import (
+    WhatsAppMessage,
+    WhatsAppMessageCreate,
+    WhatsAppUser,
+    WhatsAppUserCreate,
+)
 
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
@@ -295,3 +301,61 @@ def get_all_active_users(*, session: Session) -> list[User]:
     """Get all active users in the system."""
     statement = select(User).where(User.is_active == True)
     return session.exec(statement).all()
+
+
+# ---------------------------------------------------------------------------
+# WhatsApp
+# ---------------------------------------------------------------------------
+
+
+def get_whatsapp_user_by_phone(*, session: Session, phone: str) -> WhatsAppUser | None:
+    return session.exec(
+        select(WhatsAppUser).where(WhatsAppUser.phone == phone)
+    ).first()
+
+
+def create_whatsapp_user(
+    *, session: Session, user_in: WhatsAppUserCreate
+) -> WhatsAppUser:
+    """
+    Register a new WhatsApp farmer.
+    The phone number is hashed and stored as the password — it serves as
+    both identifier and credential for this channel.
+    """
+    user = WhatsAppUser.model_validate(
+        user_in,
+        update={"hashed_password": get_password_hash(user_in.phone)},
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+
+def save_whatsapp_message(
+    *, session: Session, user: WhatsAppUser, msg_in: WhatsAppMessageCreate
+) -> WhatsAppMessage:
+    """Persist a single inbound or outbound WhatsApp message."""
+    message = WhatsAppMessage.model_validate(
+        msg_in, update={"user_id": user.id}
+    )
+    session.add(message)
+    session.commit()
+    session.refresh(message)
+    return message
+
+
+def get_conversation_history(
+    *, session: Session, phone: str, limit: int = 10
+) -> list[WhatsAppMessage]:
+    """
+    Return the last `limit` messages for a phone number in chronological order
+    (oldest first), ready to be fed as context to the AI.
+    """
+    rows = session.exec(
+        select(WhatsAppMessage)
+        .where(WhatsAppMessage.phone == phone)
+        .order_by(col(WhatsAppMessage.created_at).desc())
+        .limit(limit)
+    ).all()
+    return list(reversed(rows))
