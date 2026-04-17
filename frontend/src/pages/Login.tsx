@@ -43,31 +43,6 @@ export default function Login() {
     }
   };
 
-  const demoLogin = async (role: "farmer" | "vet" | "admin") => {
-    const credentials = {
-      farmer: { email: "farmer@vvet.com", password: "demo1234" },
-      vet: { email: "vet@vvet.com", password: "demo1234" },
-      admin: { email: "admin@vvet.com", password: "demo1234" },
-    }[role];
-
-    setEmail(credentials.email);
-    setPassword(credentials.password);
-    setLoading(true);
-    try {
-      await login(credentials.email, credentials.password);
-    } catch (err) {
-      toast({
-        title:
-          err instanceof Error
-            ? err.message
-            : "Demo login failed. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
@@ -160,43 +135,15 @@ export default function Login() {
           </div>
         </form>
 
-        <div className="space-y-2">
-          <p className="text-xs text-muted-foreground text-center">
-            Quick demo access
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => demoLogin("farmer")}
-              disabled={loading}
-              className="text-xs"
-            >
-              🐄 Farmer
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => demoLogin("vet")}
-              disabled={loading}
-              className="text-xs"
-            >
-              🩺 Vet
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => demoLogin("admin")}
-              disabled={loading}
-              className="text-xs"
-            >
-              🌍 Admin
-            </Button>
-          </div>
-        </div>
+        <p className="text-xs text-muted-foreground text-center">
+          To join the pilot, contact{" "}
+          <a
+            href="mailto:dekewgodfrey@gmail.com"
+            className="text-foreground underline underline-offset-2 hover:opacity-75 transition-opacity"
+          >
+            dekewgodfrey@gmail.com
+          </a>
+        </p>
       </div>
     </div>
   );
