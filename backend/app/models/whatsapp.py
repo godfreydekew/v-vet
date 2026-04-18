@@ -25,6 +25,7 @@ class WhatsAppUserBase(SQLModel):
     preferred_language: str | None = Field(default=None, max_length=100)
     main_goal: str | None = Field(default=None, max_length=500)
     is_fully_onboarded: bool = Field(default=False)
+    linked_user_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")
 
 
 class WhatsAppUserCreate(SQLModel):
@@ -43,6 +44,7 @@ class WhatsAppUserUpdate(SQLModel):
     preferred_language: str | None = None
     main_goal: str | None = None
     is_fully_onboarded: bool | None = None
+    linked_user_id: uuid.UUID | None = None
 
 
 class WhatsAppUser(WhatsAppUserBase, table=True):
@@ -61,6 +63,7 @@ class WhatsAppUser(WhatsAppUserBase, table=True):
 class WhatsAppUserPublic(WhatsAppUserBase):
     id: uuid.UUID
     created_at: datetime
+    linked_user_id: uuid.UUID | None = None
 
 
 # ---------------------------------------------------------------------------

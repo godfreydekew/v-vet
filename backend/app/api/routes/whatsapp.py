@@ -14,12 +14,16 @@ from app.crud import (
 )
 from app.models.whatsapp import WhatsAppMessageCreate, WhatsAppUser, WhatsAppUserCreate
 from app.services.whatsapp import (
+    detect_animal_query,
     detect_language_change,
+    detect_sync_command,
     extract_message_body,
     generate_ai_response,
     get_welcome_message,
+    handle_animal_query,
     handle_language_change,
     handle_onboarding,
+    handle_sync,
     send_whatsapp_message,
 )
 
@@ -111,6 +115,23 @@ def _process_message(phone: str, message_obj: dict) -> None:
         new_language = detect_language_change(message_body)
         if new_language:
             reply = handle_language_change(user=user, language=new_language, session=session)
+            _send_and_persist(session=session, user=user, phone=phone, reply=reply)
+            return
+
+        sync_creds = detect_sync_command(message_body)
+        if sync_creds:
+            email, password = sync_creds
+            reply = handle_sync(
+                whatsapp_user=user, email=email, password=password, session=session
+            )
+            _send_and_persist(session=session, user=user, phone=phone, reply=reply)
+            return
+
+        animal_query = detect_animal_query(message_body)
+        if animal_query is not None:
+            reply = handle_animal_query(
+                whatsapp_user=user, name_query=animal_query, session=session
+            )
             _send_and_persist(session=session, user=user, phone=phone, reply=reply)
             return
 

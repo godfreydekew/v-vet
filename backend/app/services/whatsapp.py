@@ -317,3 +317,131 @@ def _download_media(url: str) -> bytes | None:
         logger.warning("[WhatsApp] Media download failed %s: %s", resp.status_code, url)
         return None
     return resp.content
+
+
+# ---------------------------------------------------------------------------
+# Account sync — link WhatsApp user to web account
+# ---------------------------------------------------------------------------
+
+
+def detect_sync_command(message_body: str) -> tuple[str, str] | None:
+    """
+    Return (email, password) if the message is a sync command, else None.
+
+    Accepted formats:
+      sync email@example.com mypassword
+      link email@example.com mypassword
+    """
+    text = message_body.strip()
+    lower = text.lower()
+    for prefix in ("sync ", "link "):
+        if lower.startswith(prefix):
+            parts = text[len(prefix):].strip().split(None, 1)
+            if len(parts) == 2:
+                return parts[0], parts[1]
+    return None
+
+
+def handle_sync(
+    whatsapp_user: WhatsAppUser,
+    email: str,
+    password: str,
+    session: Session,
+) -> str:
+    """Authenticate against the web User table and store the link if valid."""
+    from app.crud import authenticate  # local import avoids circular dependency
+
+    web_user = authenticate(session=session, email=email, password=password)
+    if web_user is None:
+        return "Wrong email or password. Please try again:\nsync your@email.com yourpassword"
+
+    whatsapp_user.linked_user_id = web_user.id
+    session.add(whatsapp_user)
+    session.commit()
+
+    name = web_user.full_name or email
+    return (
+        f"Account linked! Welcome, {name}.\n\n"
+        "You can now ask about your livestock. Try:\n"
+        "• *cows* — list your first 10 animals\n"
+        "• *cow <name>* — get full details on a specific animal"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Livestock query tool
+# ---------------------------------------------------------------------------
+
+
+def detect_animal_query(message_body: str) -> str | None:
+    """
+    Return the animal name if the message is a livestock query, else None.
+
+    Accepted formats:
+      cow <name>       animal <name>
+      cows             animals         ← list mode (no name = return first 10)
+    """
+    text = message_body.strip().lower()
+    for prefix in ("cow ", "animal ", "livestock "):
+        if text.startswith(prefix):
+            return text[len(prefix):].strip() or None
+    if text in ("cows", "animals", "livestock", "my animals", "my cows"):
+        return ""  # empty string = list mode
+    return None
+
+
+def handle_animal_query(
+    whatsapp_user: WhatsAppUser,
+    name_query: str,
+    session: Session,
+) -> str:
+    """Look up livestock for the linked web account and return a formatted reply."""
+    from app.crud import get_livestock_by_name_for_user, get_livestock_for_user
+
+    if whatsapp_user.linked_user_id is None:
+        return (
+            "Your WhatsApp account is not linked to a V-Vet web account yet.\n\n"
+            "To link it, send:\nsync your@email.com yourpassword"
+        )
+
+    if name_query == "":
+        animals = get_livestock_for_user(
+            session=session, user_id=whatsapp_user.linked_user_id, limit=10
+        )
+        if not animals:
+            return "No active animals found on your account."
+        lines = [f"Your animals ({len(animals)}):"]
+        for a in animals:
+            tag = f" [{a.tag_number}]" if a.tag_number else ""
+            lines.append(f"• {a.name or '(unnamed)'}{tag} — {a.species}, {a.health_status}")
+        return "\n".join(lines)
+
+    matches = get_livestock_by_name_for_user(
+        session=session, user_id=whatsapp_user.linked_user_id, name=name_query
+    )
+    if not matches:
+        return f"No animal found matching \"{name_query}\" on your account."
+    if len(matches) > 1:
+        names = ", ".join(a.name or "(unnamed)" for a in matches)
+        return f"Multiple matches: {names}\nPlease be more specific."
+
+    a = matches[0]
+    lines = [f"*{a.name or '(unnamed)'}*"]
+    if a.tag_number:
+        lines.append(f"Tag: {a.tag_number}")
+    lines.append(f"Species: {a.species}")
+    if a.breed:
+        lines.append(f"Breed: {a.breed}")
+    if a.gender:
+        lines.append(f"Gender: {a.gender}")
+    lines.append(f"Health: {a.health_status}")
+    lines.append(f"Status: {a.lifecycle_status}")
+    if a.weight_kg is not None:
+        lines.append(f"Weight: {a.weight_kg} kg")
+    if a.date_of_birth:
+        lines.append(f"DOB: {a.date_of_birth}")
+    if a.acquired_date:
+        lines.append(f"Acquired: {a.acquired_date}")
+    if a.notes:
+        lines.append(f"Notes: {a.notes}")
+    return "\n".join(lines)

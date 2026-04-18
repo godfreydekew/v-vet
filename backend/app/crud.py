@@ -359,3 +359,36 @@ def get_conversation_history(
         .limit(limit)
     ).all()
     return list(reversed(rows))
+
+
+def get_livestock_for_user(
+    *, session: Session, user_id: uuid.UUID, limit: int = 10
+) -> list[Livestock]:
+    """Return the first `limit` active livestock across all farms owned by user_id."""
+    farm_ids = session.exec(
+        select(Farm.id).where(Farm.farmer_id == user_id)
+    ).all()
+    if not farm_ids:
+        return []
+    return session.exec(
+        select(Livestock)
+        .where(Livestock.farm_id.in_(farm_ids))
+        .where(Livestock.lifecycle_status == "active")
+        .limit(limit)
+    ).all()
+
+
+def get_livestock_by_name_for_user(
+    *, session: Session, user_id: uuid.UUID, name: str
+) -> list[Livestock]:
+    """Case-insensitive name search across all farms owned by user_id."""
+    farm_ids = session.exec(
+        select(Farm.id).where(Farm.farmer_id == user_id)
+    ).all()
+    if not farm_ids:
+        return []
+    return session.exec(
+        select(Livestock)
+        .where(Livestock.farm_id.in_(farm_ids))
+        .where(col(Livestock.name).ilike(f"%{name}%"))
+    ).all()
