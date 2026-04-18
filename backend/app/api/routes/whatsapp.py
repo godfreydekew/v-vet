@@ -1,9 +1,11 @@
-from fastapi import APIRouter, HTTPException, Query
+import logging
+
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 from sqlmodel import Session
 
-from app.api.deps import SessionDep
 from app.core.config import settings
+from app.core.db import engine
 from app.crud import (
     create_whatsapp_user,
     get_conversation_history,
@@ -13,6 +15,7 @@ from app.crud import (
 from app.models.whatsapp import WhatsAppMessageCreate, WhatsAppUser, WhatsAppUserCreate
 from app.services.whatsapp import (
     detect_language_change,
+    extract_message_body,
     generate_ai_response,
     get_welcome_message,
     handle_language_change,
@@ -20,6 +23,7 @@ from app.services.whatsapp import (
     send_whatsapp_message,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["whatsapp"], prefix="/whatsapp")
 
 
@@ -45,77 +49,81 @@ def verify_webhook(
 
 
 @router.post("/webhook", status_code=200)
-def receive_webhook(payload: dict, session: SessionDep) -> dict:
+def receive_webhook(payload: dict, background_tasks: BackgroundTasks) -> dict:
     """
-    Main entry point for all incoming WhatsApp messages.
+    Acknowledge Meta immediately, then process the message in the background.
 
-    Pipeline:
-      1. Extract phone + message body from Meta payload.
-      2. Look up (or create) the WhatsAppUser row.
-      3. Persist the incoming message.
-      4. Route to onboarding OR AI response based on profile completeness.
-      5. Persist the bot reply and send it back via Meta API.
+    Meta retries if it doesn't get a 200 within ~5 s — doing audio download,
+    transcription, and AI generation inline causes those retries and results
+    in the same message being processed multiple times.
     """
     try:
         entry = payload["entry"][0]["changes"][0]["value"]
         message_obj = entry["messages"][0]
         phone: str = message_obj["from"]
-        message_body: str = message_obj["text"]["body"]
     except (KeyError, IndexError):
+        # Status updates, reactions, etc. — nothing to process.
         return {"status": "ok"}
 
-    user = get_whatsapp_user_by_phone(session=session, phone=phone)
+    background_tasks.add_task(_process_message, phone, message_obj)
+    return {"status": "ok"}
 
-    if user is None:
-        user = create_whatsapp_user(
-            session=session,
-            user_in=WhatsAppUserCreate(phone=phone),
-        )
-        # Persist the triggering message before sending welcome.
+
+# ---------------------------------------------------------------------------
+# Background processor
+# ---------------------------------------------------------------------------
+
+
+def _process_message(phone: str, message_obj: dict) -> None:
+    """
+    Full message pipeline running after the webhook has already returned 200.
+
+    Opens its own DB session — the request session is closed by the time
+    this runs.
+    """
+    message_body = extract_message_body(message_obj)
+    if message_body is None:
+        return
+
+    with Session(engine) as session:
+        user = get_whatsapp_user_by_phone(session=session, phone=phone)
+
+        if user is None:
+            user = create_whatsapp_user(
+                session=session,
+                user_in=WhatsAppUserCreate(phone=phone),
+            )
+            save_whatsapp_message(
+                session=session,
+                user=user,
+                msg_in=WhatsAppMessageCreate(phone=phone, role="farmer", content=message_body),
+            )
+            reply = get_welcome_message()
+            _send_and_persist(session=session, user=user, phone=phone, reply=reply)
+            return
+
         save_whatsapp_message(
             session=session,
             user=user,
             msg_in=WhatsAppMessageCreate(phone=phone, role="farmer", content=message_body),
         )
-        reply = get_welcome_message()
+
+        new_language = detect_language_change(message_body)
+        if new_language:
+            reply = handle_language_change(user=user, language=new_language, session=session)
+            _send_and_persist(session=session, user=user, phone=phone, reply=reply)
+            return
+
+        if not user.is_fully_onboarded:
+            reply = handle_onboarding(user=user, message_body=message_body, session=session)
+        else:
+            history = get_conversation_history(session=session, phone=phone, limit=20)
+            reply = generate_ai_response(message=message_body, history=history, user=user)
+
         _send_and_persist(session=session, user=user, phone=phone, reply=reply)
-        return {"status": "ok"}
-
-    # --- 3. Persist incoming message ---
-    save_whatsapp_message(
-        session=session,
-        user=user,
-        msg_in=WhatsAppMessageCreate(phone=phone, role="farmer", content=message_body),
-    )
-
-    # --- 4. Language change command (available at any time) ---
-    new_language = detect_language_change(message_body)
-    if new_language:
-        reply = handle_language_change(user=user, language=new_language, session=session)
-        _send_and_persist(session=session, user=user, phone=phone, reply=reply)
-        return {"status": "ok"}
-
-    # --- 5. Route: onboarding or AI conversation ---
-    if not user.is_fully_onboarded:
-        # First message after registration goes straight into onboarding answers.
-        # handle_onboarding detects the current step from null fields and saves the answer.
-        reply = handle_onboarding(user=user, message_body=message_body, session=session)
-    else:
-        history = get_conversation_history(session=session, phone=phone, limit=20)
-        reply = generate_ai_response(message=message_body, history=history, user=user)
-
-    # --- 6. Send and persist the bot reply ---
-    _send_and_persist(session=session, user=user, phone=phone, reply=reply)
-    return {"status": "ok"}
-
-
-# ---------------------------------------------------------------------------
-# Internal helper
-# ---------------------------------------------------------------------------
 
 
 def _send_and_persist(*, session: Session, user: WhatsAppUser, phone: str, reply: str) -> None:
-    """Persist the bot reply and dispatch it via Meta API."""
     save_whatsapp_message(
         session=session,
         user=user,
@@ -123,8 +131,7 @@ def _send_and_persist(*, session: Session, user: WhatsAppUser, phone: str, reply
     )
     response = send_whatsapp_message(phone=phone, text=reply)
     if response.status_code != 200:
-        # Log but do not raise — Meta webhook must always get a 200 back.
-        print(f"[WhatsApp] Send failed {response.status_code}: {response.text}")
+        logger.warning("[WhatsApp] Send failed %s: %s", response.status_code, response.text)
 
 
 # ---------------------------------------------------------------------------

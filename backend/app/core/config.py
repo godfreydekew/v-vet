@@ -69,6 +69,8 @@ class Settings(BaseSettings):
     WHATSAPP_ACCESS_TOKEN: str | None = None
     VERIFY_TOKEN: str | None = None
     CHALLENGE: str | None = None
+    
+    ELEVENLABS_API_KEY: str | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property

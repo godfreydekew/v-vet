@@ -1,18 +1,15 @@
-"""
-WhatsApp service layer.
+import logging
+from io import BytesIO
 
-Responsibilities:
-- Sending messages via the Meta Cloud API
-- Generating AI responses (with optional conversation history)
-- Onboarding state machine (stateless — derives current step from null fields)
-- Greeting helpers for new and returning users
-"""
 import requests
+from elevenlabs.client import ElevenLabs
 from sqlmodel import Session
 
 from app.core.config import settings
 from app.core.openai import client as openai_client
 from app.models.whatsapp import WhatsAppMessage, WhatsAppUser
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # System prompt
@@ -257,3 +254,66 @@ def get_returning_incomplete_message(user: WhatsAppUser) -> str:
         )
     # Edge case: all fields filled but flag not set — shouldn't normally happen.
     return f"Hi {name}, welcome back! How can I help you today?"
+
+
+
+
+def convert_speech_to_text(audio_file) -> str:
+    elevenlabs_api_key = settings.ELEVENLABS_API_KEY
+    client = ElevenLabs(api_key=elevenlabs_api_key)
+
+    audio_data = BytesIO(audio_file.read())
+    transcription = client.speech_to_text.convert(
+        file=audio_data,
+        model_id="scribe_v2",
+        tag_audio_events=True,
+        language_code="en",
+    )
+    return transcription.text
+
+
+# ---------------------------------------------------------------------------
+# Message extraction — text or audio
+# ---------------------------------------------------------------------------
+
+
+def extract_message_body(message_obj: dict) -> str | None:
+    """
+    Return the plain-text content of a Meta message object.
+
+    - type "text"  → return text.body directly.
+    - type "audio" → download from the URL already in the payload,
+                     transcribe via ElevenLabs, return the transcription.
+    - anything else (image, video, sticker, …) → return None so the caller
+      can ignore it silently.
+    """
+    msg_type: str = message_obj.get("type", "")
+
+    if msg_type == "text":
+        return message_obj.get("text", {}).get("body", "").strip() or None
+
+    if msg_type == "audio":
+        audio_url: str | None = message_obj.get("audio", {}).get("url")
+        if not audio_url:
+            logger.warning("[WhatsApp] Audio message missing URL:", message_obj)
+            return None
+        audio_bytes = _download_media(audio_url)
+        if audio_bytes is None:
+            logger.warning("[WhatsApp] Failed to download audio from URL:", audio_url)
+            return None
+        return convert_speech_to_text(BytesIO(audio_bytes))
+
+    return None
+
+
+def _download_media(url: str) -> bytes | None:
+    """Download raw media bytes from a Meta-signed URL using the access token."""
+    if not settings.WHATSAPP_ACCESS_TOKEN:
+        return None
+
+    headers = {"Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}"}
+    resp = requests.get(url, headers=headers, timeout=30)
+    if resp.status_code != 200:
+        logger.warning("[WhatsApp] Media download failed %s: %s", resp.status_code, url)
+        return None
+    return resp.content
