@@ -2,7 +2,7 @@
 
 > Report symptoms through WhatsApp or web, get triage guidance quickly, and connect farmers to vets with full case context.
 
-![V-Vet Banner](frontend/public/readme.png)
+![V-Vet Banner](frontend/public/readme.svg)
 
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
