@@ -287,7 +287,3 @@ The following features are planned for after AI integration and are **not** in s
 - Confidence-scored AI assessments
 
 ---
-
-## Why this scope
-
-Every piece of data entered in the prototype — health observations, treatments, vaccinations, vet responses — becomes the foundation the AI model will use. The prototype is not a stepping stone to be discarded. It is the data collection engine that makes V-Vet's AI meaningful the moment it is switched on.
