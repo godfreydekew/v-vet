@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 SYSTEM_PROMPT = (
-    "You are VVet Live, a helpful WhatsApp assistant for livestock farmers and veterinary support. "
+    "You are VVet, a helpful WhatsApp assistant for livestock farmers and veterinary support. "
     "Answer questions about cattle, sheep, goats, poultry, and other farm animals — health, feeding, "
     "breeding, behaviour, injuries, symptoms, and day-to-day farm care. "
     "Keep replies practical, clear, and concise (under 200 words). "
@@ -27,9 +27,6 @@ SYSTEM_PROMPT = (
 
 # ---------------------------------------------------------------------------
 # Onboarding configuration
-# Steps are ordered — each key maps to the WhatsAppUser column that stores
-# the answer. The order here IS the onboarding order.
-# ---------------------------------------------------------------------------
 
 ONBOARDING_STEPS: list[tuple[str, str]] = [
     ("animal_count", "How many animals do you currently have on your farm? (reply with a number)"),
@@ -81,13 +78,6 @@ def generate_ai_response(
     history: list[WhatsAppMessage],
     user: WhatsAppUser,
 ) -> str:
-    """
-    Generate an AI response using the last N messages as context.
-
-    History is a chronologically ordered list of WhatsAppMessage rows.
-    Farmer messages map to OpenAI role "user"; assistant messages stay "assistant".
-    User profile (language, district, animal count) is injected into the system prompt.
-    """
     # Personalise system prompt with known user details.
     user_context_parts = []
     if user.preferred_language and user.preferred_language.lower() != "english":
@@ -188,11 +178,6 @@ def handle_onboarding(
 
 
 def get_welcome_message() -> str:
-    """
-    First message sent to a brand-new user right after registration.
-    Includes the first onboarding question.
-    New users have no profile data yet, so no personalisation is applied.
-    """
     _, first_question = ONBOARDING_STEPS[0]
     return (
         "Welcome to V-Vet! I'm your livestock health assistant.\n\n"
@@ -201,23 +186,10 @@ def get_welcome_message() -> str:
     )
 
 
-# ---------------------------------------------------------------------------
-# Language change command
-# ---------------------------------------------------------------------------
-
 SUPPORTED_LANGUAGES = {"english", "shona", "ndebele"}
 
 
 def detect_language_change(message_body: str) -> str | None:
-    """
-    Return the normalised language name if the message is a language-change
-    command, otherwise return None.
-
-    Accepted formats (all case-insensitive):
-      "language english"
-      "language: shona"
-      "shona"          ← bare language name with no other words
-    """
     text = message_body.strip().lower().rstrip(".")
 
     # Strip optional "language" keyword and colon prefix.

@@ -362,7 +362,7 @@ def get_conversation_history(
 
 
 def get_livestock_for_user(
-    *, session: Session, user_id: uuid.UUID, limit: int = 10
+    *, session: Session, user_id: uuid.UUID
 ) -> list[Livestock]:
     """Return the first `limit` active livestock across all farms owned by user_id."""
     farm_ids = session.exec(
@@ -374,7 +374,6 @@ def get_livestock_for_user(
         select(Livestock)
         .where(Livestock.farm_id.in_(farm_ids))
         .where(Livestock.lifecycle_status == "active")
-        .limit(limit)
     ).all()
 
 
