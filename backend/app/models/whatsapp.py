@@ -89,8 +89,7 @@ class WhatsAppMessage(WhatsAppMessageBase, table=True):
     __tablename__ = "whatsapp_message"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(foreign_key="whatsapp_user.id", index=True)
-    # role stored as plain str; validation happens at Create schema layer.
+    user_id: uuid.UUID = Field(foreign_key="whatsapp_user.id", index=True, ondelete="CASCADE")
     role: str = Field(max_length=20)  # type: ignore[assignment]
     created_at: datetime = Field(
         default_factory=_utcnow,
