@@ -370,11 +370,13 @@ def get_livestock_for_user(
     ).all()
     if not farm_ids:
         return []
-    return session.exec(
+    rows = session.exec(
         select(Livestock)
-        .where(Livestock.farm_id.in_(farm_ids))
+        .where(col(Livestock.farm_id).in_(farm_ids))
         .where(Livestock.lifecycle_status == "active")
+        .limit(10)
     ).all()
+    return list(rows)
 
 
 def get_livestock_by_name_for_user(
@@ -386,8 +388,9 @@ def get_livestock_by_name_for_user(
     ).all()
     if not farm_ids:
         return []
-    return session.exec(
+    rows = session.exec(
         select(Livestock)
-        .where(Livestock.farm_id.in_(farm_ids))
+        .where(col(Livestock.farm_id).in_(farm_ids))
         .where(col(Livestock.name).ilike(f"%{name}%"))
     ).all()
+    return list(rows)
