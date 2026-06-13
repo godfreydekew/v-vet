@@ -6,7 +6,6 @@ from elevenlabs.client import ElevenLabs
 from sqlmodel import Session
 
 from app.core.config import settings
-from app.core.openai import client as openai_client
 from app.models.whatsapp import WhatsAppMessage, WhatsAppUser
 
 logger = logging.getLogger(__name__)
@@ -25,11 +24,24 @@ SYSTEM_PROMPT = (
     "Do not invent facts. If a situation may need a veterinarian, say so plainly."
 )
 
+ONBOARDING_SYSTEM_PROMPT = (
+    "You are VVet's onboarding agent for a farmer using WhatsApp. "
+    "Review the recent conversation history and the user's current profile. "
+    "Your goal is to collect these onboarding fields when they are available: full_name, animal_count, district, preferred_language, and main_goal. "
+    "If the farmer provides one or more fields in one message, call the save-multiple-fields tool. "
+    "If all required fields are available, call the complete onboarding tool. "
+    "If the message is random or incomplete, ask one short clarifying question for the missing field that matters most. "
+    "Keep replies short, clear, and friendly."
+)
+
 # ---------------------------------------------------------------------------
 # Onboarding configuration
 
 ONBOARDING_STEPS: list[tuple[str, str]] = [
-    ("animal_count", "How many animals do you currently have on your farm? (reply with a number)"),
+    (
+        "animal_count",
+        "How many animals do you currently have on your farm? (reply with a number)",
+    ),
     ("district", "Which district are you located in?"),
     (
         "preferred_language",
@@ -53,7 +65,9 @@ def send_whatsapp_message(phone: str, text: str) -> requests.Response:
     if not settings.WHATSAPP_PHONE_NUMBER_ID or not settings.WHATSAPP_ACCESS_TOKEN:
         raise RuntimeError("WhatsApp configuration is missing in settings.")
 
-    url = f"https://graph.facebook.com/v25.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
+    url = (
+        f"https://graph.facebook.com/v25.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
+    )
     payload = {
         "messaging_product": "whatsapp",
         "to": phone,
@@ -78,6 +92,8 @@ def generate_ai_response(
     history: list[WhatsAppMessage],
     user: WhatsAppUser,
 ) -> str:
+    from app.core.openai import client as openai_client
+
     # Personalise system prompt with known user details.
     user_context_parts = []
     if user.preferred_language and user.preferred_language.lower() != "english":
@@ -87,7 +103,9 @@ def generate_ai_response(
     if user.district:
         user_context_parts.append(f"The farmer is located in {user.district}.")
     if user.animal_count is not None:
-        user_context_parts.append(f"They have {user.animal_count} animals on their farm.")
+        user_context_parts.append(
+            f"They have {user.animal_count} animals on their farm."
+        )
     if user.main_goal:
         user_context_parts.append(f"Their main goal is: {user.main_goal}.")
 
@@ -132,58 +150,36 @@ def handle_onboarding(
     message_body: str,
     session: Session,
 ) -> str:
-    """
-    Stateless onboarding state machine.
+    """Run the onboarding agent over the recent WhatsApp conversation history."""
+    from app.core import openai as openai_helpers
+    from app.crud import get_conversation_history
 
-    Called when the user exists but is not yet fully onboarded.
-    Saves the incoming message as the answer to the current step,
-    then returns the next question or a completion message.
-    """
-    current_step = _next_onboarding_step(user)
-
-    if current_step is not None:
-        field, _ = current_step
-
-        if field == "animal_count":
-            # Expect a numeric answer; ask again on invalid input.
-            cleaned = message_body.strip().split()[0]  # take first word/number
-            try:
-                setattr(user, field, int(cleaned))
-            except ValueError:
-                return "Please reply with just a number. How many animals do you have on your farm?"
-        else:
-            setattr(user, field, message_body.strip()[:500])
-
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-
-    # After saving, check what's next.
-    next_step = _next_onboarding_step(user)
-
-    if next_step is None:
-        # All fields filled — mark fully onboarded.
-        user.is_fully_onboarded = True
-        session.add(user)
-        session.commit()
-        name = user.full_name or "there"
-        return (
-            f"Thank you, {name}! You're all set on V-Vet ✓\n\n"
-            "You can now ask me anything about your livestock — health, feeding, "
-            "breeding, and more. How can I help you today?"
-        )
-
-    _, next_question = next_step
-    return next_question
+    history = get_conversation_history(session=session, phone=user.phone, limit=10)
+    return openai_helpers.run_onboarding_agent(
+        system_prompt=f"{ONBOARDING_SYSTEM_PROMPT}\n\nLatest incoming message: {message_body}",
+        user=user,
+        history=history,
+        session=session,
+        limit=10,
+    )
 
 
 def get_welcome_message() -> str:
-    _, first_question = ONBOARDING_STEPS[0]
-    return (
-        "Welcome to V-Vet! I'm your livestock health assistant.\n\n"
-        "Before we get started, I need a few quick details to personalise your experience.\n\n"
-        f"{first_question}"
-    )
+    # _, first_question = ONBOARDING_STEPS[0]
+    welcome_message = """👋 Welcome to V-Vet!
+
+    I help farmers like you keep animals healthy and productive.
+
+    💬 You can send me:
+    - Photos or videos of sick animals
+    - Questions about your livestock
+    - Reports when animals are born, sick, or treated
+
+    I'll help you fast - and connect you to a vet when needed.
+
+    Ready to start? Reply YES to set up your farm (takes 2 minutes)."""
+
+    return welcome_message
 
 
 SUPPORTED_LANGUAGES = {"english", "shona", "ndebele"}
@@ -195,7 +191,7 @@ def detect_language_change(message_body: str) -> str | None:
     # Strip optional "language" keyword and colon prefix.
     for prefix in ("language:", "language"):
         if text.startswith(prefix):
-            text = text[len(prefix):].strip()
+            text = text[len(prefix) :].strip()
             break
 
     if text in SUPPORTED_LANGUAGES:
@@ -226,8 +222,6 @@ def get_returning_incomplete_message(user: WhatsAppUser) -> str:
         )
     # Edge case: all fields filled but flag not set — shouldn't normally happen.
     return f"Hi {name}, welcome back! How can I help you today?"
-
-
 
 
 def convert_speech_to_text(audio_file) -> str:
@@ -308,7 +302,7 @@ def detect_sync_command(message_body: str) -> tuple[str, str] | None:
     lower = text.lower()
     for prefix in ("sync ", "link "):
         if lower.startswith(prefix):
-            parts = text[len(prefix):].strip().split(None, 1)
+            parts = text[len(prefix) :].strip().split(None, 1)
             if len(parts) == 2:
                 return parts[0], parts[1]
     return None
@@ -356,7 +350,7 @@ def detect_animal_query(message_body: str) -> str | None:
     text = message_body.strip().lower()
     for prefix in ("cow ", "animal ", "livestock "):
         if text.startswith(prefix):
-            return text[len(prefix):].strip() or None
+            return text[len(prefix) :].strip() or None
     if text in ("cows", "animals", "livestock", "my animals", "my cows"):
         return ""  # empty string = list mode
     return None
@@ -385,14 +379,16 @@ def handle_animal_query(
         lines = [f"Your animals ({len(animals)}):"]
         for a in animals:
             tag = f" [{a.tag_number}]" if a.tag_number else ""
-            lines.append(f"• {a.name or '(unnamed)'}{tag} — {a.species}, {a.health_status}")
+            lines.append(
+                f"• {a.name or '(unnamed)'}{tag} — {a.species}, {a.health_status}"
+            )
         return "\n".join(lines)
 
     matches = get_livestock_by_name_for_user(
         session=session, user_id=whatsapp_user.linked_user_id, name=name_query
     )
     if not matches:
-        return f"No animal found matching \"{name_query}\" on your account."
+        return f'No animal found matching "{name_query}" on your account.'
     if len(matches) > 1:
         names = ", ".join(a.name or "(unnamed)" for a in matches)
         return f"Multiple matches: {names}\nPlease be more specific."

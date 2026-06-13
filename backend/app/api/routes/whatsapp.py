@@ -30,12 +30,6 @@ from app.services.whatsapp import (
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["whatsapp"], prefix="/whatsapp")
 
-
-# ---------------------------------------------------------------------------
-# Webhook verification (Meta handshake)
-# ---------------------------------------------------------------------------
-
-
 @router.get("/webhook", status_code=200, response_class=PlainTextResponse)
 def verify_webhook(
     hub_mode: str = Query(..., alias="hub.mode"),
@@ -47,20 +41,8 @@ def verify_webhook(
     raise HTTPException(status_code=400, detail="Webhook verification failed")
 
 
-# ---------------------------------------------------------------------------
-# Incoming message handler
-# ---------------------------------------------------------------------------
-
-
 @router.post("/webhook", status_code=200)
 def receive_webhook(payload: dict, background_tasks: BackgroundTasks) -> dict:
-    """
-    Acknowledge Meta immediately, then process the message in the background.
-
-    Meta retries if it doesn't get a 200 within ~5 s — doing audio download,
-    transcription, and AI generation inline causes those retries and results
-    in the same message being processed multiple times.
-    """
     try:
         entry = payload["entry"][0]["changes"][0]["value"]
         message_obj = entry["messages"][0]
@@ -71,11 +53,6 @@ def receive_webhook(payload: dict, background_tasks: BackgroundTasks) -> dict:
 
     background_tasks.add_task(_process_message, phone, message_obj)
     return {"status": "ok"}
-
-
-# ---------------------------------------------------------------------------
-# Background processor
-# ---------------------------------------------------------------------------
 
 
 def _process_message(phone: str, message_obj: dict) -> None:
@@ -103,6 +80,7 @@ def _process_message(phone: str, message_obj: dict) -> None:
                 msg_in=WhatsAppMessageCreate(phone=phone, role="farmer", content=message_body),
             )
             reply = get_welcome_message()
+            # logger.info("[WhatsApp] New user %s - sending welcome message", reply)
             _send_and_persist(session=session, user=user, phone=phone, reply=reply)
             return
 
@@ -153,11 +131,6 @@ def _send_and_persist(*, session: Session, user: WhatsAppUser, phone: str, reply
     response = send_whatsapp_message(phone=phone, text=reply)
     if response.status_code != 200:
         logger.warning("[WhatsApp] Send failed %s: %s", response.status_code, response.text)
-
-
-# ---------------------------------------------------------------------------
-# Manual send (admin / testing)
-# ---------------------------------------------------------------------------
 
 
 @router.post("/send_message", status_code=200)
