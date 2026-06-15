@@ -64,7 +64,7 @@ def send_whatsapp_message(phone: str, text: str) -> requests.Response:
     """Send a WhatsApp text message via the Meta Cloud API."""
     if not settings.WHATSAPP_PHONE_NUMBER_ID or not settings.WHATSAPP_ACCESS_TOKEN:
         raise RuntimeError("WhatsApp configuration is missing in settings.")
-
+    
     url = (
         f"https://graph.facebook.com/v25.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
     )
@@ -81,11 +81,24 @@ def send_whatsapp_message(phone: str, text: str) -> requests.Response:
     response = requests.post(url, json=payload, headers=headers, timeout=15)
     return response
 
-
-# ---------------------------------------------------------------------------
-# AI response generation
-# ---------------------------------------------------------------------------
-
+def mark_whatsapp_message_as_read(message_id: str) -> requests.Response:
+    """Mark a message as read via Meta cloud API."""
+    if not settings.WHATSAPP_PHONE_NUMBER_ID or not settings.WHATSAPP_ACCESS_TOKEN:
+            raise RuntimeError("WhatsApp configuration is missing in settings.")
+    url = (
+        f"https://graph.facebook.com/v25.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
+    )
+    payload = {
+        "messaging_product": "whatsapp",
+        "status": "read",
+        "message_id": message_id,
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    response = requests.post(url, json=payload, headers=headers, timeout=15)
+    return response
 
 def generate_ai_response(
     message: str,
@@ -372,7 +385,7 @@ def handle_animal_query(
 
     if name_query == "":
         animals = get_livestock_for_user(
-            session=session, user_id=whatsapp_user.linked_user_id, limit=10
+            session=session, user_id=whatsapp_user.linked_user_id
         )
         if not animals:
             return "No active animals found on your account."

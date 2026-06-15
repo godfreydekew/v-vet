@@ -24,6 +24,7 @@ from app.services.whatsapp import (
     handle_language_change,
     handle_onboarding,
     handle_sync,
+    mark_whatsapp_message_as_read,
     send_whatsapp_message,
 )
 
@@ -65,6 +66,14 @@ def _process_message(phone: str, message_obj: dict) -> None:
     message_body = extract_message_body(message_obj)
     if message_body is None:
         return
+    # Mark the message as read to show blue ticks in WhatsApp.
+    read_receipts_response = mark_whatsapp_message_as_read(message_id=message_obj["id"])
+    if read_receipts_response.status_code != 200:
+        logger.warning(
+            "[WhatsApp] Failed to mark message as read %s: %s",
+            read_receipts_response.status_code,
+            read_receipts_response.text,
+        )
 
     with Session(engine) as session:
         user = get_whatsapp_user_by_phone(session=session, phone=phone)
