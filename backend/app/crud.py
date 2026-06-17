@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from typing import Any
 
 from sqlmodel import Session, col, select
@@ -65,6 +66,23 @@ def get_user_by_email(*, session: Session, email: str) -> User | None:
 
 def create_farm(*, session: Session, farm_in: FarmBase, farmer_id: uuid.UUID) -> Farm:
     farm = Farm.model_validate(farm_in, update={"farmer_id": farmer_id})
+    session.add(farm)
+    session.commit()
+    session.refresh(farm)
+    return farm
+
+
+def get_or_create_default_farm(*, session: Session, user_id: uuid.UUID) -> Farm:
+    """Return the user's oldest farm, or create a default livestock farm if they have none."""
+    farm = session.exec(
+        select(Farm)
+        .where(Farm.farmer_id == user_id)
+        .order_by(col(Farm.created_at))
+        .limit(1)
+    ).first()
+    if farm:
+        return farm
+    farm = Farm(name="My Farm", farm_type="livestock", farmer_id=user_id)
     session.add(farm)
     session.commit()
     session.refresh(farm)
@@ -394,3 +412,33 @@ def get_livestock_by_name_for_user(
         .where(col(Livestock.name).ilike(f"%{name}%"))
     ).all()
     return list(rows)
+
+
+def create_livestock_from_whatsapp(
+    *,
+    session: Session,
+    user_id: uuid.UUID,
+    species: str,
+    name: str | None = None,
+    tag_number: str | None = None,
+    gender: str | None = None,
+    breed: str | None = None,
+    weight_kg: float | None = None,
+    date_of_birth: date | None = None,
+) -> Livestock:
+    """Get or create the user's default farm, then create the livestock record."""
+    farm = get_or_create_default_farm(session=session, user_id=user_id)
+    animal = Livestock(
+        farm_id=farm.id,
+        species=species,
+        name=name,
+        tag_number=tag_number,
+        gender=gender,
+        breed=breed,
+        weight_kg=weight_kg,
+        date_of_birth=date_of_birth,
+    )
+    session.add(animal)
+    session.commit()
+    session.refresh(animal)
+    return animal
