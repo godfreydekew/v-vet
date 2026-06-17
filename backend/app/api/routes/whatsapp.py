@@ -8,19 +8,16 @@ from app.core.config import settings
 from app.core.db import engine
 from app.crud import (
     create_whatsapp_user,
-    get_conversation_history,
     get_whatsapp_user_by_phone,
     save_whatsapp_message,
 )
 from app.models.whatsapp import WhatsAppMessageCreate, WhatsAppUser, WhatsAppUserCreate
 from app.services.whatsapp import (
-    detect_animal_query,
     detect_language_change,
     detect_sync_command,
     extract_message_body,
-    generate_ai_response,
     get_welcome_message,
-    handle_animal_query,
+    handle_farmer_agent,
     handle_language_change,
     handle_onboarding,
     handle_sync,
@@ -119,16 +116,7 @@ def _process_message(phone: str, message_obj: dict) -> None:
             _send_and_persist(session=session, user=user, phone=phone, reply=reply)
             return
 
-        animal_query = detect_animal_query(message_body)
-        if animal_query is not None:
-            reply = handle_animal_query(
-                whatsapp_user=user, name_query=animal_query, session=session
-            )
-            _send_and_persist(session=session, user=user, phone=phone, reply=reply)
-            return
-
-        history = get_conversation_history(session=session, phone=phone, limit=20)
-        reply = generate_ai_response(message=message_body, history=history, user=user)
+        reply = handle_farmer_agent(user=user, message_body=message_body, session=session)
         _send_and_persist(session=session, user=user, phone=phone, reply=reply)
 
 
