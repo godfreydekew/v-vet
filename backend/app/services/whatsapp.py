@@ -143,6 +143,42 @@ def generate_ai_response(
 
 
 # ---------------------------------------------------------------------------
+# Farmer agent
+# ---------------------------------------------------------------------------
+
+_ADD_ANIMAL_TRIGGERS = (
+    "add animal", "add cow", "add cattle", "add goat", "add sheep",
+    "add pig", "add poultry", "new animal", "register animal",
+)
+
+
+def handle_farmer_agent(
+    user: WhatsAppUser,
+    message_body: str,
+    session: Session,
+) -> str:
+    """Route all onboarded-farmer messages through the unified farmer agent."""
+    from app.core import openai as openai_helpers
+    from app.crud import get_conversation_history
+
+    # Set the flag on the first message of an add-animal flow so the agent
+    # knows to keep collecting details on subsequent turns.
+    if not user.is_adding_animal:
+        lower = message_body.strip().lower()
+        if any(trigger in lower for trigger in _ADD_ANIMAL_TRIGGERS):
+            user.is_adding_animal = True
+            session.add(user)
+            session.commit()
+
+    history = get_conversation_history(session=session, phone=user.phone, limit=20)
+    return openai_helpers.run_farmer_agent(
+        user=user,
+        history=history,
+        session=session,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Onboarding helpers
 # ---------------------------------------------------------------------------
 
