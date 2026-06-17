@@ -114,6 +114,11 @@ def _process_message(phone: str, message_obj: dict) -> None:
             _send_and_persist(session=session, user=user, phone=phone, reply=reply)
             return
 
+        if not user.is_fully_onboarded:
+            reply = handle_onboarding(user=user, message_body=message_body, session=session)
+            _send_and_persist(session=session, user=user, phone=phone, reply=reply)
+            return
+
         animal_query = detect_animal_query(message_body)
         if animal_query is not None:
             reply = handle_animal_query(
@@ -122,12 +127,8 @@ def _process_message(phone: str, message_obj: dict) -> None:
             _send_and_persist(session=session, user=user, phone=phone, reply=reply)
             return
 
-        if not user.is_fully_onboarded:
-            reply = handle_onboarding(user=user, message_body=message_body, session=session)
-        else:
-            history = get_conversation_history(session=session, phone=phone, limit=20)
-            reply = generate_ai_response(message=message_body, history=history, user=user)
-
+        history = get_conversation_history(session=session, phone=phone, limit=20)
+        reply = generate_ai_response(message=message_body, history=history, user=user)
         _send_and_persist(session=session, user=user, phone=phone, reply=reply)
 
 
