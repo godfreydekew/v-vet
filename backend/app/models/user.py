@@ -19,7 +19,7 @@ def _utcnow() -> datetime:
 
 
 class UserBase(SQLModel):
-    email: EmailStr = Field(unique=True, index=True, max_length=255)
+    email: EmailStr = Field(unique=True, index=True, max_length=255, nullable=True)
     role: UserRole = Field(default="farmer")
     is_active: bool = True
     is_superuser: bool = False
