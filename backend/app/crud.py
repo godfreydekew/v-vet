@@ -38,6 +38,24 @@ def create_user(*, session: Session, user_create: UserCreate) -> User:
     session.refresh(db_obj)
     return db_obj
 
+def create_user_for_new_whatsapp(*, session: Session, whatsapp_user: WhatsAppUser) -> User:
+    """Create a web User account for a WhatsApp farmer who completed onboarding."""
+    existing = session.exec(
+        select(User).where(col(User.phone_number) == whatsapp_user.phone)
+    ).first()
+    if existing:
+        return existing
+
+    db_obj = User(
+        full_name=whatsapp_user.full_name,
+        phone_number=whatsapp_user.phone,
+        email=None,
+        hashed_password=get_password_hash(whatsapp_user.phone),
+    )
+    session.add(db_obj)
+    session.commit()
+    session.refresh(db_obj)
+    return db_obj
 
 def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> Any:
     user_data = user_in.model_dump(exclude_unset=True)
@@ -337,8 +355,6 @@ def create_whatsapp_user(
 ) -> WhatsAppUser:
     """
     Register a new WhatsApp farmer.
-    The phone number is hashed and stored as the password — it serves as
-    both identifier and credential for this channel.
     """
     user = WhatsAppUser.model_validate(
         user_in,
