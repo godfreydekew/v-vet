@@ -5,10 +5,11 @@ from datetime import date
 from typing import Any, cast
 
 from openai import OpenAI
-from sqlalchemy.orm import Session
+from sqlmodel import Session
 
 from app.core.config import settings
 from app.models.whatsapp import WhatsAppMessage, WhatsAppUser
+from app.crud import create_user_for_new_whatsapp
 
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
@@ -144,6 +145,8 @@ def save_onboarding_fields(
 
 def complete_onboarding(*, session: Session, user: WhatsAppUser) -> WhatsAppUser:
     """Mark the WhatsApp user as fully onboarded."""
+    new_user = create_user_for_new_whatsapp(session=session, whatsapp_user=user)
+    user.linked_user_id = new_user.id
     user.is_fully_onboarded = True
     session.add(user)
     session.commit()

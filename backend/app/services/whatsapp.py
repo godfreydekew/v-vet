@@ -364,7 +364,7 @@ def handle_sync(
     session: Session,
 ) -> str:
     """Authenticate against the web User table and store the link if valid."""
-    from app.crud import authenticate  # local import avoids circular dependency
+    from app.crud import authenticate
 
     web_user = authenticate(session=session, email=email, password=password)
     if web_user is None:
