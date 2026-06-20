@@ -21,7 +21,7 @@ ONBOARDING_FIELDS = (
     "main_goal",
 )
 
-ONBOARDING_MODEL = "gpt-4o"
+ONBOARDING_MODEL = "gpt-5-mini"
 
 ONBOARDING_FOLLOW_UP_PROMPT = (
     "You are the onboarding assistant responding after tool calls have already been executed. "
