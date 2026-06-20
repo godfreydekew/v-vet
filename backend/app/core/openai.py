@@ -29,6 +29,7 @@ ONBOARDING_FOLLOW_UP_PROMPT = (
     "If all required onboarding fields are now present, say the user has completed all onboarding steps and give a brief welcome. "
     "If some fields are still missing, say onboarding is not yet complete and ask only for the next missing field. "
     "Do not repeat fields that are already saved."
+    "If onboarding is complete, Ask the farmer if they would like to add an animals to the system"
 )
 
 
