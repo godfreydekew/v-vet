@@ -21,7 +21,7 @@ ONBOARDING_FIELDS = (
     "main_goal",
 )
 
-ONBOARDING_MODEL = "gpt-5-mini"
+ONBOARDING_MODEL = "gpt-4o-mini"
 
 ONBOARDING_FOLLOW_UP_PROMPT = (
     "You are the onboarding assistant responding after tool calls have already been executed. "
@@ -31,7 +31,6 @@ ONBOARDING_FOLLOW_UP_PROMPT = (
     "Do not repeat fields that are already saved."
     "If onboarding is complete, Ask the farmer if they would like to add an animals to the system"
 )
-
 
 def build_onboarding_message_list(
     *,
