@@ -298,7 +298,7 @@ def build_farmer_agent_tools() -> list[dict[str, Any]]:
                         },
                         "name": {"type": ["string", "null"]},
                         "tag_number": {"type": ["string", "null"]},
-                        "gender": {"type": ["string", "null"]},
+                        "gender": {"type": ["string", "null"], "enum": ["male", "female", "unknown"]},
                         "breed": {"type": ["string", "null"]},
                         "weight_kg": {"type": ["number", "null"]},
                         "date_of_birth": {
@@ -379,14 +379,19 @@ def _execute_farmer_tool(
         }
 
     if tool_name == "add_livestock":
+        if not user.district:
+            return {
+                "status": "error",
+                "message": "District not set. Ask the farmer to provide their district before adding animals.",
+            }
         dob_raw = arguments.get("date_of_birth")
         dob: date | None = date.fromisoformat(dob_raw) if dob_raw else None
         animal = create_livestock_from_whatsapp(
             session=session,
             user_id=user.linked_user_id,
+            district=user.district,
             species=arguments.get("species", "cattle"),
             name=arguments.get("name"),
-            tag_number=arguments.get("tag_number"),
             gender=arguments.get("gender"),
             breed=arguments.get("breed"),
             weight_kg=arguments.get("weight_kg"),
