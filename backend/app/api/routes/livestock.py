@@ -105,7 +105,17 @@ def create_livestock(
     if not current_user.is_superuser and not current_user.is_admin:
         if farm.farmer_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not enough privileges")
-    livestock = crud.create_livestock(session=session, livestock_in=livestock_in)
+    if not current_user.district:
+        raise HTTPException(
+            status_code=422,
+            detail="Please set your district in your profile before adding animals.",
+        )
+    livestock = crud.create_livestock(
+        session=session,
+        livestock_in=livestock_in,
+        user_id=current_user.id,
+        district=current_user.district,
+    )
     return crud.serialize_livestock(session=session, livestock=livestock)
 
 

@@ -26,6 +26,7 @@ class UserBase(SQLModel):
     is_admin: bool = False
     full_name: str | None = Field(default=None, max_length=255)
     phone_number: str | None = Field(default=None, max_length=255)
+    district: str | None = Field(default=None, max_length=255)
     address: str | None = Field(default=None, max_length=255)
     added_at: datetime | None = Field(
         default=None, sa_column=Column(DateTime(timezone=True))
@@ -68,6 +69,7 @@ class UserUpdateMe(SQLModel):
     full_name: str | None = Field(default=None, max_length=255)
     email: EmailStr | None = Field(default=None, max_length=255)
     phone_number: str | None = Field(default=None, max_length=255)
+    district: str | None = Field(default=None, max_length=255)
     address: str | None = Field(default=None, max_length=255)
 
 
@@ -84,8 +86,6 @@ class UpdatePassword(SQLModel):
 class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
-    # Literal types are not understood by SQLAlchemy — store as plain str.
-    # Validation via UserRole happens at the Create/Update schema layer.
     role: str = Field(default="farmer")  # type: ignore[assignment]
     created_at: datetime | None = Field(
         default_factory=_utcnow,

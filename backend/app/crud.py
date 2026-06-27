@@ -4,8 +4,8 @@ from typing import Any
 
 from sqlmodel import Session, col, select
 
-from app.core.security import get_password_hash, verify_password
 from app.ai.gemma import analyze_livestock_image
+from app.core.security import get_password_hash, verify_password
 from app.models import (
     Farm,
     FarmBase,
@@ -49,6 +49,7 @@ def create_user_for_new_whatsapp(*, session: Session, whatsapp_user: WhatsAppUse
     db_obj = User(
         full_name=whatsapp_user.full_name,
         phone_number=whatsapp_user.phone,
+        district=whatsapp_user.district,
         email=None,
         hashed_password=get_password_hash(whatsapp_user.phone),
     )
@@ -121,8 +122,48 @@ def update_farm(*, session: Session, db_farm: Farm, farm_in: FarmUpdate) -> Farm
 # ---------------------------------------------------------------------------
 
 
-def create_livestock(*, session: Session, livestock_in: LivestockCreate) -> Livestock:
-    livestock = Livestock.model_validate(livestock_in)
+def _count_all_livestock_for_user(*, session: Session, user_id: uuid.UUID) -> int:
+    """Count ALL livestock ever registered for a user (across all farms, all statuses)."""
+    farm_ids = session.exec(
+        select(Farm.id).where(Farm.farmer_id == user_id)
+    ).all()
+    if not farm_ids:
+        return 0
+    rows = session.exec(
+        select(Livestock).where(col(Livestock.farm_id).in_(farm_ids))
+    ).all()
+    return len(rows)
+
+
+def generate_livestock_tag(
+    *, session: Session, user_id: uuid.UUID, district: str
+) -> str:
+    """Generate a unique tag: DISTRICT_CODE-UUID_PREFIX-YY-SEQUENCE.
+
+    Example: GWE-a1b-26-0001
+    """
+    from datetime import datetime
+
+    from app.data.districts import get_district_code
+
+    district_code = get_district_code(district) or "UNK"
+    farmer_prefix = str(user_id).replace("-", "")[:3].upper()
+    year = str(datetime.now().year)[-2:]
+    sequence = str(_count_all_livestock_for_user(session=session, user_id=user_id) + 1).zfill(4)
+    return f"{district_code}-{farmer_prefix}-{year}-{sequence}"
+
+
+def create_livestock(
+    *,
+    session: Session,
+    livestock_in: LivestockCreate,
+    user_id: uuid.UUID | None = None,
+    district: str | None = None,
+) -> Livestock:
+    tag = livestock_in.tag_number
+    if not tag and user_id and district:
+        tag = generate_livestock_tag(session=session, user_id=user_id, district=district)
+    livestock = Livestock.model_validate(livestock_in, update={"tag_number": tag})
     session.add(livestock)
     session.commit()
     session.refresh(livestock)
@@ -153,11 +194,11 @@ def update_livestock(
 def list_livestock_images(
     *, session: Session, livestock_id: uuid.UUID
 ) -> list[LivestockImage]:
-    return session.exec(
+    return list(session.exec(
         select(LivestockImage)
         .where(LivestockImage.livestock_id == livestock_id)
         .order_by(col(LivestockImage.is_primary).desc(), col(LivestockImage.created_at))
-    ).all()
+    ).all())
 
 
 def get_livestock_image_by_url(
@@ -254,7 +295,7 @@ def serialize_livestock_list(
     ids = [item.id for item in livestock_items]
     images = session.exec(
         select(LivestockImage)
-        .where(LivestockImage.livestock_id.in_(ids))
+        .where(col(LivestockImage.livestock_id).in_(ids))
         .order_by(col(LivestockImage.is_primary).desc(), col(LivestockImage.created_at))
     ).all()
 
@@ -335,8 +376,8 @@ def authenticate(*, session: Session, email: str, password: str) -> User | None:
 
 def get_all_active_users(*, session: Session) -> list[User]:
     """Get all active users in the system."""
-    statement = select(User).where(User.is_active == True)
-    return session.exec(statement).all()
+    statement = select(User).where(User.is_active)
+    return list(session.exec(statement).all())
 
 
 # ---------------------------------------------------------------------------
@@ -434,21 +475,22 @@ def create_livestock_from_whatsapp(
     *,
     session: Session,
     user_id: uuid.UUID,
+    district: str,
     species: str,
     name: str | None = None,
-    tag_number: str | None = None,
     gender: str | None = None,
     breed: str | None = None,
     weight_kg: float | None = None,
     date_of_birth: date | None = None,
 ) -> Livestock:
-    """Get or create the user's default farm, then create the livestock record."""
+    """Get or create the user's default farm, then create the livestock record with an auto-generated tag."""
     farm = get_or_create_default_farm(session=session, user_id=user_id)
+    tag = generate_livestock_tag(session=session, user_id=user_id, district=district)
     animal = Livestock(
         farm_id=farm.id,
         species=species,
         name=name,
-        tag_number=tag_number,
+        tag_number=tag,
         gender=gender,
         breed=breed,
         weight_kg=weight_kg,

@@ -233,23 +233,21 @@ def run_onboarding_agent(
 # Farmer agent — handles chat, animal queries, and livestock registration
 # ---------------------------------------------------------------------------
 
-FARMER_AGENT_SYSTEM_PROMPT = (
-    "You are VVet, a WhatsApp assistant for livestock farmers. "
-    "You help farmers track their animals, answer health and care questions, and register new livestock. "
-    "Keep replies short and practical — this is WhatsApp. "
-    "If a question is unclear, ask one focused follow-up. "
-    "Do not invent facts. If a situation may need a vet, say so plainly."
-)
+FARMER_AGENT_SYSTEM_PROMPT = """You are VVet, a WhatsApp assistant for livestock farmers. 
+You help farmers track their animals, answer health and care questions, and register new livestock. 
+Keep replies short and practical — this is WhatsApp. 
+If a question is unclear, ask one focused follow-up. 
+Do not invent facts. If a situation may need a vet, say so plainly."""
 
 FARMER_AGENT_ADDING_ANIMAL_HINT = (
-    "\n\nThe farmer is currently in the process of adding a new animal. "
+    "\n\nThe farmer is currently adding a new animal. "
+    "Tag number is auto-generated — do NOT ask for it. "
     "Species defaults to cattle if not stated. "
-    "Check the recent conversation history for details already provided. "
-    "Ask for any remaining fields (name, tag number, gender, breed, weight, date of birth) "
-    "and show the farmer a one-line example of how to reply, for example:\n"
-    "  Bessie, ZW-001, female, Hereford, 250kg, born 2022-03-15\n"
+    "Collect: name, gender, breed, weight (kg), date of birth. "
+    "Show a one-line example when asking: Bessie, female, Hereford, 250kg, born 2022-03-15\n"
     "Call add_livestock as soon as you have any detail to save. "
-    "If the farmer says 'skip', 'done', or 'that\\'s all', call add_livestock with whatever you have."
+    "If the farmer says 'skip', 'done', or 'that\\'s all', call add_livestock with whatever you have. "
+    "After saving, show the animal summary from the tool result and ask if they want to add another animal."
 )
 
 
@@ -297,7 +295,6 @@ def build_farmer_agent_tools() -> list[dict[str, Any]]:
                             "description": "Defaults to cattle if not specified.",
                         },
                         "name": {"type": ["string", "null"]},
-                        "tag_number": {"type": ["string", "null"]},
                         "gender": {"type": ["string", "null"], "enum": ["male", "female", "unknown"]},
                         "breed": {"type": ["string", "null"]},
                         "weight_kg": {"type": ["number", "null"]},
@@ -403,7 +400,12 @@ def _execute_farmer_tool(
         return {
             "status": "saved",
             "name": animal.name or "(unnamed)",
+            "tag_number": animal.tag_number,
             "species": animal.species,
+            "breed": animal.breed,
+            "gender": animal.gender,
+            "weight_kg": animal.weight_kg,
+            "date_of_birth": str(animal.date_of_birth) if animal.date_of_birth else None,
         }
 
     return {"status": "unknown_tool", "tool": tool_name}
