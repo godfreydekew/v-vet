@@ -23,6 +23,7 @@ export interface User {
   is_admin: boolean;
   full_name: string | null;
   phone_number: string | null;
+  district: string | null;
   address: string | null;
   created_at: string | null;
 }

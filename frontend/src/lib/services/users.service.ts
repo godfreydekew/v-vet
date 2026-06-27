@@ -22,6 +22,7 @@ export interface UserUpdateMePayload {
   full_name?: string | null;
   email?: string | null;
   phone_number?: string | null;
+  district?: string | null;
   address?: string | null;
 }
 

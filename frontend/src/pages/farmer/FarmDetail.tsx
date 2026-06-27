@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 import { getApiError } from "@/lib/api";
 import {
   fetchFarmById,
@@ -62,7 +63,6 @@ const EMPTY_FORM: LivestockCreatePayload = {
   farm_id: "",
   species: "cattle",
   name: "",
-  tag_number: "",
   breed: "",
   gender: null,
   weight_kg: null,
@@ -118,27 +118,15 @@ function AddAnimalDialog({
           }}
           className="space-y-4"
         >
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Name</Label>
-              <Input
-                placeholder="e.g. Bessie"
-                value={form.name ?? ""}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, name: e.target.value || null }))
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Tag Number</Label>
-              <Input
-                placeholder="e.g. ZW-001"
-                value={form.tag_number ?? ""}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, tag_number: e.target.value || null }))
-                }
-              />
-            </div>
+          <div className="space-y-2">
+            <Label>Name</Label>
+            <Input
+              placeholder="e.g. Bessie"
+              value={form.name ?? ""}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, name: e.target.value || null }))
+              }
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
@@ -267,6 +255,8 @@ export default function FarmDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const [search, setSearch] = useState("");
   const [healthFilter, setHealthFilter] = useState<HealthStatus | "all">("all");
@@ -274,6 +264,18 @@ export default function FarmDetail() {
     LifecycleStatus | "all"
   >("all");
   const [addOpen, setAddOpen] = useState(false);
+
+  const openAddDialog = () => {
+    if (!user?.district) {
+      toast({
+        title: "District not set",
+        description: "Please set your district in Account Settings before adding animals. Your district is used to generate animal tags.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setAddOpen(true);
+  };
 
   const farmQuery = useQuery({
     queryKey: ["farm", id],
@@ -352,7 +354,7 @@ export default function FarmDetail() {
               <Button
                 size="sm"
                 className="gap-1.5"
-                onClick={() => setAddOpen(true)}
+                onClick={() => openAddDialog()}
               >
                 <Plus size={16} /> Add Animal
               </Button>

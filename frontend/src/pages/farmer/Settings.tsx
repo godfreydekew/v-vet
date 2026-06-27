@@ -25,6 +25,7 @@ export default function FarmerSettings() {
   const [fullName,    setFullName]    = useState(user?.full_name    ?? '');
   const [email,       setEmail]       = useState(user?.email        ?? '');
   const [phoneNumber, setPhoneNumber] = useState(user?.phone_number ?? '');
+  const [district,    setDistrict]    = useState(user?.district     ?? '');
   const [address,     setAddress]     = useState(user?.address      ?? '');
   const [profileSaving, setProfileSaving] = useState(false);
 
@@ -38,7 +39,7 @@ export default function FarmerSettings() {
     e.preventDefault();
     setProfileSaving(true);
     try {
-      const updated = await updateCurrentUser({ full_name: fullName, email, phone_number: phoneNumber, address });
+      const updated = await updateCurrentUser({ full_name: fullName, email, phone_number: phoneNumber, district, address });
       setUser(updated);
       toast({ title: 'Your profile has been updated.' });
     } catch (err) {
@@ -85,6 +86,15 @@ export default function FarmerSettings() {
         <div className="space-y-2"><Label>Full Name</Label><Input value={fullName} onChange={e => setFullName(e.target.value)} /></div>
         <div className="space-y-2"><Label>Email</Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
         <div className="space-y-2"><Label>Phone</Label><Input value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} /></div>
+        <div className="space-y-2">
+          <Label>District</Label>
+          <Input
+            value={district}
+            onChange={e => setDistrict(e.target.value)}
+            placeholder="e.g. Gweru"
+          />
+          <p className="text-xs text-muted-foreground">Required to auto-generate animal tags.</p>
+        </div>
         <div className="space-y-2"><Label>Address</Label><Input value={address} onChange={e => setAddress(e.target.value)} /></div>
         <Button type="submit" disabled={profileSaving}>{profileSaving ? 'Saving…' : 'Save Changes'}</Button>
       </form>
