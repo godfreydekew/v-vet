@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getApiError } from '@/lib/api';
 import { updateCurrentUser, updatePassword, deleteCurrentUser } from '@/lib/services/users.service';
+import DistrictSelect from '@/components/DistrictSelect';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -88,11 +89,7 @@ export default function FarmerSettings() {
         <div className="space-y-2"><Label>Phone</Label><Input value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} /></div>
         <div className="space-y-2">
           <Label>District</Label>
-          <Input
-            value={district}
-            onChange={e => setDistrict(e.target.value)}
-            placeholder="e.g. Gweru"
-          />
+          <DistrictSelect value={district} onChange={setDistrict} />
           <p className="text-xs text-muted-foreground">Required to auto-generate animal tags.</p>
         </div>
         <div className="space-y-2"><Label>Address</Label><Input value={address} onChange={e => setAddress(e.target.value)} /></div>
