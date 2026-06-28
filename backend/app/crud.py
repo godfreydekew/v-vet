@@ -136,21 +136,20 @@ def _count_all_livestock_for_user(*, session: Session, user_id: uuid.UUID) -> in
 
 
 def generate_livestock_tag(
-    *, session: Session, user_id: uuid.UUID, district: str
+    *, session: Session, user_id: uuid.UUID, district: str, year: int
 ) -> str:
     """Generate a unique tag: DISTRICT_CODE-UUID_PREFIX-YY-SEQUENCE.
 
     Example: GWE-a1b-26-0001
     """
-    from datetime import datetime
 
     from app.data.districts import get_district_code
 
     district_code = get_district_code(district) or "UNK"
     farmer_prefix = str(user_id).replace("-", "")[:3].upper()
-    year = str(datetime.now().year)[-2:]
+    year_of_birth = str(year)[-2:]
     sequence = str(_count_all_livestock_for_user(session=session, user_id=user_id) + 1).zfill(4)
-    return f"{district_code}-{farmer_prefix}-{year}-{sequence}"
+    return f"{district_code}-{farmer_prefix}-{year_of_birth}-{sequence}"
 
 
 def create_livestock(
@@ -161,8 +160,8 @@ def create_livestock(
     district: str | None = None,
 ) -> Livestock:
     tag = livestock_in.tag_number
-    if not tag and user_id and district:
-        tag = generate_livestock_tag(session=session, user_id=user_id, district=district)
+    if not tag and user_id and district and livestock_in.date_of_birth:
+        tag = generate_livestock_tag(session=session, user_id=user_id, district=district, year=livestock_in.date_of_birth.year)
     livestock = Livestock.model_validate(livestock_in, update={"tag_number": tag})
     session.add(livestock)
     session.commit()
@@ -485,7 +484,7 @@ def create_livestock_from_whatsapp(
 ) -> Livestock:
     """Get or create the user's default farm, then create the livestock record with an auto-generated tag."""
     farm = get_or_create_default_farm(session=session, user_id=user_id)
-    tag = generate_livestock_tag(session=session, user_id=user_id, district=district)
+    tag = generate_livestock_tag(session=session, user_id=user_id, district=district, year=date_of_birth.year)
     animal = Livestock(
         farm_id=farm.id,
         species=species,
