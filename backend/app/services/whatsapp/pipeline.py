@@ -1,0 +1,240 @@
+import logging
+from io import BytesIO
+
+from sqlmodel import Session
+
+from app.crud import (
+    authenticate,
+    create_whatsapp_user,
+    get_conversation_history,
+    get_livestock_by_name_for_user,
+    get_livestock_for_user,
+    get_whatsapp_user_by_phone,
+    save_whatsapp_message,
+)
+from app.models.whatsapp import WhatsAppMessageCreate, WhatsAppUser, WhatsAppUserCreate
+from app.services.whatsapp.client import download_media, mark_whatsapp_message_as_read, send_whatsapp_message
+from app.services.whatsapp.transcription import convert_speech_to_text
+
+logger = logging.getLogger(__name__)
+
+SUPPORTED_LANGUAGES = {"english", "shona", "ndebele"}
+
+ONBOARDING_STEPS: list[tuple[str, str]] = [
+    ("animal_count",        "How many animals do you currently have on your farm? (reply with a number)"),
+    ("district",            "Which district are you located in?"),
+    ("preferred_language",  "What language do you prefer?\nReply with: English, Shona, or Ndebele"),
+    ("main_goal",           "What is your main goal with V-Vet?\n"
+                            "For example: health tracking, breeding management, record keeping, or general advice."),
+]
+
+ONBOARDING_SYSTEM_PROMPT = (
+    "You are VVet's onboarding agent for a farmer using WhatsApp. "
+    "Review the recent conversation history and the user's current profile. "
+    "Your goal is to collect these onboarding fields when they are available: full_name, animal_count, district, preferred_language, and main_goal. "
+    "If the farmer provides one or more fields in one message, call the save-multiple-fields tool. "
+    "If all required fields are available, call the complete onboarding tool. "
+    "If the message is random or incomplete, ask one short clarifying question for the missing field that matters most. "
+    "Keep replies short, clear, and friendly."
+)
+
+_ADD_ANIMAL_TRIGGERS = (
+    "add animal", "add cow", "add cattle", "add goat", "add sheep",
+    "add pig", "add poultry", "new animal", "register animal",
+)
+
+
+class WhatsAppConversationService:
+    """Orchestrates the full inbound-message pipeline for WhatsApp conversations."""
+
+    def process_message(self, *, session: Session, phone: str, message_obj: dict) -> None:
+        message_body = self._extract_message_body(message_obj)
+        if message_body is None:
+            return
+
+        self._mark_read(message_obj["id"])
+
+        user = get_whatsapp_user_by_phone(session=session, phone=phone)
+        if user is None:
+            user = create_whatsapp_user(
+                session=session,
+                user_in=WhatsAppUserCreate(phone=phone),
+            )
+            self._send_and_persist(session=session, user=user, phone=phone, reply=self._welcome_message())
+            return
+
+        save_whatsapp_message(
+            session=session,
+            user=user,
+            msg_in=WhatsAppMessageCreate(phone=phone, role="farmer", content=message_body),
+        )
+
+        new_lang = self._detect_language_change(message_body)
+        if new_lang:
+            reply = self._handle_language_change(user=user, language=new_lang, session=session)
+            self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
+            return
+
+        sync_creds = self._detect_sync_command(message_body)
+        if sync_creds:
+            email, password = sync_creds
+            reply = self._handle_sync(user=user, email=email, password=password, session=session)
+            self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
+            return
+
+        if not user.is_fully_onboarded:
+            reply = self._handle_onboarding(user=user, message_body=message_body, session=session)
+            self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
+            return
+
+        reply = self._handle_farmer_agent(user=user, message_body=message_body, session=session)
+        self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
+
+    # ------------------------------------------------------------------
+    # Private — message extraction
+    # ------------------------------------------------------------------
+
+    def _extract_message_body(self, message_obj: dict) -> str | None:
+        msg_type: str = message_obj.get("type", "")
+
+        if msg_type == "text":
+            return message_obj.get("text", {}).get("body", "").strip() or None
+
+        if msg_type == "audio":
+            audio_url: str | None = message_obj.get("audio", {}).get("url")
+            if not audio_url:
+                logger.warning("[WhatsApp] Audio message missing URL")
+                return None
+            audio_bytes = download_media(audio_url)
+            if audio_bytes is None:
+                logger.warning("[WhatsApp] Failed to download audio from %s", audio_url)
+                return None
+            return convert_speech_to_text(BytesIO(audio_bytes))
+
+        return None
+
+    # ------------------------------------------------------------------
+    # Private — Meta API helpers
+    # ------------------------------------------------------------------
+
+    def _mark_read(self, message_id: str) -> None:
+        response = mark_whatsapp_message_as_read(message_id)
+        if response.status_code != 200:
+            logger.warning("[WhatsApp] Failed to mark as read %s: %s", response.status_code, response.text)
+
+    def _send_and_persist(self, *, session: Session, user: WhatsAppUser, phone: str, reply: str) -> None:
+        save_whatsapp_message(
+            session=session,
+            user=user,
+            msg_in=WhatsAppMessageCreate(phone=phone, role="assistant", content=reply),
+        )
+        response = send_whatsapp_message(phone=phone, text=reply)
+        if response.status_code != 200:
+            logger.warning("[WhatsApp] Send failed %s: %s", response.status_code, response.text)
+
+    # ------------------------------------------------------------------
+    # Private — language change
+    # ------------------------------------------------------------------
+
+    def _detect_language_change(self, message_body: str) -> str | None:
+        text = message_body.strip().lower().rstrip(".")
+        for prefix in ("language:", "language"):
+            if text.startswith(prefix):
+                text = text[len(prefix):].strip()
+                break
+        return text.capitalize() if text in SUPPORTED_LANGUAGES else None
+
+    def _handle_language_change(self, *, user: WhatsAppUser, language: str, session: Session) -> str:
+        user.preferred_language = language
+        session.add(user)
+        session.commit()
+        return f"Language updated to {language}. I'll respond in {language} from now on."
+
+    # ------------------------------------------------------------------
+    # Private — account sync (legacy manual link)
+    # ------------------------------------------------------------------
+
+    def _detect_sync_command(self, message_body: str) -> tuple[str, str] | None:
+        text = message_body.strip()
+        for prefix in ("sync ", "link "):
+            if text.lower().startswith(prefix):
+                parts = text[len(prefix):].strip().split(None, 1)
+                if len(parts) == 2:
+                    return parts[0], parts[1]
+        return None
+
+    def _handle_sync(self, *, user: WhatsAppUser, email: str, password: str, session: Session) -> str:
+        web_user = authenticate(session=session, email=email, password=password)
+        if web_user is None:
+            return "Wrong email or password. Please try again:\nsync your@email.com yourpassword"
+        user.linked_user_id = web_user.id
+        session.add(user)
+        session.commit()
+        name = web_user.full_name or email
+        return (
+            f"Account linked! Welcome, {name}.\n\n"
+            "You can now ask about your livestock. Try:\n"
+            "• *cows* — list your first 10 animals\n"
+            "• *cow <name>* — get full details on a specific animal"
+        )
+
+    # ------------------------------------------------------------------
+    # Private — onboarding
+    # ------------------------------------------------------------------
+
+    def _handle_onboarding(self, *, user: WhatsAppUser, message_body: str, session: Session) -> str:
+        from app.core import openai as openai_helpers
+
+        history = get_conversation_history(session=session, phone=user.phone, limit=10)
+        return openai_helpers.run_onboarding_agent(
+            system_prompt=f"{ONBOARDING_SYSTEM_PROMPT}\n\nLatest incoming message: {message_body}",
+            user=user,
+            history=history,
+            session=session,
+            limit=10,
+        )
+
+    # ------------------------------------------------------------------
+    # Private — farmer agent
+    # ------------------------------------------------------------------
+
+    def _handle_farmer_agent(self, *, user: WhatsAppUser, message_body: str, session: Session) -> str:
+        from app.core import openai as openai_helpers
+
+        if not user.is_adding_animal:
+            lower = message_body.strip().lower()
+            if any(trigger in lower for trigger in _ADD_ANIMAL_TRIGGERS):
+                user.is_adding_animal = True
+                session.add(user)
+                session.commit()
+
+        history = get_conversation_history(session=session, phone=user.phone, limit=20)
+        return openai_helpers.run_farmer_agent(user=user, history=history, session=session)
+
+    # ------------------------------------------------------------------
+    # Private — static message builders
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _welcome_message() -> str:
+        return (
+            "👋 Welcome to V-Vet!\n\n"
+            "I help farmers like you keep animals healthy and productive.\n\n"
+            "💬 You can send me:\n"
+            "- Photos or videos of sick animals\n"
+            "- Questions about your livestock\n"
+            "- Reports when animals are born, sick, or treated\n\n"
+            "I'll help you fast - and connect you to a vet when needed.\n\n"
+            "Ready to start? Reply YES to set up your farm (takes 2 minutes)."
+        )
+
+    @staticmethod
+    def _returning_incomplete_message(user: WhatsAppUser) -> str:
+        name = user.full_name or "there"
+        for field, question in ONBOARDING_STEPS:
+            if getattr(user, field) is None:
+                return (
+                    f"Hi {name}, welcome back to V-Vet!\n\n"
+                    f"Let's finish setting up your profile.\n\n{question}"
+                )
+        return f"Hi {name}, welcome back! How can I help you today?"

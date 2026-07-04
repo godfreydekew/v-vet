@@ -6,27 +6,14 @@ from sqlmodel import Session
 
 from app.core.config import settings
 from app.core.db import engine
-from app.crud import (
-    create_whatsapp_user,
-    get_whatsapp_user_by_phone,
-    save_whatsapp_message,
-)
-from app.models.whatsapp import WhatsAppMessageCreate, WhatsAppUser, WhatsAppUserCreate
-from app.services.whatsapp import (
-    detect_language_change,
-    detect_sync_command,
-    extract_message_body,
-    get_welcome_message,
-    handle_farmer_agent,
-    handle_language_change,
-    handle_onboarding,
-    handle_sync,
-    mark_whatsapp_message_as_read,
-    send_whatsapp_message,
-)
+from app.services.whatsapp.client import send_whatsapp_message
+from app.services.whatsapp.pipeline import WhatsAppConversationService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["whatsapp"], prefix="/whatsapp")
+
+_conversation_service = WhatsAppConversationService()
+
 
 @router.get("/webhook", status_code=200, response_class=PlainTextResponse)
 def verify_webhook(
@@ -46,7 +33,6 @@ def receive_webhook(payload: dict, background_tasks: BackgroundTasks) -> dict:
         message_obj = entry["messages"][0]
         phone: str = message_obj["from"]
     except (KeyError, IndexError):
-        # Status updates, reactions, etc. — nothing to process.
         return {"status": "ok"}
 
     background_tasks.add_task(_process_message, phone, message_obj)
@@ -54,81 +40,12 @@ def receive_webhook(payload: dict, background_tasks: BackgroundTasks) -> dict:
 
 
 def _process_message(phone: str, message_obj: dict) -> None:
-    """
-    Full message pipeline running after the webhook has already returned 200.
-
-    Opens its own DB session — the request session is closed by the time
-    this runs.
-    """
-    message_body = extract_message_body(message_obj)
-    if message_body is None:
-        return
-    # Mark the message as read to show blue ticks in WhatsApp.
-    read_receipts_response = mark_whatsapp_message_as_read(message_id=message_obj["id"])
-    if read_receipts_response.status_code != 200:
-        logger.warning(
-            "[WhatsApp] Failed to mark message as read %s: %s",
-            read_receipts_response.status_code,
-            read_receipts_response.text,
-        )
-
     with Session(engine) as session:
-        user = get_whatsapp_user_by_phone(session=session, phone=phone)
-
-        if user is None:
-            user = create_whatsapp_user(
-                session=session,
-                user_in=WhatsAppUserCreate(phone=phone),
-            )
-            save_whatsapp_message(
-                session=session,
-                user=user,
-                msg_in=WhatsAppMessageCreate(phone=phone, role="farmer", content=message_body),
-            )
-            reply = get_welcome_message()
-            # logger.info("[WhatsApp] New user %s - sending welcome message", reply)
-            _send_and_persist(session=session, user=user, phone=phone, reply=reply)
-            return
-
-        save_whatsapp_message(
+        _conversation_service.process_message(
             session=session,
-            user=user,
-            msg_in=WhatsAppMessageCreate(phone=phone, role="farmer", content=message_body),
+            phone=phone,
+            message_obj=message_obj,
         )
-
-        new_language = detect_language_change(message_body)
-        if new_language:
-            reply = handle_language_change(user=user, language=new_language, session=session)
-            _send_and_persist(session=session, user=user, phone=phone, reply=reply)
-            return
-
-        sync_creds = detect_sync_command(message_body)
-        if sync_creds:
-            email, password = sync_creds
-            reply = handle_sync(
-                whatsapp_user=user, email=email, password=password, session=session
-            )
-            _send_and_persist(session=session, user=user, phone=phone, reply=reply)
-            return
-
-        if not user.is_fully_onboarded:
-            reply = handle_onboarding(user=user, message_body=message_body, session=session)
-            _send_and_persist(session=session, user=user, phone=phone, reply=reply)
-            return
-
-        reply = handle_farmer_agent(user=user, message_body=message_body, session=session)
-        _send_and_persist(session=session, user=user, phone=phone, reply=reply)
-
-
-def _send_and_persist(*, session: Session, user: WhatsAppUser, phone: str, reply: str) -> None:
-    save_whatsapp_message(
-        session=session,
-        user=user,
-        msg_in=WhatsAppMessageCreate(phone=phone, role="assistant", content=reply),
-    )
-    response = send_whatsapp_message(phone=phone, text=reply)
-    if response.status_code != 200:
-        logger.warning("[WhatsApp] Send failed %s: %s", response.status_code, response.text)
 
 
 @router.post("/send_message", status_code=200)
