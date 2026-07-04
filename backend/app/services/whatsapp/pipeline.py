@@ -13,7 +13,12 @@ from app.crud import (
     save_whatsapp_message,
 )
 from app.models.whatsapp import WhatsAppMessageCreate, WhatsAppUser, WhatsAppUserCreate
-from app.services.whatsapp.client import download_media, mark_whatsapp_message_as_read, send_whatsapp_message
+from app.services.whatsapp.client import (
+    download_media,
+    mark_whatsapp_message_as_read,
+    send_list_message,
+    send_whatsapp_message,
+)
 from app.services.whatsapp.transcription import convert_speech_to_text
 
 logger = logging.getLogger(__name__)
@@ -37,6 +42,63 @@ ONBOARDING_SYSTEM_PROMPT = (
     "If the message is random or incomplete, ask one short clarifying question for the missing field that matters most. "
     "Keep replies short, clear, and friendly."
 )
+
+# ---------------------------------------------------------------------------
+# Intent menu
+# ---------------------------------------------------------------------------
+
+# Row IDs returned by WhatsApp when a farmer taps a menu item.
+# These become the message_body in the pipeline, so routing is a dict lookup.
+INTENT_IDS: set[str] = {
+    "register_animal",
+    "record_birth",
+    "record_death",
+    "log_vaccination",
+    "log_dipping",
+    "log_deworming",
+    "log_bull_soundness",
+    "manage_weaning",
+    "report_sickness",
+    "request_vet",
+    "my_animals",
+    "weekly_summary",
+}
+
+# Words that trigger the main menu instead of the farmer agent.
+_MENU_TRIGGERS: set[str] = {"menu", "help", "hi", "hello", "start", "options"}
+
+MAIN_MENU_SECTIONS: list[dict] = [
+    {
+        "title": "Records",
+        "rows": [
+            {"id": "register_animal",  "title": "Register Animal",  "description": "Add a new animal to your herd"},
+            {"id": "record_birth",     "title": "Record Birth",     "description": "Log a new calf born"},
+            {"id": "record_death",     "title": "Record Death",     "description": "Log an animal death"},
+        ],
+    },
+    {
+        "title": "Treatments",
+        "rows": [
+            {"id": "log_vaccination",  "title": "Log Vaccination"},
+            {"id": "log_dipping",      "title": "Log Dipping"},
+            {"id": "log_deworming",    "title": "Log Deworming"},
+        ],
+    },
+    {
+        "title": "Health & Support",
+        "rows": [
+            {"id": "report_sickness",  "title": "Report Sickness",  "description": "Describe symptoms for advice"},
+            {"id": "request_vet",      "title": "Request Vet Help", "description": "Connect with a veterinarian"},
+        ],
+    },
+    {
+        "title": "My Farm",
+        "rows": [
+            {"id": "my_animals",       "title": "My Animals",       "description": "View your herd"},
+            {"id": "weekly_summary",   "title": "Weekly Summary",   "description": "Get a herd overview"},
+        ],
+    },
+]
 
 _ADD_ANIMAL_TRIGGERS = (
     "add animal", "add cow", "add cattle", "add goat", "add sheep",
@@ -87,6 +149,21 @@ class WhatsAppConversationService:
             self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
             return
 
+        # Show menu on greetings / explicit "menu" request.
+        if message_body.strip().lower() in _MENU_TRIGGERS:
+            self._send_main_menu(phone=phone)
+            self._persist_assistant(
+                session=session, user=user, phone=phone,
+                content="[Menu sent]",
+            )
+            return
+
+        # Known intent from a menu tap — route to the right handler.
+        if message_body in INTENT_IDS:
+            reply = self._handle_intent(intent=message_body, user=user, session=session)
+            self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
+            return
+
         reply = self._handle_farmer_agent(user=user, message_body=message_body, session=session)
         self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
 
@@ -111,6 +188,22 @@ class WhatsAppConversationService:
                 return None
             return convert_speech_to_text(BytesIO(audio_bytes))
 
+        if msg_type == "interactive":
+            interactive = message_obj.get("interactive", {})
+            kind = interactive.get("type", "")
+
+            if kind == "list_reply":
+                # Farmer tapped a menu item — return the row ID directly.
+                return interactive.get("list_reply", {}).get("id")
+
+            if kind == "button_reply":
+                # Farmer tapped a quick-reply button — return the button ID.
+                return interactive.get("button_reply", {}).get("id")
+
+            if kind == "nfm_reply":
+                # WhatsApp Flow form submitted — return raw JSON string.
+                return interactive.get("nfm_reply", {}).get("response_json")
+
         return None
 
     # ------------------------------------------------------------------
@@ -123,14 +216,51 @@ class WhatsAppConversationService:
             logger.warning("[WhatsApp] Failed to mark as read %s: %s", response.status_code, response.text)
 
     def _send_and_persist(self, *, session: Session, user: WhatsAppUser, phone: str, reply: str) -> None:
-        save_whatsapp_message(
-            session=session,
-            user=user,
-            msg_in=WhatsAppMessageCreate(phone=phone, role="assistant", content=reply),
-        )
+        self._persist_assistant(session=session, user=user, phone=phone, content=reply)
         response = send_whatsapp_message(phone=phone, text=reply)
         if response.status_code != 200:
             logger.warning("[WhatsApp] Send failed %s: %s", response.status_code, response.text)
+
+    def _persist_assistant(self, *, session: Session, user: WhatsAppUser, phone: str, content: str) -> None:
+        save_whatsapp_message(
+            session=session,
+            user=user,
+            msg_in=WhatsAppMessageCreate(phone=phone, role="assistant", content=content),
+        )
+
+    def _send_main_menu(self, *, phone: str) -> None:
+        response = send_list_message(
+            phone=phone,
+            body="What would you like to do today?",
+            button_label="View Menu",
+            sections=MAIN_MENU_SECTIONS,
+        )
+        if response.status_code != 200:
+            logger.warning("[WhatsApp] Menu send failed %s: %s", response.status_code, response.text)
+
+    def _handle_intent(self, *, intent: str, user: WhatsAppUser, session: Session) -> str:
+        """Route a known intent ID to its handler. Unimplemented flows fall back to the farmer agent."""
+        intent_labels = {
+            "register_animal":   "register a new animal",
+            "record_birth":      "record a birth",
+            "record_death":      "record a death",
+            "log_vaccination":   "log a vaccination",
+            "log_dipping":       "log a dipping treatment",
+            "log_deworming":     "log a deworming treatment",
+            "log_bull_soundness": "log a bull soundness evaluation",
+            "manage_weaning":    "manage weaning",
+            "report_sickness":   "report a sick animal",
+            "request_vet":       "request vet help",
+            "my_animals":        "list my animals",
+            "weekly_summary":    "get a weekly summary",
+        }
+        label = intent_labels.get(intent, intent)
+        # Delegate to the farmer agent with intent already resolved — no keyword guessing needed.
+        return self._handle_farmer_agent(
+            user=user,
+            message_body=f"I want to {label}",
+            session=session,
+        )
 
     # ------------------------------------------------------------------
     # Private — language change
