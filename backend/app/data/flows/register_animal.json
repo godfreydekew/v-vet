@@ -70,6 +70,16 @@
                 "required": false
               },
               {
+                "type": "PhotoPicker",
+                "label": "Photo of Animal",
+                "name": "animal_photo",
+                "description": "Optional — helps identify the animal",
+                "photo-source": "camera_gallery",
+                "required": false,
+                "min-uploaded-photos": 0,
+                "max-uploaded-photos": 1
+              },
+              {
                 "type": "Footer",
                 "label": "Register Animal",
                 "on-click-action": {
@@ -80,7 +90,8 @@
                     "breed":         "${form.breed}",
                     "gender":        "${form.gender}",
                     "date_of_birth": "${form.date_of_birth}",
-                    "weight_kg":     "${form.weight_kg}"
+                    "weight_kg":     "${form.weight_kg}",
+                    "animal_photo":  "${form.animal_photo}"
                   }
                 }
               }

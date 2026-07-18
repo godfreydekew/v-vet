@@ -63,6 +63,11 @@ class RegisterAnimalFlow(BaseFlow):
         if data.get("weight_kg"):
             fields.append(f"weight: {data['weight_kg']}kg")
 
+        photo = data.get("animal_photo")
+        if photo:
+            # photo is a list of Meta media IDs — log for now, save later
+            logger.info("[RegisterAnimalFlow] Received animal photo(s) for %s: %s", user.phone, photo)
+
         if fields:
             message = "Register this animal — " + ", ".join(fields)
         else:
