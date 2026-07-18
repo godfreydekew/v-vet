@@ -417,8 +417,13 @@ def run_farmer_agent(
     history: list[WhatsAppMessage],
     session: Session,
     model: str = ONBOARDING_MODEL,
+    extra_user_message: str | None = None,
 ) -> str:
-    """Single agent that handles chat, animal queries, and livestock registration."""
+    """Single agent that handles chat, animal queries, and livestock registration.
+
+    extra_user_message — injected as the final user turn without being persisted
+    to DB first. Used by Flow form handlers to pass clean structured data.
+    """
     system_content = FARMER_AGENT_SYSTEM_PROMPT
 
     profile_parts = []
@@ -440,6 +445,9 @@ def run_farmer_agent(
     for msg in history:
         role = "user" if msg.role == "farmer" else "assistant"
         messages.append({"role": role, "content": msg.content})
+
+    if extra_user_message:
+        messages.append({"role": "user", "content": extra_user_message})
 
     tools = build_farmer_agent_tools()
     response = client.chat.completions.create(

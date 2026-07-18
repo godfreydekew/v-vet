@@ -69,6 +69,9 @@ class Settings(BaseSettings):
     WHATSAPP_ACCESS_TOKEN: str | None = None
     VERIFY_TOKEN: str | None = None
     CHALLENGE: str | None = None
+
+    # WhatsApp Flow IDs — created once in Meta Flow Builder, stored here
+    FLOW_ID_REGISTER_ANIMAL: str | None = None
     
     ELEVENLABS_API_KEY: str | None = None
 

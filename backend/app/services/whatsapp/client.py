@@ -110,6 +110,50 @@ def send_reply_buttons(
     return requests.post(url, json=payload, headers=headers, timeout=15)
 
 
+def send_flow_message(
+    phone: str,
+    flow_id: str,
+    flow_token: str,
+    body: str,
+    cta: str,
+    screen: str = "MAIN",
+) -> requests.Response:
+    """Launch a WhatsApp Flow form for the user.
+
+    flow_token is echoed back in the nfm_reply so the pipeline knows
+    which form was submitted without needing server-side session state.
+    """
+    if not settings.WHATSAPP_PHONE_NUMBER_ID or not settings.WHATSAPP_ACCESS_TOKEN:
+        raise RuntimeError("WhatsApp configuration is missing in settings.")
+
+    url_endpoint = f"https://graph.facebook.com/v25.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone,
+        "type": "interactive",
+        "interactive": {
+            "type": "flow",
+            "body": {"text": body},
+            "action": {
+                "name": "flow",
+                "parameters": {
+                    "flow_message_version": "3",
+                    "flow_token": flow_token,
+                    "flow_id": flow_id,
+                    "flow_cta": cta,
+                    "flow_action": "navigate",
+                    "flow_action_payload": {"screen": screen},
+                },
+            },
+        },
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    return requests.post(url_endpoint, json=payload, headers=headers, timeout=15)
+
+
 def download_media(url: str) -> bytes | None:
     """Download raw media bytes from a Meta-signed URL."""
     if not settings.WHATSAPP_ACCESS_TOKEN:
