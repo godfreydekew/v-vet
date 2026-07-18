@@ -1,0 +1,93 @@
+{
+  "version": "7.3",
+  "screens": [
+    {
+      "id": "REGISTER_ANIMAL",
+      "title": "Register Animal",
+      "terminal": true,
+      "success": true,
+      "data": {},
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "register_animal_form",
+            "children": [
+              {
+                "type": "Dropdown",
+                "label": "Species",
+                "name": "species",
+                "required": true,
+                "data-source": [
+                  {"id": "cattle",  "title": "Cattle"},
+                  {"id": "sheep",   "title": "Sheep"},
+                  {"id": "goat",    "title": "Goat"},
+                  {"id": "pig",     "title": "Pig"},
+                  {"id": "poultry", "title": "Poultry"},
+                  {"id": "other",   "title": "Other"}
+                ]
+              },
+              {
+                "type": "TextInput",
+                "label": "Name",
+                "name": "name",
+                "input-type": "text",
+                "required": false,
+                "helper-text": "Optional — leave blank to save as unnamed"
+              },
+              {
+                "type": "TextInput",
+                "label": "Breed",
+                "name": "breed",
+                "input-type": "text",
+                "required": false,
+                "helper-text": "e.g. Hereford, Angus, Brahman"
+              },
+              {
+                "type": "RadioButtonsGroup",
+                "label": "Gender",
+                "name": "gender",
+                "required": false,
+                "data-source": [
+                  {"id": "male",    "title": "Male"},
+                  {"id": "female",  "title": "Female"},
+                  {"id": "unknown", "title": "Unknown"}
+                ]
+              },
+              {
+                "type": "DatePicker",
+                "label": "Date of Birth",
+                "name": "date_of_birth",
+                "required": false,
+                "helper-text": "Approximate date is fine"
+              },
+              {
+                "type": "TextInput",
+                "label": "Weight (kg)",
+                "name": "weight_kg",
+                "input-type": "number",
+                "required": false
+              },
+              {
+                "type": "Footer",
+                "label": "Register Animal",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "species":       "${form.species}",
+                    "name":          "${form.name}",
+                    "breed":         "${form.breed}",
+                    "gender":        "${form.gender}",
+                    "date_of_birth": "${form.date_of_birth}",
+                    "weight_kg":     "${form.weight_kg}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
