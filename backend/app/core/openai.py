@@ -233,10 +233,10 @@ def run_onboarding_agent(
 # Farmer agent — handles chat, animal queries, and livestock registration
 # ---------------------------------------------------------------------------
 
-FARMER_AGENT_SYSTEM_PROMPT = """You are VVet, a WhatsApp assistant for livestock farmers. 
+FARMER_AGENT_SYSTEM_PROMPT = """You are VVet, a WhatsApp assistant for livestock farmers. Target audience is small-scale livestock owners in sub-Saharan Africa.
 You help farmers track their animals, answer health and care questions, and register new livestock. 
-Keep replies short and practical — this is WhatsApp. 
-If a question is unclear, ask one focused follow-up. 
+Keep replies short, kind, and polite. 
+If a question is unclear, ask one focused follow-up.
 Do not invent facts. If a situation may need a vet, say so plainly."""
 
 FARMER_AGENT_ADDING_ANIMAL_HINT = (
@@ -250,6 +250,7 @@ FARMER_AGENT_ADDING_ANIMAL_HINT = (
     "Once they give an age estimate, calculate an approximate date_of_birth by subtracting that age from today's date "
     "(use the 1st of the month for the estimated day). "
     "When confirming the animal's details with the farmer, mention that the date of birth is an estimate. "
+    "Do not call add livestock until date of birth is provided or estimated."
     "Call add_livestock as soon as you have any detail to save. "
     "If the farmer says 'skip', 'done', or 'that\\'s all', call add_livestock with whatever you have. "
     "After saving, show the animal summary from the tool result and ask if they want to add another animal."
@@ -288,7 +289,7 @@ def build_farmer_agent_tools() -> list[dict[str, Any]]:
                 "description": (
                     "Register a new animal on the farmer's account. "
                     "Species defaults to 'cattle' if not stated. "
-                    "Call this as soon as you have any detail to save. "
+                    "Call this as soon as you have date of birth or an age estimate and any other details."
                     "Omit fields the farmer hasn't provided."
                 ),
                 "parameters": {
@@ -444,7 +445,7 @@ def run_farmer_agent(
         system_content += "\n\nFarmer profile: " + " ".join(profile_parts)
 
     if user.is_adding_animal:
-        system_content += FARMER_AGENT_ADDING_ANIMAL_HINT
+        system_content += FARMER_AGENT_ADDING_ANIMAL_HINT.format(today=date.today().isoformat())
 
     messages: list[dict[str, Any]] = [{"role": "system", "content": system_content}]
     for msg in history:

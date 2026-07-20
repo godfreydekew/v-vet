@@ -4,7 +4,7 @@ from sqlmodel import Session
 
 from app.core.config import settings
 from app.flows.base import BaseFlow
-from app.models.whatsapp import WhatsAppUser
+from app.models.whatsapp import WhatsAppMessageCreate, WhatsAppUser
 from app.services.whatsapp.client import send_flow_message
 
 logger = logging.getLogger(__name__)
@@ -43,12 +43,10 @@ class RegisterAnimalFlow(BaseFlow):
 
     def handle(self, data: dict, user: WhatsAppUser, session: Session) -> str:
         from app.core import openai as openai_helpers
-        from app.crud import get_conversation_history
-        
-        logger.info(f"[RegisterAnimalFlow] Handling flow submission for {user.phone}: {data}")
+        from app.crud import get_conversation_history, save_whatsapp_message
 
-        # Build a clear, single-line instruction for the farmer agent.
-        # The agent calls add_livestock with whatever fields are present.
+        logger.info("[RegisterAnimalFlow] Handling flow submission for %s: %s", user.phone, data)
+
         fields = []
         if data.get("name"):
             fields.append(f"name: {data['name']}")
@@ -65,8 +63,26 @@ class RegisterAnimalFlow(BaseFlow):
 
         photo = data.get("animal_photo")
         if photo:
-            # photo is a list of Meta media IDs — log for now, save later
             logger.info("[RegisterAnimalFlow] Received animal photo(s) for %s: %s", user.phone, photo)
+
+        # If date of birth was not provided we can't generate a tag yet.
+        # Save the partial details to history, flag the user as mid-registration,
+        # and ask for an age estimate. The next message goes through the farmer
+        # agent which has the today-aware hint and will calculate a DOB.
+        if not data.get("date_of_birth"):
+            partial = "Register this animal — " + ", ".join(fields) if fields else "Register an animal."
+            save_whatsapp_message(
+                session=session,
+                user=user,
+                msg_in=WhatsAppMessageCreate(phone=user.phone, role="farmer", content=partial),
+            )
+            user.is_adding_animal = True
+            session.add(user)
+            session.commit()
+            return (
+                "Almost done! One more thing — I need your animal's approximate age to complete the registration.\n\n"
+                "How old is the animal? For example: *2 years old*, *6 months*, *born around 2022*"
+            )
 
         if fields:
             message = "Register this animal — " + ", ".join(fields)
