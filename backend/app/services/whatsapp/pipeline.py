@@ -7,8 +7,6 @@ from app.crud import (
     authenticate,
     create_whatsapp_user,
     get_conversation_history,
-    get_livestock_by_name_for_user,
-    get_livestock_for_user,
     get_whatsapp_user_by_phone,
     save_whatsapp_message,
 )
@@ -224,6 +222,34 @@ class WhatsAppConversationService:
             )
             return
 
+        # Farmer tapped an animal in the report_sickness interactive list.
+        if message_body.startswith("select_animal_"):
+            from app.flows import FLOW_REGISTRY
+            from app.flows.report_sickness import ReportSicknessFlow
+
+            flow = FLOW_REGISTRY.get(ReportSicknessFlow.flow_id)
+            if isinstance(flow, ReportSicknessFlow):
+                animal_id = message_body.removeprefix("select_animal_")
+                reply = flow.handle_selection(animal_id, user, session)
+                self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
+                return
+
+        # Farmer tapped "Show more animals" — herds over 9 are paginated
+        # because WhatsApp list messages cap out at 10 rows total.
+        if message_body.startswith("sickness_more_"):
+            from app.flows import FLOW_REGISTRY
+            from app.flows.report_sickness import ReportSicknessFlow
+
+            flow = FLOW_REGISTRY.get(ReportSicknessFlow.flow_id)
+            if isinstance(flow, ReportSicknessFlow):
+                offset_str = message_body.removeprefix("sickness_more_")
+                offset = int(offset_str) if offset_str.isdigit() else 0
+                if flow.show_more(offset=offset, phone=phone, user=user, session=session):
+                    self._persist_assistant(
+                        session=session, user=user, phone=phone, content="[More animals sent]"
+                    )
+                return
+
         # Known intent from a menu tap — route to the right handler.
         if message_body in INTENT_IDS:
             reply = self._handle_intent(
@@ -234,14 +260,15 @@ class WhatsAppConversationService:
                     session=session, user=user, phone=phone, reply=reply
                 )
             else:
-                # Flow form was sent — persist a record so history stays consistent.
+                # Flow form or list message was sent — persist a record so history stays consistent.
                 self._persist_assistant(
                     session=session,
                     user=user,
                     phone=phone,
-                    content=f"[Form sent: {message_body}]",
+                    content=f"[Form/List sent: {message_body}]",
                 )
             return
+
 
         reply = self._handle_farmer_agent(
             user=user, message_body=message_body, session=session
@@ -424,8 +451,8 @@ class WhatsAppConversationService:
         # If the form can't be sent (no flow ID configured, Meta API error),
         # fall through to the farmer agent which guides them step by step.
         flow = FLOW_REGISTRY.get(intent)
-        if flow and flow.start(phone=phone):
-            return None  # form sent — no additional text reply needed
+        if flow and flow.start(phone=phone, user=user, session=session):
+            return None  # form/list sent — no additional text reply needed
 
         # Fallback: farmer agent handles anything not yet a dedicated flow.
         intent_labels = {

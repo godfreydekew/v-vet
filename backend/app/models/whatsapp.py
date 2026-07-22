@@ -26,6 +26,7 @@ class WhatsAppUserBase(SQLModel):
     main_goal: str | None = Field(default=None, max_length=500)
     is_fully_onboarded: bool = Field(default=False)
     is_adding_animal: bool = Field(default=False)
+    active_sickness_animal_id: uuid.UUID | None = Field(default=None, foreign_key="livestock.id")
     linked_user_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")
 
 
@@ -46,6 +47,7 @@ class WhatsAppUserUpdate(SQLModel):
     main_goal: str | None = None
     is_fully_onboarded: bool | None = None
     is_adding_animal: bool | None = None
+    active_sickness_animal_id: uuid.UUID | None = None
     linked_user_id: uuid.UUID | None = None
 
 
