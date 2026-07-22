@@ -22,9 +22,9 @@ class BaseFlow(ABC):
     flow_id: str
 
     @abstractmethod
-    def start(self, phone: str) -> bool:
-        """Send the WhatsApp Flow form to the farmer.
-        Returns True if the form was sent successfully, False otherwise.
+    def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
+        """Send the WhatsApp Flow form (or interactive list) to the farmer.
+        Returns True if it was sent successfully, False otherwise.
         The pipeline falls back to the farmer agent when False is returned.
         """
         ...

@@ -19,7 +19,7 @@ class RegisterAnimalFlow(BaseFlow):
 
     flow_id = "register_animal"
 
-    def start(self, phone: str) -> bool:
+    def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
         if not settings.FLOW_ID_REGISTER_ANIMAL:
             logger.warning("[RegisterAnimalFlow] FLOW_ID_REGISTER_ANIMAL not configured — falling back to agent.")
             return False

@@ -436,21 +436,39 @@ def get_conversation_history(
 
 
 def get_livestock_for_user(
-    *, session: Session, user_id: uuid.UUID
+    *, session: Session, user_id: uuid.UUID, limit: int | None = 10
 ) -> list[Livestock]:
-    """Return the first `limit` active livestock across all farms owned by user_id."""
+    """Return active livestock across all farms owned by user_id, capped at `limit` (None = no cap)."""
     farm_ids = session.exec(
         select(Farm.id).where(Farm.farmer_id == user_id)
     ).all()
     if not farm_ids:
         return []
-    rows = session.exec(
+    query = (
         select(Livestock)
         .where(col(Livestock.farm_id).in_(farm_ids))
         .where(Livestock.lifecycle_status == "active")
-        .limit(10)
-    ).all()
+    )
+    if limit is not None:
+        query = query.limit(limit)
+    rows = session.exec(query).all()
     return list(rows)
+
+
+def get_livestock_by_id_for_user(
+    *, session: Session, user_id: uuid.UUID, livestock_id: uuid.UUID
+) -> Livestock | None:
+    """Fetch a single livestock record, scoped to farms owned by user_id."""
+    farm_ids = session.exec(
+        select(Farm.id).where(Farm.farmer_id == user_id)
+    ).all()
+    if not farm_ids:
+        return None
+    return session.exec(
+        select(Livestock)
+        .where(Livestock.id == livestock_id)
+        .where(col(Livestock.farm_id).in_(farm_ids))
+    ).first()
 
 
 def get_livestock_by_name_for_user(
