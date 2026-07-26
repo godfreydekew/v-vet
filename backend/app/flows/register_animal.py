@@ -64,6 +64,21 @@ class RegisterAnimalFlow(BaseFlow):
         photo = data.get("animal_photo")
         if photo:
             logger.info("[RegisterAnimalFlow] Received animal photo(s) for %s: %s", user.phone, photo)
+            try:
+                from app.services.whatsapp_flow_media import download_whatsapp_flow_media
+                from app.services.storage import upload_livestock_image_bytes
+
+                download_res = download_whatsapp_flow_media(photo)
+                if download_res:
+                    img_bytes, ctype, fname = download_res
+                    s3_url = upload_livestock_image_bytes(img_bytes, filename=fname, content_type=ctype)
+                    if s3_url:
+                        user.pending_animal_photo_url = s3_url
+                        session.add(user)
+                        session.commit()
+                        logger.info("[RegisterAnimalFlow] Saved pending_animal_photo_url for %s: %s", user.phone, s3_url)
+            except Exception as err:
+                logger.exception("[RegisterAnimalFlow] Failed processing animal photo for %s: %s", user.phone, err)
 
         # If date of birth was not provided we can't generate a tag yet.
         # Save the partial details to history, flag the user as mid-registration,

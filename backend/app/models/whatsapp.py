@@ -28,6 +28,7 @@ class WhatsAppUserBase(SQLModel):
     is_adding_animal: bool = Field(default=False)
     active_sickness_animal_id: uuid.UUID | None = Field(default=None, foreign_key="livestock.id")
     linked_user_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")
+    pending_animal_photo_url: str | None = Field(default=None, max_length=1024)
 
 
 class WhatsAppUserCreate(SQLModel):
@@ -49,6 +50,7 @@ class WhatsAppUserUpdate(SQLModel):
     is_adding_animal: bool | None = None
     active_sickness_animal_id: uuid.UUID | None = None
     linked_user_id: uuid.UUID | None = None
+    pending_animal_photo_url: str | None = None
 
 
 class WhatsAppUser(WhatsAppUserBase, table=True):

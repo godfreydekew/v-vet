@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from datetime import date
 from typing import Any, cast
@@ -12,6 +13,8 @@ from app.core.config import settings
 from app.models.livestock import Livestock
 from app.models.whatsapp import WhatsAppMessage, WhatsAppUser
 from app.crud import create_user_for_new_whatsapp
+
+logger = logging.getLogger(__name__)
 
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
@@ -559,6 +562,25 @@ def _execute_farmer_tool(
             date_of_birth=dob,
         )
         user.is_adding_animal = False
+        if user.pending_animal_photo_url:
+            from app import crud
+            from app.models.livestock_image import LivestockImageCreate
+
+            crud.create_livestock_image(
+                session=session,
+                livestock_id=animal.id,
+                image_in=LivestockImageCreate(
+                    image_url=user.pending_animal_photo_url,
+                    is_primary=True,
+                ),
+            )
+            logger.info(
+                "[add_livestock] Created primary LivestockImage for %s from pending URL: %s",
+                animal.id,
+                user.pending_animal_photo_url,
+            )
+            user.pending_animal_photo_url = None
+
         session.add(user)
         session.commit()
         return {

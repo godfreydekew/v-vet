@@ -25,7 +25,6 @@ def parse_cors(v: Any) -> list[str] | str:
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        # Use top level .env file (one level above ./backend/)
         env_file=".env",
         env_ignore_empty=True,
         extra="ignore",
@@ -70,10 +69,17 @@ class Settings(BaseSettings):
     VERIFY_TOKEN: str | None = None
     CHALLENGE: str | None = None
 
-    # WhatsApp Flow IDs — created once in Meta Flow Builder, stored here
+    # WhatsApp Flow IDs
     FLOW_ID_REGISTER_ANIMAL: str | None = None
     
     ELEVENLABS_API_KEY: str | None = None
+
+    # Superbase S3 configuration (used by Supabase Storage)
+    SUPERBASE_S3_ACCESS_ID: str | None = None
+    SUPERBASE_S3_SECRET_ACCESS_KEY: str | None = None
+    SUPERBASE_S3_REGION: str | None = None
+    SUPERBASE_S3_BUCKET: str | None = None
+    SUPERBASE_S3_BUCKET_ENDPOINT: str | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
