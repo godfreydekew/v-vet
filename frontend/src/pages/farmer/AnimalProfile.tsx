@@ -1136,92 +1136,114 @@ export default function AnimalProfile() {
         <ArrowLeft size={16} /> Back to {farm?.name ?? "Farm"}
       </Link>
 
-      {/* Header */}
-      <div className="bg-card rounded-xl border border-border p-6">
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              {animal.name ?? "Unnamed Animal"}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1 capitalize">
-              {[animal.tag_number, animal.species, animal.breed]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-sm text-muted-foreground capitalize">
-              {animal.gender && <span>{animal.gender}</span>}
-              {calcAge(animal.date_of_birth) && (
-                <span>{calcAge(animal.date_of_birth)}</span>
+      {/* Header Card */}
+      <div className="bg-card rounded-xl border border-border p-5 md:p-6 space-y-5 shadow-sm">
+        {/* Top Title & Status Row */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">
+                {animal.name ?? "Unnamed Animal"}
+              </h1>
+              {animal.tag_number && (
+                <span className="text-xs font-mono font-medium px-2.5 py-0.5 rounded-md bg-muted text-muted-foreground border border-border">
+                  {animal.tag_number}
+                </span>
               )}
-              {animal.weight_kg != null && <span>{animal.weight_kg} kg</span>}
             </div>
-            {farm && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Farm:{" "}
-                <Link
-                  to={`/farms/${farm.id}`}
-                  className="text-primary hover:underline"
-                >
-                  {farm.name}
-                </Link>
-              </p>
-            )}
+            <p className="text-sm text-muted-foreground capitalize">
+              {[animal.species, animal.breed].filter(Boolean).join(" · ")}
+            </p>
           </div>
-          <div className="flex flex-col items-start md:items-end gap-2">
-            <span
-              className={`text-sm px-3 py-1 rounded-full font-medium capitalize ${HEALTH_COLORS[animal.health_status]}`}
-            >
-              • {animal.health_status}
+
+          <span
+            className={`text-xs md:text-sm px-3 py-1 rounded-full font-medium capitalize shrink-0 ${HEALTH_COLORS[animal.health_status]}`}
+          >
+            • {animal.health_status}
+          </span>
+        </div>
+
+        {/* Metadata Chips / Quick Stats */}
+        <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-muted-foreground">
+          {animal.gender && (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-accent text-accent-foreground font-medium capitalize">
+              {animal.gender}
             </span>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Lifecycle</span>
-              <Select
-                value={animal.lifecycle_status}
-                onValueChange={(v) =>
-                  lifecycleMutation.mutate(v as LifecycleStatus)
-                }
-                disabled={lifecycleMutation.isPending}
+          )}
+          {calcAge(animal.date_of_birth) && (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-accent text-accent-foreground font-medium">
+              {calcAge(animal.date_of_birth)}
+            </span>
+          )}
+          {animal.weight_kg != null && (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-accent text-accent-foreground font-medium">
+              {animal.weight_kg} kg
+            </span>
+          )}
+          {farm && (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-accent text-accent-foreground font-medium">
+              Farm:{" "}
+              <Link
+                to={`/farms/${farm.id}`}
+                className="text-primary hover:underline ml-1 font-semibold"
               >
-                <SelectTrigger className="w-[160px] h-8 capitalize">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {LIFECYCLE_OPTIONS.map((s) => (
-                    <SelectItem key={s} value={s} className="capitalize">
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => setVetRequestOpen(true)}
-              >
-                <Stethoscope size={14} /> Submit Vet Request
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="gap-1.5"
-                onClick={() => setEditOpen(true)}
-              >
-                <Pencil size={14} /> Edit
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
-                onClick={() => setDeleteOpen(true)}
-              >
-                <Trash2 size={14} /> Delete
-              </Button>
-            </div>
+                {farm.name}
+              </Link>
+            </span>
+          )}
+        </div>
+
+        {/* Action Toolbar & Lifecycle Control */}
+        <div className="pt-4 border-t border-border/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground font-medium">Lifecycle:</span>
+            <Select
+              value={animal.lifecycle_status}
+              onValueChange={(v) =>
+                lifecycleMutation.mutate(v as LifecycleStatus)
+              }
+              disabled={lifecycleMutation.isPending}
+            >
+              <SelectTrigger className="w-[140px] sm:w-[160px] h-9 text-xs sm:text-sm capitalize bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LIFECYCLE_OPTIONS.map((s) => (
+                  <SelectItem key={s} value={s} className="capitalize text-xs sm:text-sm">
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <Button
+              type="button"
+              size="sm"
+              className="gap-1.5 flex-1 sm:flex-none h-9 text-xs sm:text-sm"
+              onClick={() => setVetRequestOpen(true)}
+            >
+              <Stethoscope size={15} /> Submit Vet Request
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-1.5 h-9 text-xs sm:text-sm"
+              onClick={() => setEditOpen(true)}
+            >
+              <Pencil size={14} /> Edit
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-1.5 h-9 text-xs sm:text-sm text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 size={14} /> Delete
+            </Button>
           </div>
         </div>
       </div>
