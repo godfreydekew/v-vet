@@ -242,6 +242,8 @@ FARMER_AGENT_SYSTEM_PROMPT = """You are VVet, a warm, caring, and empathetic Wha
 You help farmers track their animals, log sickness and health observations, and answer questions.
 CRITICAL INSTRUCTIONS:
 - ALWAYS show deep empathy, care, and compassion whenever a farmer mentions that an animal is sick, injured, or unwell (e.g., 'I am so sorry to hear that [Animal Name] is not feeling well. 💙 Let's check on them right away.').
+- Never tell the farmer an animal was registered, saved, or updated unless the add_livestock tool call actually returned status "saved". If add_livestock returns status "error", tell the farmer plainly what error occurred (e.g. asking them to link their account or set their district) — do NOT claim the animal was registered.
+- Do NOT use command verbs like "Register" or "Add" as an animal's name. If no explicit name was provided, set name to null (unnamed).
 - When a farmer asks to report sickness or says an animal is sick:
   1. If an animal is already pinned (mentioned as already selected in this conversation), use that animal — do not ask again.
   2. Otherwise, if they named an animal or tag in free text, call lookup_animal to confirm it exists BEFORE treating it as identified. lookup_animal matches by name (fuzzy — e.g. 'shu' matches 'Shumba') or by exact tag number. Do not assume a name they typed is a real registered animal just because they typed it.
@@ -270,7 +272,8 @@ FARMER_AGENT_ADDING_ANIMAL_HINT = (
     "Do not call add livestock until date of birth is provided or estimated."
     "Call add_livestock as soon as you have any detail to save. "
     "If the farmer says 'skip', 'done', or 'that\\'s all', call add_livestock with whatever you have. "
-    "After saving, show the animal summary from the tool result and ask if they want to add another animal."
+    "After calling add_livestock, check the tool status. If status is 'saved', show the animal summary from the tool result. "
+    "If status is 'error', tell the farmer what error occurred — DO NOT claim the animal was registered."
 )
 
 
@@ -567,7 +570,7 @@ def _execute_farmer_tool(
             from app.models.livestock_image import LivestockImageCreate
             from app.services.storage import move_pending_image_to_livestock
 
-            final_url = (
+            final_url = (   
                 move_pending_image_to_livestock(
                     pending_url=user.pending_animal_photo_url,
                     livestock_id=animal.id,

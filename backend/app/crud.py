@@ -160,9 +160,12 @@ def create_livestock(
     district: str | None = None,
 ) -> Livestock:
     tag = livestock_in.tag_number
+    print(f"Generating tag for {user_id} in {district}")
     if not tag and user_id and district and livestock_in.date_of_birth:
         tag = generate_livestock_tag(session=session, user_id=user_id, district=district, year=livestock_in.date_of_birth.year)
+        print(f"Generated tag: {tag}")
     livestock = Livestock.model_validate(livestock_in, update={"tag_number": tag})
+    print(f"Livestock: {livestock}")
     session.add(livestock)
     session.commit()
     session.refresh(livestock)
@@ -502,7 +505,8 @@ def create_livestock_from_whatsapp(
 ) -> Livestock:
     """Get or create the user's default farm, then create the livestock record with an auto-generated tag."""
     farm = get_or_create_default_farm(session=session, user_id=user_id)
-    tag = generate_livestock_tag(session=session, user_id=user_id, district=district, year=date_of_birth.year)
+    birth_year = date_of_birth.year if date_of_birth else date.today().year
+    tag = generate_livestock_tag(session=session, user_id=user_id, district=district, year=birth_year)
     animal = Livestock(
         farm_id=farm.id,
         species=species,

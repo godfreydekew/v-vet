@@ -50,6 +50,8 @@ class RegisterAnimalFlow(BaseFlow):
         fields = []
         if data.get("name"):
             fields.append(f"name: {data['name']}")
+        else:
+            fields.append("name: null (unnamed)")
         if data.get("species"):
             fields.append(f"species: {data['species']}")
         if data.get("breed"):
