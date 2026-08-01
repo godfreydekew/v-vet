@@ -2,7 +2,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from sqlalchemy import delete
+from sqlalchemy import delete, update
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, func, select
 
@@ -33,6 +33,9 @@ from app.models import (
     VaccinationBase,
     VaccinationPublic,
     VaccinationsPublic,
+    VetRequest,
+    VetResponse,
+    WhatsAppUser,
 )
 
 router = APIRouter(prefix="/livestock", tags=["livestock"])
@@ -154,29 +157,8 @@ def delete_livestock(
 ) -> Any:
     livestock = _get_livestock_or_404(session, livestock_id)
     _assert_livestock_owner(session, livestock, current_user)
-    try:
-        # TODO: use ON DELETE CASCADE in the database and just delete the livestock record here instead of doing multiple queries and handling exceptions
-        session.exec(
-            delete(HealthObservation).where(
-                HealthObservation.livestock_id == livestock_id
-            )
-        )
-        session.exec(delete(Treatment).where(Treatment.livestock_id == livestock_id))
-        session.exec(
-            delete(Vaccination).where(Vaccination.livestock_id == livestock_id)
-        )
-        session.exec(delete(LivestockImage).where(LivestockImage.livestock_id == livestock_id))
-        session.exec(delete(Livestock).where(Livestock.id == livestock_id))
-        session.commit()
-    except IntegrityError:
-        session.rollback()
-        raise HTTPException(
-            status_code=409,
-            detail="Cannot delete animal because it is still referenced by related records",
-        )
-    except Exception as e:
-        session.rollback()
-        raise HTTPException(status_code=500, detail=f"Error deleting animal: {str(e)}")
+    session.delete(livestock)
+    session.commit()
     return Message(message="Animal deleted successfully")
 
 

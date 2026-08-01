@@ -33,7 +33,7 @@ class LivestockImage(LivestockImageBase, table=True):
     __tablename__ = "livestock_image"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    livestock_id: uuid.UUID = Field(foreign_key="livestock.id")
+    livestock_id: uuid.UUID = Field(foreign_key="livestock.id", ondelete="CASCADE")
     created_at: datetime = Field(
         default_factory=_utcnow,
         sa_column=Column(DateTime(timezone=True)),

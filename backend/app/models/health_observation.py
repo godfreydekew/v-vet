@@ -62,7 +62,7 @@ class HealthObservation(HealthObservationBase, table=True):
     __tablename__ = "health_observation"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    livestock_id: uuid.UUID = Field(foreign_key="livestock.id")
+    livestock_id: uuid.UUID = Field(foreign_key="livestock.id", ondelete="CASCADE")
     logged_by: uuid.UUID = Field(foreign_key="user.id")
     # Literal → str: SQLAlchemy doesn't understand Literal types.
     appetite_level: str | None = None  # type: ignore[assignment]

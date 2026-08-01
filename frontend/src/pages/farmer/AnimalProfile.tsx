@@ -6,6 +6,7 @@ import { fetchFarmById } from "@/lib/services/farms.service";
 import {
   fetchLivestockById,
   updateLivestock,
+  deleteLivestock,
   fetchHealthObservations,
   createHealthObservation,
   fetchTreatments,
@@ -47,6 +48,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
@@ -58,6 +69,7 @@ import {
   Wind,
   Clock,
   Stethoscope,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import AnimalPhoto from "@/components/AnimalPhoto";
@@ -1002,6 +1014,7 @@ export default function AnimalProfile() {
   const { toast } = useToast();
 
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [vetRequestOpen, setVetRequestOpen] = useState(false);
   const [obsOpen, setObsOpen] = useState(false);
   const [treatOpen, setTreatOpen] = useState(false);
@@ -1013,6 +1026,20 @@ export default function AnimalProfile() {
     enabled: !!id,
   });
   const animal = animalQuery.data;
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteLivestock(id!),
+    onSuccess: () => {
+      toast({ title: "Animal deleted successfully." });
+      queryClient.invalidateQueries({
+        queryKey: ["farm-livestock", animal?.farm_id],
+      });
+      queryClient.invalidateQueries({ queryKey: ["livestock"] });
+      navigate(`/farms/${animal?.farm_id}`);
+    },
+    onError: (err) =>
+      toast({ title: getApiError(err), variant: "destructive" }),
+  });
 
   const farmQuery = useQuery({
     queryKey: ["farm", animal?.farm_id],
@@ -1184,6 +1211,15 @@ export default function AnimalProfile() {
                 onClick={() => setEditOpen(true)}
               >
                 <Pencil size={14} /> Edit
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 size={14} /> Delete
               </Button>
             </div>
           </div>
@@ -1506,6 +1542,35 @@ export default function AnimalProfile() {
           queryClient.invalidateQueries({ queryKey: ["vaccinations", id] })
         }
       />
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Animal Profile</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {animal.name ? `"${animal.name}"` : "this animal"}
+              {animal.tag_number ? ` (${animal.tag_number})` : ""}? This action cannot be undone and will remove all associated observations, treatments, vaccinations, and requests.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                deleteMutation.mutate();
+              }}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 size={15} className="animate-spin mr-2" />
+              ) : null}
+              Delete Animal
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
