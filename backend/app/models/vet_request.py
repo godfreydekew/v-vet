@@ -61,7 +61,7 @@ class VetRequest(VetRequestBase, table=True):
     __tablename__ = "vet_request"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    livestock_id: uuid.UUID = Field(foreign_key="livestock.id")
+    livestock_id: uuid.UUID = Field(foreign_key="livestock.id", ondelete="CASCADE")
     farm_id: uuid.UUID = Field(foreign_key="farm.id")
     farmer_id: uuid.UUID = Field(foreign_key="user.id")
     vet_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")

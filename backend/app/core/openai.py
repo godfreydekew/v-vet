@@ -565,19 +565,28 @@ def _execute_farmer_tool(
         if user.pending_animal_photo_url:
             from app import crud
             from app.models.livestock_image import LivestockImageCreate
+            from app.services.storage import move_pending_image_to_livestock
+
+            final_url = (
+                move_pending_image_to_livestock(
+                    pending_url=user.pending_animal_photo_url,
+                    livestock_id=animal.id,
+                )
+                or user.pending_animal_photo_url
+            )
 
             crud.create_livestock_image(
                 session=session,
                 livestock_id=animal.id,
                 image_in=LivestockImageCreate(
-                    image_url=user.pending_animal_photo_url,
+                    image_url=final_url,
                     is_primary=True,
                 ),
             )
             logger.info(
-                "[add_livestock] Created primary LivestockImage for %s from pending URL: %s",
+                "[add_livestock] Created primary LivestockImage for %s from URL: %s",
                 animal.id,
-                user.pending_animal_photo_url,
+                final_url,
             )
             user.pending_animal_photo_url = None
 

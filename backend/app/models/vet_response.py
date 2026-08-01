@@ -61,7 +61,7 @@ class VetResponse(VetResponseBase, table=True):
     __tablename__ = "vet_response"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    vet_request_id: uuid.UUID = Field(foreign_key="vet_request.id", unique=True)
+    vet_request_id: uuid.UUID = Field(foreign_key="vet_request.id", unique=True, ondelete="CASCADE")
     vet_id: uuid.UUID = Field(foreign_key="user.id")
     # Literal → str: SQLAlchemy doesn't understand Literal types.
     response_type: str  # type: ignore[assignment]
