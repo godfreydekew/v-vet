@@ -251,7 +251,7 @@ CRITICAL INSTRUCTIONS:
        - If they confirm it's still the same animal, proceed using the pin as usual.
        - If they name a different animal ("No, it's Shumba"), that's handled by case 3 below — a named animal always overrides the pin, you don't need to unpin it yourself.
        - If they say no but don't give a new name, treat it exactly like case 2 below — identification starts fresh, call lookup_animal with name omitted.
-  2. If they did NOT name an animal at all (e.g. "my animal is sick", "one of my cows isn't well"), call lookup_animal with name omitted (null). It will return "no_animal_specified" (small herd: the real interactive list has already been sent, just tell them briefly to pick from it) or "too_many_to_list" (large herd: ask them to reply with the animal's name or tag). If they then say they don't know / can't tell you a name, call send_animal_selection_list with force=true — this always sends the real tappable list regardless of herd size.
+  2. If they did NOT name an animal at all (e.g. "my animal is sick", "one of my cows isn't well"), call lookup_animal with name omitted (null). It will return "no_animal_specified" (small herd: the real interactive list has already been sent, just tell them briefly to pick from it) or "too_many_to_list" (large herd: ask them to reply with the animal's name or tag). If they then say they don't know / can't tell you a name, call send_animal_selection_list — this sends the real tappable list directly to their WhatsApp.
   3. If they named an animal or tag in free text — including what looks like an exact tag number — call lookup_animal to confirm it exists BEFORE treating it as identified. lookup_animal matches by name (fuzzy — e.g. 'shu' matches 'Shumba') or by exact tag number. Never invent a placeholder name (e.g. 'animal', 'my animal') — if they haven't actually named one, use case 2 instead.
      - If lookup_animal finds a match, do not treat it as settled yet — explicitly ask the farmer to confirm (e.g., "I found Shumba, your cow — is that right?") and wait for them to say yes. This applies even to an exact tag match, not just a fuzzy name match.
      - If lookup_animal returns "multiple", list the matching names and ask the farmer which one they mean — do not guess.
@@ -262,7 +262,7 @@ CRITICAL INSTRUCTIONS:
      - Once they confirm, call report_sickness again with the same details plus confirmed=true.
      - It then returns "context_flow_started" — it has handed off to a separate deterministic questionnaire that sends its own WhatsApp messages asking follow-up questions (onset, progression, herd context) and records the observation itself once done. Do not call report_sickness again for this animal, and do not claim anything was recorded yet — just add one brief, warm line (e.g. "Let's go through a few quick questions about Bessie.") since the next message the farmer sees is the questionnaire's first question, not yours.
 - Never tell the farmer an observation was recorded, or that you "will report" it, unless a tool call actually returned status "ok". If report_sickness returns "not_found", "not_found_list_sent", "no_animal_specified", "too_many_to_list", "needs_confirmation", or "context_flow_started", nothing has been recorded yet — do not claim otherwise.
-- If the farmer explicitly asks to see/select from their animals (e.g. "send the list", "show me my animals"), call send_animal_selection_list with force=true directly — do not describe the list yourself in text using list_animals for this purpose.
+- If the farmer explicitly asks to see/select from their animals (e.g. "send the list", "show me my animals", "I don't know the name"), call send_animal_selection_list directly — do not describe the list yourself in text using list_animals for this purpose.
 - Keep replies short, kind, polite, and practical."""
 
 FARMER_AGENT_ADDING_ANIMAL_HINT = (
@@ -326,27 +326,13 @@ def build_farmer_agent_tools() -> list[dict[str, Any]]:
                 "name": "send_animal_selection_list",
                 "description": (
                     "Send the farmer a tappable WhatsApp list of their registered animals to pick from. "
+                    "Use this whenever the farmer says they don't know the animal's name/tag, or explicitly "
+                    "asks to see/select from their animal list (e.g. 'send the list', 'show me my animals'). "
                     "Do NOT format the list yourself in text using list_animals for this purpose — this "
                     "tool sends the real interactive picker, which lets the farmer tap the exact animal "
-                    "instead of typing a name. For a large herd this call may decline to send the list "
-                    "and ask you to get a name/tag from the farmer first — see status handling."
+                    "instead of typing a name."
                 ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "force": {
-                            "type": ["boolean", "null"],
-                            "description": (
-                                "Leave false/omit for the default 'no animal named yet' case — for a large "
-                                "herd this returns too_many_to_list instead of sending, so you ask for a "
-                                "name/tag first. Set true only when the farmer explicitly asked to see/select "
-                                "from their list (e.g. 'send the list'), or said they don't know which animal "
-                                "it is / can't give you a name — this always sends the list regardless of herd size."
-                            ),
-                        },
-                    },
-                    "additionalProperties": False,
-                },
+                "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
             },
         },
         {
@@ -514,12 +500,6 @@ def _execute_farmer_tool(
         }
 
     if tool_name == "send_animal_selection_list":
-        force = bool(arguments.get("force"))
-        if not force:
-            return _handle_no_animal_specified(
-                user=user, user_id=user.linked_user_id, session=session
-            )
-
         list_sent = _send_animal_selection_list(user=user, session=session)
         if list_sent:
             return {"status": "sent"}
