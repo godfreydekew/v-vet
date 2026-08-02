@@ -1,4 +1,3 @@
-import json
 from dataclasses import dataclass
 
 from sqlmodel import Session
@@ -54,11 +53,7 @@ def record_sickness_report(
         livestock_id=animal.id,
         logged_by=user.linked_user_id,
         symptoms=symptoms,
-        urgency_level=triage_res.urgency_level,
-        danger_flags=json.dumps(triage_res.danger_flags),
-        symptom_duration=duration,
         symptom_duration_days=symptom_duration_days,
-        symptom_trend=trend,
         notes=triage_res.summary_text,
     )
     session.add(obs)
@@ -66,6 +61,7 @@ def record_sickness_report(
     if triage_res.requires_vet:
         vr = VetRequest(
             livestock_id=animal.id,
+            farm_id=animal.farm_id,
             farmer_id=user.linked_user_id,
             urgency=triage_res.urgency_level.lower(),
             farmer_notes=f"Symptoms: {symptoms}. {triage_res.summary_text}",

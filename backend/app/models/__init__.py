@@ -40,6 +40,7 @@ from app.models.livestock_image import (
     LivestockImageUpdate,
 )
 from app.models.shared import Message, NewPassword, Token, TokenPayload, BroadcastEmailRequest
+from app.models.triage_session import TriageSession
 from app.models.treatment import (
     Treatment,
     TreatmentBase,
@@ -147,6 +148,8 @@ __all__ = [
     "HealthObservationPublic",
     "HealthObservationsPublic",
     "HealthObservationUpdate",
+    # TriageSession
+    "TriageSession",
     # Vaccination
     "Vaccination",
     "VaccinationBase",

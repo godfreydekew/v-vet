@@ -250,6 +250,26 @@ class WhatsAppConversationService:
                     )
                 return
 
+        # Farmer tapped an answer in the deterministic "basic context"
+        # questionnaire (only ever running once an animal is confirmed).
+        if message_body.startswith("ctx_"):
+            from app.flows.report_sickness_context import TriageContextFlow
+
+            flow = TriageContextFlow()
+            sent, completed_session = flow.handle_answer(
+                row_id=message_body, phone=phone, user=user, session=session
+            )
+            if completed_session is not None:
+                reply = flow.complete_and_record(
+                    triage_session=completed_session, user=user, session=session
+                )
+                self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
+            elif sent:
+                self._persist_assistant(
+                    session=session, user=user, phone=phone, content="[Context question sent]"
+                )
+            return
+
         # Known intent from a menu tap — route to the right handler.
         if message_body in INTENT_IDS:
             reply = self._handle_intent(
@@ -269,6 +289,28 @@ class WhatsAppConversationService:
                 )
             return
 
+        # An animal is pinned (tapped from the report_sickness list) and this
+        # is the farmer's first free-text reply since then — that's the
+        # "describe the problem" step. Hand off to the deterministic
+        # questionnaire instead of the general agent; it takes over from here.
+        if user.active_sickness_animal_id is not None:
+            from app.flows.report_sickness_context import TriageContextFlow
+
+            flow = TriageContextFlow()
+            sent = flow.start(
+                phone=phone,
+                user=user,
+                session=session,
+                livestock_id=user.active_sickness_animal_id,
+                problem_description=message_body,
+            )
+            if sent:
+                self._persist_assistant(
+                    session=session, user=user, phone=phone, content="[Context questionnaire started]"
+                )
+                return
+            # If the interactive send failed for some reason, fall through to
+            # the agent rather than silently dropping the farmer's message.
 
         reply = self._handle_farmer_agent(
             user=user, message_body=message_body, session=session

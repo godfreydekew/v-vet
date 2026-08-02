@@ -245,19 +245,23 @@ CRITICAL INSTRUCTIONS:
 - Never tell the farmer an animal was registered, saved, or updated unless the add_livestock tool call actually returned status "saved". If add_livestock returns status "error", tell the farmer plainly what error occurred (e.g. asking them to link their account or set their district) — do NOT claim the animal was registered.
 - Do NOT use command verbs like "Register" or "Add" as an animal's name. If no explicit name was provided, set name to null (unnamed).
 - When a farmer asks to report sickness or says an animal is sick, you must always call a tool to identify the animal — never just reply in text asking which animal it is without also calling a tool. The core rule: nothing gets written to report_sickness until the animal is confirmed, and tapping the interactive list is the only thing that counts as confirmed on its own.
-  1. If an animal is already pinned (already tapped from the interactive list earlier in this conversation), use that animal directly — that tap was the confirmation, do not ask again.
+  1. If an animal is already pinned (already tapped from the interactive list earlier in this conversation):
+     - If the message clearly continues describing that same animal (more symptom detail, answering something you just asked about it), use the pinned animal directly — that tap was the confirmation, do not ask again.
+     - If the message is generic and could plausibly be about a different animal (e.g. they say "my animal is sick" or "she is not eating" again, out of context of the current conversation), ask: "You previously selected [pinned animal name] — are you still reporting for them, or a different animal?" and wait for their answer before calling report_sickness.
+       - If they confirm it's still the same animal, proceed using the pin as usual.
+       - If they name a different animal ("No, it's Shumba"), that's handled by case 3 below — a named animal always overrides the pin, you don't need to unpin it yourself.
+       - If they say no but don't give a new name, treat it exactly like case 2 below — identification starts fresh, call lookup_animal with name omitted.
   2. If they did NOT name an animal at all (e.g. "my animal is sick", "one of my cows isn't well"), call lookup_animal with name omitted (null). It will return "no_animal_specified" (small herd: the real interactive list has already been sent, just tell them briefly to pick from it) or "too_many_to_list" (large herd: ask them to reply with the animal's name or tag). If they then say they don't know / can't tell you a name, call send_animal_selection_list with force=true — this always sends the real tappable list regardless of herd size.
   3. If they named an animal or tag in free text — including what looks like an exact tag number — call lookup_animal to confirm it exists BEFORE treating it as identified. lookup_animal matches by name (fuzzy — e.g. 'shu' matches 'Shumba') or by exact tag number. Never invent a placeholder name (e.g. 'animal', 'my animal') — if they haven't actually named one, use case 2 instead.
      - If lookup_animal finds a match, do not treat it as settled yet — explicitly ask the farmer to confirm (e.g., "I found Shumba, your cow — is that right?") and wait for them to say yes. This applies even to an exact tag match, not just a fuzzy name match.
      - If lookup_animal returns "multiple", list the matching names and ask the farmer which one they mean — do not guess.
      - If lookup_animal (or report_sickness) returns status "not_found_list_sent", a real name/tag was given but didn't match anything — their registered-animals list has already been sent as a separate message. Do not repeat the list yourself in text. Just tell them you couldn't find that specific animal and to pick from the list above.
      - If status is plain "not_found" (list couldn't be sent — e.g. no animals registered yet), tell them plainly and suggest registering an animal first.
-  4. Once you have symptoms and a resolved animal (from lookup_animal or given together in one message, e.g. "Bessie is sick, she is coughing and has a fever"), call report_sickness. If the animal was not pinned, leave confirmed false on this first call.
+  4. Once you have the farmer's problem description and a resolved animal (from lookup_animal, or given together in one message, e.g. "Bessie is sick, she is coughing and has a fever"), call report_sickness with that description as symptoms. If the animal was not pinned, leave confirmed false on this first call.
      - If report_sickness returns "needs_confirmation", ask the farmer to confirm the named animal (by name and species) and wait for a yes — do not call report_sickness again until they confirm.
-     - Once they confirm, call report_sickness again with the same details plus confirmed=true. Only now does it actually get recorded.
-- When asking how long symptoms have lasted, convert the farmer's answer into a whole number of days yourself and pass it as symptom_duration_days when calling report_sickness (e.g. "a week" → 7, "a month" → 30, "today" or less than a day → 0). Do not just pass the raw phrase and expect it to be parsed for you.
-- Never tell the farmer an observation was recorded, or that you "will report" it, unless a tool call actually returned status "ok". If report_sickness returns "not_found", "not_found_list_sent", "no_animal_specified", "too_many_to_list", or "needs_confirmation", nothing has been recorded — do not claim otherwise.
-- If the triage evaluation indicates a vet is needed (urgency is Emergency or Urgent), explicitly inform the farmer that a veterinary officer is required and advise them to contact their local vet immediately.
+     - Once they confirm, call report_sickness again with the same details plus confirmed=true.
+     - It then returns "context_flow_started" — it has handed off to a separate deterministic questionnaire that sends its own WhatsApp messages asking follow-up questions (onset, progression, herd context) and records the observation itself once done. Do not call report_sickness again for this animal, and do not claim anything was recorded yet — just add one brief, warm line (e.g. "Let's go through a few quick questions about Bessie.") since the next message the farmer sees is the questionnaire's first question, not yours.
+- Never tell the farmer an observation was recorded, or that you "will report" it, unless a tool call actually returned status "ok". If report_sickness returns "not_found", "not_found_list_sent", "no_animal_specified", "too_many_to_list", "needs_confirmation", or "context_flow_started", nothing has been recorded yet — do not claim otherwise.
 - If the farmer explicitly asks to see/select from their animals (e.g. "send the list", "show me my animals"), call send_animal_selection_list with force=true directly — do not describe the list yourself in text using list_animals for this purpose.
 - Keep replies short, kind, polite, and practical."""
 
@@ -350,10 +354,12 @@ def build_farmer_agent_tools() -> list[dict[str, Any]]:
             "function": {
                 "name": "report_sickness",
                 "description": (
-                    "Report sickness/symptoms for an animal to evaluate triage urgency and record health observation. "
+                    "Confirm the animal for a sickness report and hand off to the basic-context "
+                    "questionnaire, which asks its own follow-up questions (onset, progression, herd "
+                    "context) via WhatsApp buttons/lists and records the final observation itself. "
                     "If the farmer already selected an animal from the registered-animals list, "
                     "animal_name_or_tag can be omitted — the selected animal is used automatically. "
-                    "Unless the animal was selected by tapping the list, this will refuse to record anything "
+                    "Unless the animal was selected by tapping the list, this will refuse to proceed "
                     "until the farmer has explicitly confirmed which animal — see the confirmed parameter."
                 ),
                 "parameters": {
@@ -376,29 +382,7 @@ def build_farmer_agent_tools() -> list[dict[str, Any]]:
                         },
                         "symptoms": {
                             "type": "string",
-                            "description": "Observed symptoms or health concerns",
-                        },
-                        "danger_flags": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "List of danger flags if present (cannot_stand, breathing_difficulty, seizures_unconscious, heavy_bleeding, calving_emergency, multiple_sudden_deaths, severe_bloat)",
-                        },
-                        "symptom_duration": {
-                            "type": ["string", "null"],
-                            "description": "A short human-readable label for the duration, as the farmer said it (e.g. '2 days', 'since yesterday', 'a week') — for display only, not used for triage math.",
-                        },
-                        "symptom_duration_days": {
-                            "type": ["integer", "null"],
-                            "description": (
-                                "You must convert the farmer's answer into a whole number of days yourself — "
-                                "this is what triage math actually uses. 0 for today / less than a day, "
-                                "1 for yesterday, 7 for about a week, 14 for two weeks, 30 for about a month. "
-                                "Omit only if the farmer hasn't said how long."
-                            ),
-                        },
-                        "symptom_trend": {
-                            "type": ["string", "null"],
-                            "description": "Whether symptoms are worsening, stable, or improving",
+                            "description": "The farmer's free-text description of the problem, passed through as-is to the questionnaire as the initial problem description.",
                         },
                     },
                     "required": ["symptoms"],
@@ -448,7 +432,15 @@ def _send_animal_selection_list(*, user: WhatsAppUser, session: Session) -> bool
     explicit action (send_animal_selection_list tool with force=true) and as a
     fallback when a farmer-typed name/tag can't be resolved, instead of just
     telling them to type 'menu'. Always sends the tappable list regardless of
-    herd size — see ReportSicknessFlow.send_animal_list vs .start()."""
+    herd size — see ReportSicknessFlow.send_animal_list vs .start().
+
+    Clears any existing pin first: we're about to let the farmer pick fresh,
+    so a stale selection from earlier in the conversation shouldn't linger."""
+    if user.active_sickness_animal_id is not None:
+        user.active_sickness_animal_id = None
+        session.add(user)
+        session.commit()
+
     from app.flows import FLOW_REGISTRY
     from app.flows.report_sickness import ReportSicknessFlow
 
@@ -468,7 +460,16 @@ def _handle_no_animal_specified(
     (paging through a long list is worse UX than typing). Takes user_id
     explicitly (already narrowed to non-None by the caller) rather than
     reading user.linked_user_id itself.
+
+    Clears any existing pin — calling this means the agent has already
+    decided there's no specific animal to act on (e.g. the farmer declined
+    to continue with a previously pinned animal), so identification starts fresh.
     """
+    if user.active_sickness_animal_id is not None:
+        user.active_sickness_animal_id = None
+        session.add(user)
+        session.commit()
+
     from app.crud import get_livestock_for_user
     from app.flows.report_sickness import ReportSicknessFlow
 
@@ -568,15 +569,10 @@ def _execute_farmer_tool(
 
     if tool_name == "report_sickness":
         from app.services.animal_lookup import LookupStatus, resolve_animal
-        from app.services.sickness import record_sickness_report
 
         name_or_tag = arguments.get("animal_name_or_tag") or ""
         confirmed = bool(arguments.get("confirmed"))
         symptoms = arguments.get("symptoms", "")
-        danger_flags = arguments.get("danger_flags") or []
-        duration = arguments.get("symptom_duration")
-        duration_days = arguments.get("symptom_duration_days")
-        trend = arguments.get("symptom_trend")
 
         # Prefer the animal the farmer already tapped in the report_sickness
         # list (see ReportSicknessFlow.handle_selection) over free-text matching.
@@ -620,29 +616,24 @@ def _execute_farmer_tool(
                 "match_type": lookup.match_type,
             }
 
-        result = record_sickness_report(
-            session=session,
+        # Hand off to the deterministic "basic context" questionnaire
+        # (app/flows/report_sickness_context.py) instead of recording from
+        # free-text-extracted fields directly. It sends its own WhatsApp
+        # messages from here. (Emergency short-circuiting is out of scope
+        # for now — every report goes through the basic-context questions.)
+        from app.flows.report_sickness_context import TriageContextFlow
+
+        TriageContextFlow().start(
+            phone=user.phone,
             user=user,
-            animal=lookup.animal,
-            symptoms=symptoms,
-            danger_flags=danger_flags,
-            duration=duration,
-            symptom_duration_days=duration_days,
-            trend=trend,
+            session=session,
+            livestock_id=lookup.animal.id,
+            problem_description=symptoms,
         )
-
-
         return {
-            "status": "ok",
-            "match_type": lookup.match_type,
-            "is_fuzzy": lookup.match_type == "fuzzy_name",
-            "animal_name": result.animal_name,
-            "urgency_level": result.triage.urgency_level,
-            "requires_vet": result.triage.requires_vet,
-            "summary": result.triage.summary_text,
-            "recommendation_text": result.triage.recommendation_text,
+            "status": "context_flow_started",
+            "animal_name": lookup.animal.name or lookup.animal.tag_number,
         }
-
 
     if tool_name == "add_livestock":
         if not user.district:

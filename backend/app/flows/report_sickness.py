@@ -171,6 +171,5 @@ class ReportSicknessFlow(BaseFlow):
         animal_name = animal.name or animal.tag_number
         return (
             f"Thank you. I have selected **{animal_name}** ({animal.species}). 💙\n\n"
-            "Please describe what symptoms or health problems you have noticed (e.g. not eating, coughing, limping).\n\n"
-            "⚠️ *Emergency check*: Is the animal unable to stand, struggling to breathe, having fits, or bleeding heavily?"
+            "Please describe what symptoms or health problems you have noticed (e.g. not eating, coughing, limping)"
         )
