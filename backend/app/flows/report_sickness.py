@@ -6,7 +6,7 @@ from sqlmodel import Session
 from app.flows.base import BaseFlow
 from app.models.livestock import Livestock
 from app.models.whatsapp import WhatsAppUser
-from app.services.whatsapp.client import send_list_message
+from app.services.whatsapp.client import send_list_message, send_whatsapp_message
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +18,12 @@ class ReportSicknessFlow(BaseFlow):
     WhatsAppUser record so the farmer agent knows which animal the
     follow-up symptom description refers to, instead of re-inferring it
     from chat history.
+
+    Herds under SMALL_HERD_THRESHOLD get the list immediately — it fits on
+    one page, so tapping is strictly easier than typing a name. Larger herds
+    are asked for a name/tag instead by default (paging through a long list
+    is worse UX than typing); the farmer agent falls back to sending the list
+    anyway if they say they don't know which animal it is.
 
     WhatsApp list messages cap out at 10 rows total, so herds larger than
     that are paginated: PAGE_SIZE animals per page, plus one "show more" row.
@@ -32,8 +38,38 @@ class ReportSicknessFlow(BaseFlow):
     # for "Show more animals" whenever there's a next page.
     PAGE_SIZE = 9
     MAX_ANIMALS = 100
+    SMALL_HERD_THRESHOLD = 10
 
     def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
+        from app.crud import get_livestock_for_user
+
+        if not user.linked_user_id:
+            return False
+
+        animal_count = len(
+            get_livestock_for_user(session=session, user_id=user.linked_user_id, limit=self.MAX_ANIMALS)
+        )
+        if animal_count == 0:
+            return False
+
+        if animal_count >= self.SMALL_HERD_THRESHOLD:
+            response = send_whatsapp_message(
+                phone=phone,
+                text=(
+                    "I am so sorry your animal is not feeling well. 💙\n\n"
+                    "You have quite a few animals registered — which one is it? "
+                    "Please reply with its name or tag number."
+                ),
+            )
+            return response.status_code == 200
+
+        return self.send_animal_list(phone=phone, user=user, session=session)
+
+    def send_animal_list(self, *, phone: str, user: WhatsAppUser, session: Session) -> bool:
+        """Unconditionally send the real interactive animal list, regardless of herd
+        size. Used for the not-found fallback and explicit 'show me the list' /
+        'I don't know which one' requests — as opposed to start(), which is the
+        size-aware default entry point for the menu tap."""
         return self._send_animal_page(phone=phone, user=user, session=session, offset=0)
 
     def show_more(self, *, offset: int, phone: str, user: WhatsAppUser, session: Session) -> bool:

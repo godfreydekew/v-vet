@@ -46,7 +46,8 @@ def test_delete_livestock_cascade(client: TestClient, db: Session, normal_user_t
     treat = Treatment(livestock_id=animal.id, logged_by=user_id, treatment_name="Meds", date_given="2026-08-01", administered_by="farmer")
     vax = Vaccination(livestock_id=animal.id, logged_by=user_id, vaccine_name="FMD", date_given="2026-08-01", administered_by="farmer")
     vet_req = VetRequest(livestock_id=animal.id, farm_id=farm.id, farmer_id=user_id, urgency="medium")
-    wa_user = WhatsAppUser(phone="+256700999888", hashed_password="hash", active_sickness_animal_id=animal.id)
+    unique_phone = f"+256700{uuid.uuid4().hex[:6]}"
+    wa_user = WhatsAppUser(phone=unique_phone, hashed_password="hash", active_sickness_animal_id=animal.id)
 
     db.add(obs)
     db.add(treat)
@@ -63,17 +64,17 @@ def test_delete_livestock_cascade(client: TestClient, db: Session, normal_user_t
     assert del_resp.status_code == 200, del_resp.text
     assert del_resp.json()["message"] == "Animal deleted successfully"
 
-    # Expire cached session objects to query database state afresh
+    animal_id = animal.id
     db.expire_all()
 
     # Verify animal deleted
-    assert db.get(Livestock, animal.id) is None
+    assert db.exec(select(Livestock).where(Livestock.id == animal_id)).first() is None
 
     # Verify related records deleted or unlinked
-    assert db.exec(select(HealthObservation).where(HealthObservation.livestock_id == animal.id)).first() is None
-    assert db.exec(select(Treatment).where(Treatment.livestock_id == animal.id)).first() is None
-    assert db.exec(select(Vaccination).where(Vaccination.livestock_id == animal.id)).first() is None
-    assert db.exec(select(VetRequest).where(VetRequest.livestock_id == animal.id)).first() is None
+    assert db.exec(select(HealthObservation).where(HealthObservation.livestock_id == animal_id)).first() is None
+    assert db.exec(select(Treatment).where(Treatment.livestock_id == animal_id)).first() is None
+    assert db.exec(select(Vaccination).where(Vaccination.livestock_id == animal_id)).first() is None
+    assert db.exec(select(VetRequest).where(VetRequest.livestock_id == animal_id)).first() is None
     
     db.refresh(wa_user)
     assert wa_user.active_sickness_animal_id is None
