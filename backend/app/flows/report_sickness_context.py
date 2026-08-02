@@ -237,6 +237,9 @@ class TriageContextFlow:
         )
         session.add(obs)
 
+        animal.health_status = "sick"
+        session.add(animal)
+
         if user.active_sickness_animal_id is not None:
             user.active_sickness_animal_id = None
             session.add(user)
