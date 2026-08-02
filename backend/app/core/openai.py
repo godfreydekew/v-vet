@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-import uuid
 from datetime import date
 from typing import Any, cast
 
@@ -10,7 +9,6 @@ from openai import OpenAI
 from sqlmodel import Session
 
 from app.core.config import settings
-from app.models.livestock import Livestock
 from app.models.whatsapp import WhatsAppMessage, WhatsAppUser
 from app.crud import create_user_for_new_whatsapp
 
@@ -392,25 +390,6 @@ def build_farmer_agent_tools() -> list[dict[str, Any]]:
 
 
 
-def _find_animal_by_name_or_tag(
-    *, session: Session, user_id: uuid.UUID, query: str
-) -> list[Livestock]:
-    """Search a farmer's whole herd by name (fuzzy) first, then by exact tag number.
-
-    Searches every registered animal, not just the first page shown in a list
-    message — a farmer typing a tag or full name should always resolve, even
-    with a large herd.
-    """
-    from app.crud import get_livestock_by_name_for_user, get_livestock_for_user
-
-    matches = get_livestock_by_name_for_user(session=session, user_id=user_id, name=query)
-    if matches:
-        return matches
-
-    all_animals = get_livestock_for_user(session=session, user_id=user_id, limit=None)
-    return [a for a in all_animals if a.tag_number and a.tag_number.lower() == query.lower()]
-
-
 def _send_registered_animal_list_fallback(*, user: WhatsAppUser, session: Session) -> bool:
     """Send the report_sickness animal-selection list when a farmer-typed name/tag
     can't be resolved, instead of just telling them to type 'menu'."""
@@ -456,24 +435,27 @@ def _execute_farmer_tool(
         }
 
     if tool_name == "lookup_animal":
-        matches = _find_animal_by_name_or_tag(
+        from app.services.animal_lookup import LookupStatus, resolve_animal
+
+        result = resolve_animal(
             session=session, user_id=user.linked_user_id, query=arguments["name"]
         )
-        if not matches:
+
+        if result.status == LookupStatus.MULTIPLE_MATCHES:
+            return {
+                "status": "multiple",
+                "matches": [
+                    {"name": a.name, "species": a.species, "tag_number": a.tag_number}
+                    for a in result.candidates
+                ],
+            }
+        if result.animal is None:
             list_sent = _send_registered_animal_list_fallback(user=user, session=session)
             return {
                 "status": "not_found_list_sent" if list_sent else "not_found",
                 "name": arguments["name"],
             }
-        if len(matches) > 1:
-            return {
-                "status": "multiple",
-                "matches": [
-                    {"name": a.name, "species": a.species, "tag_number": a.tag_number}
-                    for a in matches
-                ],
-            }
-        a = matches[0]
+        a = result.animal
         return {
             "status": "ok",
             "animal": {
@@ -491,7 +473,7 @@ def _execute_farmer_tool(
         }
 
     if tool_name == "report_sickness":
-        from app.crud import get_livestock_by_id_for_user
+        from app.services.animal_lookup import LookupStatus, resolve_animal
         from app.services.sickness import record_sickness_report
 
         name_or_tag = arguments.get("animal_name_or_tag") or ""
@@ -503,21 +485,23 @@ def _execute_farmer_tool(
 
         # Prefer the animal the farmer already tapped in the report_sickness
         # list (see ReportSicknessFlow.handle_selection) over free-text matching.
-        animal = None
-        if user.active_sickness_animal_id:
-            animal = get_livestock_by_id_for_user(
-                session=session,
-                user_id=user.linked_user_id,
-                livestock_id=user.active_sickness_animal_id,
-            )
+        lookup = resolve_animal(
+            session=session,
+            user_id=user.linked_user_id,
+            query=name_or_tag or None,
+            pinned_animal_id=user.active_sickness_animal_id,
+        )
 
-        if animal is None and name_or_tag:
-            matches = _find_animal_by_name_or_tag(
-                session=session, user_id=user.linked_user_id, query=name_or_tag
-            )
-            animal = matches[0] if matches else None
+        if lookup.status == LookupStatus.MULTIPLE_MATCHES:
+            return {
+                "status": "multiple",
+                "matches": [
+                    {"name": a.name, "species": a.species, "tag_number": a.tag_number}
+                    for a in lookup.candidates
+                ],
+            }
 
-        if animal is None:
+        if lookup.animal is None:
             list_sent = _send_registered_animal_list_fallback(user=user, session=session)
             return {
                 "status": "not_found_list_sent" if list_sent else "not_found",
@@ -527,7 +511,7 @@ def _execute_farmer_tool(
         result = record_sickness_report(
             session=session,
             user=user,
-            animal=animal,
+            animal=lookup.animal,
             symptoms=symptoms,
             danger_flags=danger_flags,
             duration=duration,
