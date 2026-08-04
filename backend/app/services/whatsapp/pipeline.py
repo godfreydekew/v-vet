@@ -147,6 +147,20 @@ _ADD_ANIMAL_TRIGGERS = (
     "register animal",
 )
 
+# Free-text phrasings that mean the same thing as tapping "My Animals" on the
+# menu — checked before the agent so this can't misfire into the wrong tool
+# (e.g. report_sickness), same reasoning as the menu-tap fix.
+_MY_ANIMALS_TRIGGERS = (
+    "my animals",
+    "my herd",
+    "view my animals",
+    "view my herd",
+    "show my animals",
+    "show my herd",
+    "list my animals",
+    "my livestock",
+)
+
 
 class WhatsAppConversationService:
     """Orchestrates the full inbound-message pipeline for WhatsApp conversations."""
@@ -220,6 +234,21 @@ class WhatsAppConversationService:
                 phone=phone,
                 content="[Menu sent]",
             )
+            return
+
+        # Farmer typed "my animals" / "show my herd" / etc. instead of tapping
+        # the menu — route deterministically to the same flow the menu item
+        # uses, rather than letting the agent decide which tool to call.
+        if any(trigger in message_body.strip().lower() for trigger in _MY_ANIMALS_TRIGGERS):
+            reply = self._handle_intent(
+                intent="my_animals", user=user, session=session, phone=phone
+            )
+            if reply:
+                self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
+            else:
+                self._persist_assistant(
+                    session=session, user=user, phone=phone, content="[Form/List sent: my_animals]"
+                )
             return
 
         # Farmer tapped an animal in the report_sickness interactive list.

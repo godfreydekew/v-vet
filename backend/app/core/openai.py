@@ -251,7 +251,7 @@ CRITICAL INSTRUCTIONS:
        - If they confirm it's still the same animal, proceed using the pin as usual.
        - If they name a different animal ("No, it's Shumba"), that's handled by case 3 below — a named animal always overrides the pin, you don't need to unpin it yourself.
        - If they say no but don't give a new name, treat it exactly like case 2 below — identification starts fresh, call lookup_animal with name omitted.
-  2. If they did NOT name an animal at all (e.g. "my animal is sick", "one of my cows isn't well"), call lookup_animal with name omitted (null). It will return "no_animal_specified" (small herd: the real interactive list has already been sent, just tell them briefly to pick from it) or "too_many_to_list" (large herd: ask them to reply with the animal's name or tag). If they then say they don't know / can't tell you a name, call send_animal_selection_list — this sends the real tappable list directly to their WhatsApp.
+  2. If they did NOT name an animal at all (e.g. "my animal is sick", "one of my cows isn't well"), call lookup_animal with name omitted (null). It will return "no_animal_specified" (small herd: the real interactive list has already been sent, just tell them briefly to pick from it) or "too_many_to_list" (large herd: ask them to reply with the animal's name or tag). If they then say they don't know / can't tell you a name, call send_animal_selection_list with intent="sickness" — this sends the real tappable list directly to their WhatsApp, and tapping an animal pins it for this report.
   3. If they named an animal or tag in free text — including what looks like an exact tag number — call lookup_animal to confirm it exists BEFORE treating it as identified. lookup_animal matches by name (fuzzy — e.g. 'shu' matches 'Shumba') or by exact tag number. Never invent a placeholder name (e.g. 'animal', 'my animal') — if they haven't actually named one, use case 2 instead.
      - If lookup_animal finds a match, do not treat it as settled yet — explicitly ask the farmer to confirm (e.g., "I found Shumba, your cow — is that right?") and wait for them to say yes. This applies even to an exact tag match, not just a fuzzy name match.
      - If lookup_animal returns "multiple", list the matching names and ask the farmer which one they mean — do not guess.
@@ -262,7 +262,7 @@ CRITICAL INSTRUCTIONS:
      - Once they confirm, call report_sickness again with the same details plus confirmed=true.
      - It then returns "context_flow_started" — it has handed off to a separate deterministic questionnaire that sends its own WhatsApp messages asking follow-up questions (onset, progression, herd context) and records the observation itself once done. Do not call report_sickness again for this animal, and do not claim anything was recorded yet — just add one brief, warm line (e.g. "Let's go through a few quick questions about Bessie.") since the next message the farmer sees is the questionnaire's first question, not yours.
 - Never tell the farmer an observation was recorded, or that you "will report" it, unless a tool call actually returned status "ok". If report_sickness returns "not_found", "not_found_list_sent", "no_animal_specified", "too_many_to_list", "needs_confirmation", or "context_flow_started", nothing has been recorded yet — do not claim otherwise.
-- If the farmer explicitly asks to see/select from their animals (e.g. "send the list", "show me my animals", "I don't know the name"), call send_animal_selection_list directly — do not describe the list yourself in text using list_animals for this purpose.
+- If the farmer asks to see/browse their animals and this is NOT part of an in-progress sickness report (e.g. "send the list", "show me my animals" out of the blue), call send_animal_selection_list with intent="view" — do not describe the list yourself in text using list_animals for this purpose. Only use intent="sickness" when the list is for identifying which animal a sickness report is about (see case 2 above); using the wrong intent here means tapping an animal will do the wrong thing (pin it for a sickness report vs. just show its details).
 - Keep replies short, kind, polite, and practical."""
 
 FARMER_AGENT_ADDING_ANIMAL_HINT = (
@@ -325,14 +325,32 @@ def build_farmer_agent_tools() -> list[dict[str, Any]]:
             "function": {
                 "name": "send_animal_selection_list",
                 "description": (
-                    "Send the farmer a tappable WhatsApp list of their registered animals to pick from. "
-                    "Use this whenever the farmer says they don't know the animal's name/tag, or explicitly "
-                    "asks to see/select from their animal list (e.g. 'send the list', 'show me my animals'). "
-                    "Do NOT format the list yourself in text using list_animals for this purpose — this "
-                    "tool sends the real interactive picker, which lets the farmer tap the exact animal "
-                    "instead of typing a name."
+                    "Send the farmer a tappable WhatsApp list of their registered animals. "
+                    "Do NOT format the list yourself in text using list_animals for this purpose — "
+                    "this tool sends the real interactive picker, which lets the farmer tap the exact "
+                    "animal instead of typing a name. The intent argument changes what tapping an "
+                    "animal actually does, so pick it carefully — it is not just cosmetic."
                 ),
-                "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "intent": {
+                            "type": "string",
+                            "enum": ["sickness", "view"],
+                            "description": (
+                                "'sickness' — use while identifying an animal for an in-progress sickness "
+                                "report (farmer doesn't know the name/tag, or asks to see/select from the "
+                                "list mid-report). Tapping an animal PINS it and continues the sickness report. "
+                                "'view' — use when the farmer just wants to see/browse their animals and this "
+                                "is NOT about reporting sickness (e.g. 'show me my animals', 'send the list' "
+                                "outside of a sickness conversation). Tapping an animal shows its details and "
+                                "pins nothing."
+                            ),
+                        },
+                    },
+                    "required": ["intent"],
+                    "additionalProperties": False,
+                },
             },
         },
         {
@@ -414,14 +432,6 @@ def build_farmer_agent_tools() -> list[dict[str, Any]]:
 
 
 def _send_animal_selection_list(*, user: WhatsAppUser, session: Session) -> bool:
-    """Unconditionally send the real interactive animal-selection list — used as an
-    explicit action (send_animal_selection_list tool with force=true) and as a
-    fallback when a farmer-typed name/tag can't be resolved, instead of just
-    telling them to type 'menu'. Always sends the tappable list regardless of
-    herd size — see ReportSicknessFlow.send_animal_list vs .start().
-
-    Clears any existing pin first: we're about to let the farmer pick fresh,
-    so a stale selection from earlier in the conversation shouldn't linger."""
     if user.active_sickness_animal_id is not None:
         user.active_sickness_animal_id = None
         session.add(user)
@@ -439,18 +449,6 @@ def _send_animal_selection_list(*, user: WhatsAppUser, session: Session) -> bool
 def _handle_no_animal_specified(
     *, user: WhatsAppUser, user_id: uuid.UUID, session: Session
 ) -> dict[str, Any]:
-    """Shared status logic for when no animal name/tag was given at all.
-
-    Mirrors the size gating in ReportSicknessFlow.start(): small herds get the
-    real list immediately, larger herds are asked to type a name/tag instead
-    (paging through a long list is worse UX than typing). Takes user_id
-    explicitly (already narrowed to non-None by the caller) rather than
-    reading user.linked_user_id itself.
-
-    Clears any existing pin — calling this means the agent has already
-    decided there's no specific animal to act on (e.g. the farmer declined
-    to continue with a previously pinned animal), so identification starts fresh.
-    """
     if user.active_sickness_animal_id is not None:
         user.active_sickness_animal_id = None
         session.add(user)
@@ -500,7 +498,21 @@ def _execute_farmer_tool(
         }
 
     if tool_name == "send_animal_selection_list":
-        list_sent = _send_animal_selection_list(user=user, session=session)
+        intent = arguments.get("intent") or "sickness"
+
+        if intent == "view":
+            from app.flows import FLOW_REGISTRY
+            from app.flows.my_animals import MyAnimalsFlow
+
+            view_flow = FLOW_REGISTRY.get(MyAnimalsFlow.flow_id)
+            list_sent = (
+                view_flow.start(phone=user.phone, user=user, session=session)
+                if isinstance(view_flow, MyAnimalsFlow)
+                else False
+            )
+        else:
+            list_sent = _send_animal_selection_list(user=user, session=session)
+
         if list_sent:
             return {"status": "sent"}
         return {"status": "error", "message": "No registered animals found on this account."}
