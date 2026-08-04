@@ -83,26 +83,26 @@ MAIN_MENU_SECTIONS: list[dict] = [
                 "title": "Register Animal",
                 "description": "Add a new animal to your herd",
             },
-            {
-                "id": "record_birth",
-                "title": "Record Birth",
-                "description": "Log a new calf born",
-            },
-            {
-                "id": "record_death",
-                "title": "Record Death",
-                "description": "Log an animal death",
-            },
+            # {
+            #     "id": "record_birth",
+            #     "title": "Record Birth",
+            #     "description": "Log a new calf born",
+            # },
+            # {
+            #     "id": "record_death",
+            #     "title": "Record Death",
+            #     "description": "Log an animal death",
+            # },
         ],
     },
-    {
-        "title": "Treatments",
-        "rows": [
-            {"id": "log_vaccination", "title": "Log Vaccination"},
-            {"id": "log_dipping", "title": "Log Dipping"},
-            {"id": "log_deworming", "title": "Log Deworming"},
-        ],
-    },
+    # {
+    #     "title": "Treatments",
+    #     "rows": [
+    #         {"id": "log_vaccination", "title": "Log Vaccination"},
+    #         {"id": "log_dipping", "title": "Log Dipping"},
+    #         {"id": "log_deworming", "title": "Log Deworming"},
+    #     ],
+    # },
     {
         "title": "Health & Support",
         "rows": [
@@ -111,11 +111,11 @@ MAIN_MENU_SECTIONS: list[dict] = [
                 "title": "Report Sickness",
                 "description": "Describe symptoms for advice",
             },
-            {
-                "id": "request_vet",
-                "title": "Request Vet Help",
-                "description": "Connect with a veterinarian",
-            },
+            # {
+            #     "id": "request_vet",
+            #     "title": "Request Vet Help",
+            #     "description": "Connect with a veterinarian",
+            # },
         ],
     },
     {
@@ -126,11 +126,11 @@ MAIN_MENU_SECTIONS: list[dict] = [
                 "title": "My Animals",
                 "description": "View your herd",
             },
-            {
-                "id": "weekly_summary",
-                "title": "Weekly Summary",
-                "description": "Get a herd overview",
-            },
+            # {
+            #     "id": "weekly_summary",
+            #     "title": "Weekly Summary",
+            #     "description": "Get a herd overview",
+            # },
         ],
     },
 ]
