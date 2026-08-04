@@ -3,10 +3,10 @@ import uuid
 
 from sqlmodel import Session
 
+from app.flows.animal_list import send_interactive_animal_list
 from app.flows.base import BaseFlow
-from app.models.livestock import Livestock
 from app.models.whatsapp import WhatsAppUser
-from app.services.whatsapp.client import send_list_message, send_whatsapp_message
+from app.services.whatsapp.client import send_whatsapp_message
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +25,10 @@ class ReportSicknessFlow(BaseFlow):
     is worse UX than typing); the farmer agent falls back to sending the list
     anyway if they say they don't know which animal it is.
 
-    WhatsApp list messages cap out at 10 rows total, so herds larger than
-    that are paginated: PAGE_SIZE animals per page, plus one "show more" row.
+    The actual list-sending/pagination is shared with MyAnimalsFlow via
+    app.flows.animal_list.send_interactive_animal_list — this class only
+    owns the sickness-specific bits: the size-aware entry point and pinning
+    the tapped animal.
 
     This flow does not use native WhatsApp Flow forms (nfm_reply), so
     handle() is never called by the pipeline's form-submission path.
@@ -34,20 +36,17 @@ class ReportSicknessFlow(BaseFlow):
 
     flow_id = "report_sickness"
 
-    # WhatsApp list messages allow at most 10 rows total. Reserve one row
-    # for "Show more animals" whenever there's a next page.
-    PAGE_SIZE = 9
-    MAX_ANIMALS = 100
     SMALL_HERD_THRESHOLD = 10
 
     def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
         from app.crud import get_livestock_for_user
+        from app.flows.animal_list import MAX_ANIMALS
 
         if not user.linked_user_id:
             return False
 
         animal_count = len(
-            get_livestock_for_user(session=session, user_id=user.linked_user_id, limit=self.MAX_ANIMALS)
+            get_livestock_for_user(session=session, user_id=user.linked_user_id, limit=MAX_ANIMALS)
         )
         if animal_count == 0:
             return False
@@ -66,78 +65,13 @@ class ReportSicknessFlow(BaseFlow):
         return self.send_animal_list(phone=phone, user=user, session=session)
 
     def send_animal_list(self, *, phone: str, user: WhatsAppUser, session: Session) -> bool:
-        """Unconditionally send the real interactive animal list, regardless of herd
-        size. Used for the not-found fallback and explicit 'show me the list' /
-        'I don't know which one' requests — as opposed to start(), which is the
-        size-aware default entry point for the menu tap."""
-        return self._send_animal_page(phone=phone, user=user, session=session, offset=0)
+        return send_interactive_animal_list(phone=phone, user=user, session=session, intent="sickness")
 
     def show_more(self, *, offset: int, phone: str, user: WhatsAppUser, session: Session) -> bool:
         """Send the next page of animals, triggered by the 'Show more animals' row."""
-        return self._send_animal_page(phone=phone, user=user, session=session, offset=offset)
-
-    def _send_animal_page(
-        self, *, phone: str, user: WhatsAppUser, session: Session, offset: int
-    ) -> bool:
-        from app.crud import get_livestock_for_user
-
-        if not user.linked_user_id:
-            return False
-
-        animals = get_livestock_for_user(
-            session=session, user_id=user.linked_user_id, limit=self.MAX_ANIMALS
+        return send_interactive_animal_list(
+            phone=phone, user=user, session=session, intent="sickness", offset=offset
         )
-        if not animals:
-            return False
-
-        page = animals[offset : offset + self.PAGE_SIZE]
-        if not page:
-            # Offset ran past the end (e.g. herd shrank mid-conversation) — restart at page one.
-            offset = 0
-            page = animals[: self.PAGE_SIZE]
-
-        next_offset = offset + self.PAGE_SIZE
-        has_more = next_offset < len(animals)
-
-        rows = [self._animal_row(a) for a in page]
-        if has_more:
-            rows.append(
-                {
-                    "id": f"sickness_more_{next_offset}",
-                    "title": "Show more animals",
-                    "description": f"{len(animals) - next_offset} more in your herd",
-                }
-            )
-
-        sections = [{"title": "Your Registered Animals", "rows": rows}]
-
-        body = (
-            "I am so sorry your animal is not feeling well. 💙\n\nPlease select which animal is sick from your herd list below:"
-            if offset == 0
-            else "Here are more of your animals — select the one that's sick:"
-        )
-
-        response = send_list_message(
-            phone=phone,
-            body=body,
-            button_label="Select Animal",
-            sections=sections,
-        )
-        return response.status_code == 200
-
-    @staticmethod
-    def _animal_row(a: Livestock) -> dict:
-        title = a.name if a.name else f"Tag: {a.tag_number}"
-        species_str = a.species.capitalize() if a.species else "Cattle"
-        health_str = a.health_status.capitalize() if a.health_status else "Healthy"
-        desc = f"{species_str} • {health_str}"
-        if a.tag_number and a.name:
-            desc += f" • Tag: {a.tag_number}"
-        return {
-            "id": f"select_animal_{a.id}",
-            "title": title[:24],
-            "description": desc[:72],
-        }
 
     def handle(self, data: dict, user: WhatsAppUser, session: Session) -> str:
         raise NotImplementedError(

@@ -250,6 +250,33 @@ class WhatsAppConversationService:
                     )
                 return
 
+        # Farmer tapped an animal in the "My Animals" view list.
+        if message_body.startswith("view_animal_"):
+            from app.flows import FLOW_REGISTRY
+            from app.flows.my_animals import MyAnimalsFlow
+
+            flow = FLOW_REGISTRY.get(MyAnimalsFlow.flow_id)
+            if isinstance(flow, MyAnimalsFlow):
+                animal_id = message_body.removeprefix("view_animal_")
+                reply = flow.handle_view(animal_id, user, session)
+                self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
+                return
+
+        # Farmer tapped "Show more animals" in the "My Animals" view list.
+        if message_body.startswith("view_more_"):
+            from app.flows import FLOW_REGISTRY
+            from app.flows.my_animals import MyAnimalsFlow
+
+            flow = FLOW_REGISTRY.get(MyAnimalsFlow.flow_id)
+            if isinstance(flow, MyAnimalsFlow):
+                offset_str = message_body.removeprefix("view_more_")
+                offset = int(offset_str) if offset_str.isdigit() else 0
+                if flow.show_more(offset=offset, phone=phone, user=user, session=session):
+                    self._persist_assistant(
+                        session=session, user=user, phone=phone, content="[More animals sent]"
+                    )
+                return
+
         # Farmer tapped an answer in the deterministic "basic context"
         # questionnaire (only ever running once an animal is confirmed).
         if message_body.startswith("ctx_"):
