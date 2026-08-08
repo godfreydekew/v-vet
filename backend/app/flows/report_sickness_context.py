@@ -59,6 +59,13 @@ class TriageContextFlow:
 
         return self._send_question(phone=phone, question=BASIC_CONTEXT_QUESTIONS[0])
 
+    def resend_current_question(self, *, phone: str, question_id: str) -> bool:
+        """Re-send a question's UI unchanged — used by the sickness-followup cron job."""
+        question = get_question(question_id)
+        if question is None:
+            return False
+        return self._send_question(phone=phone, question=question)
+
     def handle_answer(
         self, *, row_id: str, phone: str, user: WhatsAppUser, session: Session
     ) -> tuple[bool, TriageSession | None]:
@@ -143,6 +150,7 @@ class TriageContextFlow:
         answers = dict(triage_session.answers)
         answers[question_id] = value
         triage_session.answers = answers
+        triage_session.reminded_at = None
 
         # Commit here rather than leaving it to the caller: each WhatsApp tap
         # is a separate webhook request with its own DB session, so an answer

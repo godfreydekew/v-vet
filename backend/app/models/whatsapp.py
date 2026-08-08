@@ -29,6 +29,13 @@ class WhatsAppUserBase(SQLModel):
     active_sickness_animal_id: uuid.UUID | None = Field(default=None, foreign_key="livestock.id", ondelete="SET NULL")
     linked_user_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")
     pending_animal_photo_url: str | None = Field(default=None, max_length=1024)
+    # Set when active_sickness_animal_id is pinned; used by the sickness-followup cron job.
+    active_sickness_updated_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True))
+    )
+    active_sickness_reminded_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True))
+    )
 
 
 class WhatsAppUserCreate(SQLModel):
