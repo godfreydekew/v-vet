@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import farms, livestock, login, private, users, utils, vet_requests, whatsapp
+from app.api.routes import cron, farms, livestock, login, private, users, utils, vet_requests, whatsapp
 from app.core.config import settings
 
 api_router = APIRouter()
@@ -11,6 +11,7 @@ api_router.include_router(livestock.router)
 api_router.include_router(vet_requests.router)
 api_router.include_router(utils.router)
 api_router.include_router(whatsapp.router)
+api_router.include_router(cron.router)
 
 
 if settings.ENVIRONMENT == "local":
