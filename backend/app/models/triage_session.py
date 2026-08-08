@@ -29,7 +29,13 @@ class TriageSession(SQLModel, table=True):
         default_factory=_utcnow,
         sa_column=Column(DateTime(timezone=True)),
     )
+    # Set by a Postgres trigger (trg_triage_session_updated_at), not app code.
     updated_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True)),
+    )
+    # Set when a follow-up reminder is sent; cleared on the next answer.
+    reminded_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True)),
     )
