@@ -785,3 +785,37 @@ def run_farmer_agent(
         ),
     )
     return (follow_up.choices[0].message.content or "").strip()
+
+
+def compose_reminder_lead_in(*, history: list[WhatsAppMessage]) -> str:
+    """
+    Reads recent conversation history and returns a short lead-in line for a
+    stalled sickness-report reminder.
+    """
+    if not history:
+        return ""
+
+    transcript = "\n".join(
+        f"{'Farmer' if m.role == 'farmer' else 'VVet'}: {m.content}" for m in history
+    )
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are VVet, a warm WhatsApp assistant for livestock farmers. "
+                "A farmer stalled mid-way through reporting a sick animal. Read the "
+                "recent conversation and write ONE short, warm lead-in sentence to "
+                "reconnect before we re-show them the next question — acknowledge "
+                "anything relevant they said in the meantime. Do not ask a new "
+                "question yourself, do not repeat the question text, just a brief "
+                "warm reconnect line. No emojis."
+            ),
+        },
+        {"role": "user", "content": f"Recent conversation:\n{transcript}"},
+    ]
+
+    response = client.chat.completions.create(
+        model=ONBOARDING_MODEL,
+        messages=cast(Any, messages),
+    )
+    return (response.choices[0].message.content or "").strip()
