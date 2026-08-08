@@ -1,5 +1,6 @@
 import logging
 import uuid
+from datetime import datetime, timezone
 
 from sqlmodel import Session
 
@@ -99,6 +100,8 @@ class ReportSicknessFlow(BaseFlow):
             return "Sorry, I couldn't find that animal. Please send 'menu' and try again."
 
         user.active_sickness_animal_id = animal.id
+        user.active_sickness_updated_at = datetime.now(timezone.utc)
+        user.active_sickness_reminded_at = None
         session.add(user)
         session.commit()
 

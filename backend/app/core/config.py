@@ -69,6 +69,8 @@ class Settings(BaseSettings):
     VERIFY_TOKEN: str | None = None
     CHALLENGE: str | None = None
 
+    CRON_SECRET: str | None = None
+
     # WhatsApp Flow IDs
     FLOW_ID_REGISTER_ANIMAL: str | None = None
     
