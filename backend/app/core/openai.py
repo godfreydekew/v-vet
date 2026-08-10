@@ -819,3 +819,80 @@ def compose_reminder_lead_in(*, history: list[WhatsAppMessage]) -> str:
         messages=cast(Any, messages),
     )
     return (response.choices[0].message.content or "").strip()
+
+
+DANGER_FLAG_OPTIONS = [
+    "cannot_stand",
+    "breathing_difficulty",
+    "seizures_unconscious",
+    "heavy_bleeding",
+    "calving_emergency",
+    "multiple_sudden_deaths",
+    "severe_bloat",
+]
+
+
+def detect_danger_flags(*, symptoms: str) -> list[str]:
+    """
+    Classifies free-text symptoms into the fixed danger-flag vocabulary.
+    """
+    if not symptoms or not symptoms.strip():
+        return []
+
+    tool = {
+        "type": "function",
+        "function": {
+            "name": "report_danger_flags",
+            "description": "Report which danger signs are present in the farmer's description, if any.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "danger_flags": {
+                        "type": "array",
+                        "items": {"type": "string", "enum": DANGER_FLAG_OPTIONS},
+                        "description": "Danger signs actually described — empty list if none apply.",
+                    },
+                },
+                "required": ["danger_flags"],
+                "additionalProperties": False,
+            },
+        },
+    }
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are a veterinary triage classifier for livestock in sub-Saharan Africa. "
+                "Read the farmer's description of their animal's symptoms — any phrasing, any "
+                "level of detail, possibly informal — and identify which of the fixed danger "
+                "signs are actually present. Farmers describe the same danger sign many "
+                "different ways (e.g. 'she can't get up', 'down and won't rise', 'struggling "
+                "for air', 'gasping' — match on meaning, not exact wording. Err toward "
+                "flagging when uncertain: missing a real danger sign is worse than flagging "
+                "one that turns out mild. Only report a flag the farmer's own words genuinely "
+                "describe — do not invent signs they didn't mention."
+            ),
+        },
+        {"role": "user", "content": symptoms},
+    ]
+
+    response = client.chat.completions.create(
+        model=ONBOARDING_MODEL,
+        messages=cast(Any, messages),
+        tools=cast(Any, [tool]),
+        tool_choice=cast(Any, {"type": "function", "function": {"name": "report_danger_flags"}}),
+    )
+
+    tool_calls = response.choices[0].message.tool_calls
+    if not tool_calls:
+        return []
+
+    tool_call_data = cast(Any, tool_calls[0])
+    try:
+        arguments = json.loads(tool_call_data.function.arguments or "{}")
+    except json.JSONDecodeError:
+        return []
+
+    flags = arguments.get("danger_flags") or []
+    return [f for f in flags if f in DANGER_FLAG_OPTIONS]
