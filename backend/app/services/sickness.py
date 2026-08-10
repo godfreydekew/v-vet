@@ -13,6 +13,13 @@ from app.services.triage import TriageResult, evaluate_triage
 class SicknessReportResult:
     animal_name: str
     triage: TriageResult
+    observation: HealthObservation
+
+
+# TriageResult.urgency_level values ("Emergency"/"Urgent"/...) don't match
+# VetRequest.urgency's Literal["low", "medium", "high", "emergency"] — only
+# Emergency/Urgent ever reach here, since requires_vet is False otherwise.
+_URGENCY_TO_VET_REQUEST = {"Emergency": "emergency", "Urgent": "high"}
 
 
 def record_sickness_report(
@@ -63,7 +70,7 @@ def record_sickness_report(
             livestock_id=animal.id,
             farm_id=animal.farm_id,
             farmer_id=user.linked_user_id,
-            urgency=triage_res.urgency_level.lower(),
+            urgency=_URGENCY_TO_VET_REQUEST.get(triage_res.urgency_level, "medium"),
             farmer_notes=f"Symptoms: {symptoms}. {triage_res.summary_text}",
             status="pending",
         )
@@ -78,4 +85,5 @@ def record_sickness_report(
     return SicknessReportResult(
         animal_name=animal.name or animal.tag_number,
         triage=triage_res,
+        observation=obs,
     )

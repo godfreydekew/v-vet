@@ -22,6 +22,7 @@ from app.models.health_observation import (
     HealthObservationsPublic,
     HealthObservationUpdate,
 )
+from app.models.health_observation_follow_up import HealthObservationFollowUp
 from app.models.livestock import (
     Livestock,
     LivestockBase,
@@ -148,6 +149,7 @@ __all__ = [
     "HealthObservationPublic",
     "HealthObservationsPublic",
     "HealthObservationUpdate",
+    "HealthObservationFollowUp",
     # TriageSession
     "TriageSession",
     # Vaccination

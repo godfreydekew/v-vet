@@ -1,5 +1,6 @@
 import logging
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from sqlmodel import Session, col, select
 
@@ -11,7 +12,7 @@ from app.flows.triage_context_questions import (
 )
 from app.models.triage_session import TriageSession
 from app.models.whatsapp import WhatsAppUser
-from app.services.whatsapp.client import send_list_message, send_reply_buttons
+from app.services.whatsapp.client import send_list_message, send_reply_buttons, send_whatsapp_message
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,26 @@ class TriageContextFlow:
         problem_description: str,
     ) -> bool:
         self._discard_open_sessions(user=user, session=session)
+
+        from app.core.openai import detect_danger_flags
+
+        try:
+            danger_flags = detect_danger_flags(symptoms=problem_description)
+        except Exception:
+            logger.exception("detect_danger_flags failed; proceeding with the questionnaire")
+            danger_flags = []
+
+        if danger_flags:
+            # Skip the questionnaire entirely — a danger sign is already
+            reply = self._finalize(
+                user=user,
+                session=session,
+                livestock_id=livestock_id,
+                answers={"problem_description": problem_description},
+                danger_flags=danger_flags,
+                is_emergency_exit=True,
+            )
+            return self._send_text(phone=phone, text=reply)
 
         triage_session = TriageSession(
             whatsapp_user_id=user.id,
@@ -209,20 +230,45 @@ class TriageContextFlow:
         self, *, triage_session: TriageSession, user: WhatsAppUser, session: Session
     ) -> str:
         """
-        Once every question is answered, persist a plain record of what was
-        collected and give the farmer a human-readable summary back.
+        Once every question is answered, run triage and give the farmer a
+        human-readable summary plus recommendation back. If start() had found
+        a danger flag it would have already finalized via the emergency exit
+        and this method would never run for that report, so no flags need
+        re-detecting here.
+        """
+        return self._finalize(
+            user=user,
+            session=session,
+            livestock_id=triage_session.livestock_id,
+            answers=triage_session.answers,
+            danger_flags=[],
+            is_emergency_exit=False,
+        )
 
-        No triage/urgency evaluation and no VetRequest here — this flow only
-        collects basic context for now. Deciding urgency is a separate, later
-        step (see docs/V-VET triage flow and district codes.md, Step 3+).
+    def _finalize(
+        self,
+        *,
+        user: WhatsAppUser,
+        session: Session,
+        livestock_id: uuid.UUID,
+        answers: dict,
+        danger_flags: list[str],
+        is_emergency_exit: bool,
+    ) -> str:
+        """
+        Shared by the emergency early-exit (answers has only
+        problem_description) and normal questionnaire completion (answers has
+        all 5 basic-context fields). Runs triage, persists the
+        HealthObservation and any VetRequest via record_sickness_report(),
+        then schedules the outcome follow-up.
         """
         from app.crud import get_livestock_by_id_for_user
-        from app.flows.triage_context_questions import ONSET_TO_DURATION_DAYS
-        from app.models.health_observation import HealthObservation
+        from app.flows.triage_context_questions import ONSET_TO_DURATION_DAYS, PROGRESSION_TO_TREND
+        from app.services.sickness import record_sickness_report
 
         animal = (
             get_livestock_by_id_for_user(
-                session=session, user_id=user.linked_user_id, livestock_id=triage_session.livestock_id
+                session=session, user_id=user.linked_user_id, livestock_id=livestock_id
             )
             if user.linked_user_id
             else None
@@ -230,31 +276,70 @@ class TriageContextFlow:
         if animal is None:
             return "Sorry, something went wrong finding that animal. Please send 'menu' and try reporting again."
 
-        answers = triage_session.answers
         symptoms = answers.get("problem_description") or "No description given."
-        animal_name = animal.name or animal.tag_number or "your animal"
-        summary = self._summarize_answers(animal_name, answers)
-
         onset = answers.get("onset_time")
-        obs = HealthObservation(
-            livestock_id=animal.id,
-            logged_by=user.linked_user_id,
+        progression = answers.get("progression")
+
+        result = record_sickness_report(
+            session=session,
+            user=user,
+            animal=animal,
             symptoms=symptoms,
+            danger_flags=danger_flags,
             symptom_duration_days=ONSET_TO_DURATION_DAYS.get(onset) if onset else None,
-            notes=summary,
+            trend=PROGRESSION_TO_TREND.get(progression) if progression else None,
         )
-        session.add(obs)
+        animal_name = result.animal_name or "your animal"
 
-        animal.health_status = "sick"
-        session.add(animal)
+        self._schedule_follow_up(
+            session=session,
+            user=user,
+            animal_id=animal.id,
+            observation_id=result.observation.id,
+            animal_name=animal_name,
+            symptoms=symptoms,
+            urgency_level=result.triage.urgency_level,
+        )
 
-        if user.active_sickness_animal_id is not None:
-            user.active_sickness_animal_id = None
-            session.add(user)
+        if is_emergency_exit:
+            return (
+                f"This looked urgent, so I've recorded it right away for {animal_name} "
+                f"without the usual follow-up questions.\n\n{result.triage.recommendation_text}"
+            )
 
+        summary = self._summarize_answers(animal_name, answers)
+        return f"{summary}\n\n{result.triage.recommendation_text}"
+
+    @staticmethod
+    def _schedule_follow_up(
+        *,
+        session: Session,
+        user: WhatsAppUser,
+        animal_id: uuid.UUID,
+        observation_id: uuid.UUID,
+        animal_name: str,
+        symptoms: str,
+        urgency_level: str,
+    ) -> None:
+        from app.models.health_observation_follow_up import HealthObservationFollowUp
+
+        excerpt = symptoms if len(symptoms) <= 80 else f"{symptoms[:77]}..."
+        minutes = 2 if urgency_level in ("Emergency", "Urgent") else 3
+
+        follow_up = HealthObservationFollowUp(
+            health_observation_id=observation_id,
+            livestock_id=animal_id,
+            whatsapp_user_id=user.id,
+            description=f"{animal_name} — {excerpt}",
+            due_at=datetime.now(timezone.utc) + timedelta(minutes=minutes),
+        )
+        session.add(follow_up)
         session.commit()
 
-        return f"{summary}\n\nThis has been recorded. Thank you for letting us know."
+    @staticmethod
+    def _send_text(*, phone: str, text: str) -> bool:
+        response = send_whatsapp_message(phone=phone, text=text)
+        return response.status_code == 200
 
     _SUMMARY_LABELS: dict[str, str] = {
         "onset_time": "Onset",

@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import func
 from sqlmodel import Session, col, select
 
 from app.cron.base import CronJob
@@ -35,11 +36,15 @@ class SicknessFollowupJob(CronJob):
     def _process_stage2(self, *, session: Session, cutoff: datetime) -> int:
         from app.flows.report_sickness_context import TriageContextFlow
 
+        # updated_at is only set by the update trigger, so a session still
+        # sitting on its first (unanswered) question has updated_at = NULL.
+        # Coalesce to created_at so those sessions are still found as stale.
+        last_touched = func.coalesce(TriageSession.updated_at, TriageSession.created_at)
         stale_sessions = session.exec(
             select(TriageSession)
             .where(col(TriageSession.is_completed).is_(False))
             .where(col(TriageSession.reminded_at).is_(None))
-            .where(col(TriageSession.updated_at) <= cutoff)
+            .where(last_touched <= cutoff)
         ).all()
 
         flow = TriageContextFlow()
@@ -92,7 +97,12 @@ class SicknessFollowupJob(CronJob):
     def _send_text(*, phone: str, text: str) -> None:
         from app.services.whatsapp.client import send_whatsapp_message
 
-        send_whatsapp_message(phone=phone, text=text)
+        response = send_whatsapp_message(phone=phone, text=text)
+        if response.status_code != 200:
+            logger.warning(
+                "[SicknessFollowupJob] Send failed for %s: %s %s",
+                phone, response.status_code, response.text,
+            )
 
     @staticmethod
     def _compose_lead_in(*, user: WhatsAppUser, session: Session) -> str:

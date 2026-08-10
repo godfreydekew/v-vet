@@ -306,6 +306,17 @@ class WhatsAppConversationService:
                     )
                 return
 
+        # Farmer tapped Better/Same/Worse on an outcome check-in sent by
+        # OutcomeFollowUpJob.
+        if message_body.startswith("followup_"):
+            from app.flows.outcome_followup import OutcomeFollowUpFlow
+
+            flow = OutcomeFollowUpFlow()
+            reply = flow.handle_reply(row_id=message_body, user=user, session=session)
+            if reply:
+                self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
+            return
+
         # Farmer tapped an answer in the deterministic "basic context"
         # questionnaire (only ever running once an animal is confirmed).
         if message_body.startswith("ctx_"):
