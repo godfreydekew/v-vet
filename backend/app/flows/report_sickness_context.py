@@ -324,7 +324,7 @@ class TriageContextFlow:
         from app.models.health_observation_follow_up import HealthObservationFollowUp
 
         excerpt = symptoms if len(symptoms) <= 80 else f"{symptoms[:77]}..."
-        minutes = 2 if urgency_level in ("Emergency", "Urgent") else 3
+        minutes = 10 if urgency_level in ("Emergency", "Urgent") else 10
 
         follow_up = HealthObservationFollowUp(
             health_observation_id=observation_id,
