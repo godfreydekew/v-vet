@@ -51,7 +51,11 @@ class OutcomeFollowUpJob(CronJob):
     def _send_check_in(*, phone: str, follow_up: HealthObservationFollowUp) -> bool:
         from app.services.whatsapp.client import send_reply_buttons
 
-        body = f"Checking in on {follow_up.description}\n\nHow is the animal doing now?"
+        report_date = follow_up.created_at.strftime("%b %d")
+        body = (
+            f"Hope things are looking up. Just checking in on the report from {report_date}:\n"
+            f"{follow_up.description}\n\nHow is the animal doing now?"
+        )
         buttons = [
             {"id": f"{_ROW_PREFIX}{follow_up.id}::better", "title": "Better"},
             {"id": f"{_ROW_PREFIX}{follow_up.id}::same", "title": "Same"},
