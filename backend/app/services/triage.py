@@ -32,10 +32,6 @@ def evaluate_triage(
     recent_calving: bool = False,
 ) -> TriageResult:
     """Evaluates symptoms, danger screen inputs, and situational context to produce a triage result.
-
-    Implements the simplified V-Vet prototype decision logic. symptom_duration_days must
-    already be a whole number of days — converting phrases like "a week" or "a month"
-    into a day count is the calling agent's job, not this function's.
     """
     flags = [f.strip().lower() for f in (danger_flags or []) if f.strip()]
     sym_lower = (symptoms or "").lower()

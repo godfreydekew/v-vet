@@ -465,6 +465,14 @@ def _handle_no_animal_specified(
     return {"status": "no_animal_specified_list_sent" if list_sent else "no_animal_specified"}
 
 
+_DIRECT_SEND_STATUSES = {
+    "no_animal_specified_list_sent",
+    "sent",
+    "not_found_list_sent",
+    "context_flow_started",
+}
+
+
 def _execute_farmer_tool(
     tool_name: str,
     arguments: dict[str, Any],
@@ -758,15 +766,21 @@ def run_farmer_agent(
         return (assistant_message.content or "").strip()
 
     tool_messages: list[dict[str, Any]] = []
+    tool_results: list[dict[str, Any]] = []
     for tool_call in assistant_message.tool_calls:
         tool_name = tool_call.function.name
         arguments = json.loads(tool_call.function.arguments or "{}")
         result = _execute_farmer_tool(tool_name, arguments, user, session)
+        tool_results.append(result)
         tool_messages.append({
             "role": "tool",
             "tool_call_id": tool_call.id,
             "content": json.dumps(result, ensure_ascii=False, default=str),
         })
+
+    # Remove agent follow narration
+    if any(r.get("status") in _DIRECT_SEND_STATUSES for r in tool_results):
+        return ""
 
     follow_up = client.chat.completions.create(
         model=model,
