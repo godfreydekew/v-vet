@@ -398,6 +398,41 @@ def build_farmer_agent_tools() -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
+                "name": "record_death",
+                "description": (
+                    "Identify which animal has died from the farmer's free-text message and hand off "
+                    "to the cause-of-death buttons. Only used when the farmer names the animal in text "
+                    "instead of tapping it from the record_death interactive list — tapping the list is "
+                    "handled separately and never reaches this tool. This will refuse to proceed until "
+                    "the farmer has explicitly confirmed which animal — see the confirmed parameter, "
+                    "since marking an animal deceased cannot be undone by the farmer."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "animal_name_or_tag": {
+                            "type": ["string", "null"],
+                            "description": "Name or tag number of the animal that died, exactly as the farmer typed it. Omit (null) if not stated yet.",
+                        },
+                        "confirmed": {
+                            "type": ["boolean", "null"],
+                            "description": (
+                                "Set true only after the farmer has explicitly said yes to confirm which "
+                                "animal this is. Leave false/omit on the first attempt; if this returns "
+                                "status 'needs_confirmation', ask the farmer to confirm by name, then call "
+                                "this again with confirmed=true once they say yes."
+                            ),
+                        },
+                    },
+                    "required": [],
+                    "additionalProperties": False,
+                },
+            },
+        },
+
+        {
+            "type": "function",
+            "function": {
                 "name": "add_livestock",
                 "description": (
                     "Register a new animal on the farmer's account. "
@@ -470,6 +505,7 @@ _DIRECT_SEND_STATUSES = {
     "sent",
     "not_found_list_sent",
     "context_flow_started",
+    "cause_question_sent",
 }
 
 
@@ -632,6 +668,63 @@ def _execute_farmer_tool(
         )
         return {
             "status": "context_flow_started",
+            "animal_name": lookup.animal.name or lookup.animal.tag_number,
+        }
+
+    if tool_name == "record_death":
+        from app.flows import FLOW_REGISTRY
+        from app.flows.record_death import RecordDeathFlow
+        from app.services.animal_lookup import LookupStatus, resolve_animal
+
+        name_or_tag = arguments.get("animal_name_or_tag") or ""
+        confirmed = bool(arguments.get("confirmed"))
+
+        lookup = resolve_animal(session=session, user_id=user.linked_user_id, query=name_or_tag or None)
+
+        if lookup.status == LookupStatus.MULTIPLE_MATCHES:
+            return {
+                "status": "multiple",
+                "matches": [
+                    {"name": a.name, "species": a.species, "tag_number": a.tag_number}
+                    for a in lookup.candidates
+                ],
+            }
+
+        if lookup.animal is None:
+            death_flow = FLOW_REGISTRY.get(RecordDeathFlow.flow_id)
+            list_sent = (
+                death_flow.send_animal_list(phone=user.phone, user=user, session=session)
+                if isinstance(death_flow, RecordDeathFlow)
+                else False
+            )
+            return {
+                "status": "not_found_list_sent" if list_sent else "not_found",
+                "message": f"Could not find registered animal matching '{name_or_tag}'.",
+            }
+
+        # Marking an animal deceased can't be undone by the farmer, so this
+        # always needs an explicit yes — no pinned/tapped fast path exists
+        # here since this tool only runs for free-text identification.
+        if not confirmed:
+            a = lookup.animal
+            return {
+                "status": "needs_confirmation",
+                "animal_name": a.name or a.tag_number,
+                "species": a.species,
+                "tag_number": a.tag_number,
+                "match_type": lookup.match_type,
+            }
+
+        death_flow = FLOW_REGISTRY.get(RecordDeathFlow.flow_id)
+        sent = (
+            death_flow.pin_and_ask_cause(
+                livestock_id=lookup.animal.id, phone=user.phone, user=user, session=session
+            )
+            if isinstance(death_flow, RecordDeathFlow)
+            else False
+        )
+        return {
+            "status": "cause_question_sent" if sent else "error",
             "animal_name": lookup.animal.name or lookup.animal.tag_number,
         }
 
