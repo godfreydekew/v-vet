@@ -1,0 +1,48 @@
+{
+  "version": "7.3",
+  "screens": [
+    {
+      "id": "IDENTIFY_ANIMAL",
+      "title": "Which Animal?",
+      "terminal": true,
+      "success": true,
+      "data": {},
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "identify_animal_form",
+            "children": [
+              {
+                "type": "TextInput",
+                "label": "Name or Tag Number",
+                "name": "name_or_tag",
+                "input-type": "text",
+                "required": false,
+                "helper-text": "Leave blank and check the box below if you are not sure"
+              },
+              {
+                "type": "OptIn",
+                "name": "show_list",
+                "label": "Show me the full list of my animals",
+                "required": false
+              },
+              {
+                "type": "Footer",
+                "label": "Continue",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "name_or_tag": "${form.name_or_tag}",
+                    "show_list": "${form.show_list}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
