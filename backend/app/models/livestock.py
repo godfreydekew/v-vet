@@ -42,6 +42,8 @@ class LivestockBase(SQLModel):
     health_status: HealthStatus = "healthy"
     lifecycle_status: LifecycleStatus = "active"
     notes: str | None = Field(default=None)
+    date_of_death: date | None = None
+    cause_of_death: str | None = Field(default=None, max_length=100)
 
 
 # ---------------------------------------------------------------------------
@@ -65,6 +67,8 @@ class LivestockUpdate(SQLModel):
     health_status: HealthStatus | None = None
     lifecycle_status: LifecycleStatus | None = None
     notes: str | None = None
+    date_of_death: date | None = None
+    cause_of_death: str | None = None
     # Backward-compatible single-image API field; maps to primary image row.
     image_url: str | None = None
 

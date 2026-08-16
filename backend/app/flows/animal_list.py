@@ -9,7 +9,7 @@ from app.services.whatsapp.client import send_list_message
 
 logger = logging.getLogger(__name__)
 
-AnimalListIntent = Literal["view", "sickness"]
+AnimalListIntent = Literal["view", "sickness", "death"]
 
 # WhatsApp list messages allow at most 10 rows total. Reserve one row for
 # "Show more animals" whenever there's a next page.
@@ -19,10 +19,12 @@ MAX_ANIMALS = 100
 _ROW_ID_PREFIX: dict[AnimalListIntent, str] = {
     "view": "view_animal_",
     "sickness": "select_animal_",
+    "death": "death_animal_",
 }
 _MORE_ID_PREFIX: dict[AnimalListIntent, str] = {
     "view": "view_more_",
     "sickness": "sickness_more_",
+    "death": "death_more_",
 }
 _HEADER_TEXT: dict[AnimalListIntent, str] = {
     "view": "Here is your registered herd. Tap an animal to view its details:",
@@ -30,14 +32,20 @@ _HEADER_TEXT: dict[AnimalListIntent, str] = {
         "I am so sorry your animal is not feeling well. 💙\n\n"
         "Please select which animal is sick from your herd list below:"
     ),
+    "death": (
+        "We are so sorry for your loss. 💙\n\n"
+        "Please select which animal passed away from your herd list below:"
+    ),
 }
 _MORE_HEADER_TEXT: dict[AnimalListIntent, str] = {
     "view": "Here are more of your animals — tap one to view its details:",
     "sickness": "Here are more of your animals — select the one that's sick:",
+    "death": "Here are more of your animals — select the one that passed away:",
 }
 _BUTTON_LABEL: dict[AnimalListIntent, str] = {
     "view": "View Animal",
     "sickness": "Select Animal",
+    "death": "Select Animal",
 }
 
 
