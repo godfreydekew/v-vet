@@ -36,6 +36,10 @@ class WhatsAppUserBase(SQLModel):
     active_sickness_reminded_at: datetime | None = Field(
         default=None, sa_column=Column(DateTime(timezone=True))
     )
+    # Pinned mid-record_death, mirroring active_sickness_animal_id.
+    active_death_animal_id: uuid.UUID | None = Field(default=None, foreign_key="livestock.id", ondelete="SET NULL")
+    # Cause selected in step 2, held until the date is picked in step 3.
+    active_death_cause: str | None = Field(default=None, max_length=100)
 
 
 class WhatsAppUserCreate(SQLModel):
@@ -58,6 +62,8 @@ class WhatsAppUserUpdate(SQLModel):
     active_sickness_animal_id: uuid.UUID | None = None
     linked_user_id: uuid.UUID | None = None
     pending_animal_photo_url: str | None = None
+    active_death_animal_id: uuid.UUID | None = None
+    active_death_cause: str | None = None
 
 
 class WhatsAppUser(WhatsAppUserBase, table=True):

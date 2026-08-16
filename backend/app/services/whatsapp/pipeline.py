@@ -88,11 +88,11 @@ MAIN_MENU_SECTIONS: list[dict] = [
             #     "title": "Record Birth",
             #     "description": "Log a new calf born",
             # },
-            # {
-            #     "id": "record_death",
-            #     "title": "Record Death",
-            #     "description": "Log an animal death",
-            # },
+            {
+                "id": "record_death",
+                "title": "Record Death",
+                "description": "Log an animal death",
+            },
         ],
     },
     # {
@@ -277,6 +277,64 @@ class WhatsAppConversationService:
                     self._persist_assistant(
                         session=session, user=user, phone=phone, content="[More animals sent]"
                     )
+                return
+
+        # Farmer tapped an animal in the record_death interactive list.
+        if message_body.startswith("death_animal_"):
+            from app.flows import FLOW_REGISTRY
+            from app.flows.record_death import RecordDeathFlow
+
+            flow = FLOW_REGISTRY.get(RecordDeathFlow.flow_id)
+            if isinstance(flow, RecordDeathFlow):
+                animal_id = message_body.removeprefix("death_animal_")
+                if flow.handle_animal_selection(
+                    animal_id=animal_id, phone=phone, user=user, session=session
+                ):
+                    self._persist_assistant(
+                        session=session, user=user, phone=phone, content="[Cause of death question sent]"
+                    )
+                return
+
+        # Farmer tapped "Show more animals" in the record_death list.
+        if message_body.startswith("death_more_"):
+            from app.flows import FLOW_REGISTRY
+            from app.flows.record_death import RecordDeathFlow
+
+            flow = FLOW_REGISTRY.get(RecordDeathFlow.flow_id)
+            if isinstance(flow, RecordDeathFlow):
+                offset_str = message_body.removeprefix("death_more_")
+                offset = int(offset_str) if offset_str.isdigit() else 0
+                if flow.show_more(offset=offset, phone=phone, user=user, session=session):
+                    self._persist_assistant(
+                        session=session, user=user, phone=phone, content="[More animals sent]"
+                    )
+                return
+
+        # Farmer tapped a cause-of-death button.
+        if message_body.startswith("death_cause_"):
+            from app.flows import FLOW_REGISTRY
+            from app.flows.record_death import RecordDeathFlow
+
+            flow = FLOW_REGISTRY.get(RecordDeathFlow.flow_id)
+            if isinstance(flow, RecordDeathFlow):
+                if flow.handle_cause_selection(
+                    row_id=message_body, phone=phone, user=user, session=session
+                ):
+                    self._persist_assistant(
+                        session=session, user=user, phone=phone, content="[Date of death question sent]"
+                    )
+                return
+
+        # Farmer tapped a date-of-death button — final step, records the death.
+        if message_body.startswith("death_date_"):
+            from app.flows import FLOW_REGISTRY
+            from app.flows.record_death import RecordDeathFlow
+
+            flow = FLOW_REGISTRY.get(RecordDeathFlow.flow_id)
+            if isinstance(flow, RecordDeathFlow):
+                reply = flow.handle_date_selection(row_id=message_body, user=user, session=session)
+                if reply:
+                    self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
                 return
 
         # Farmer tapped an animal in the "My Animals" view list.
@@ -538,7 +596,14 @@ class WhatsAppConversationService:
             return
 
         reply = flow.handle(data=data, user=user, session=session)
-        self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
+        if reply:
+            self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
+        else:
+            # The handler already sent its own interactive message (e.g. an
+            # animal list or the next step's buttons) as a side effect.
+            self._persist_assistant(
+                session=session, user=user, phone=phone, content=f"[Form handled: {flow_token}]"
+            )
 
     # ------------------------------------------------------------------
     # Private — intent routing
