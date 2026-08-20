@@ -151,10 +151,7 @@ class RecordDeathFlow(BaseFlow):
         Pins the animal and sends the cause-of-death options. Shared by the
         list-tap path (handle_animal_selection) and the large-herd free-text
         lookup (the record_death agent tool), so both end up in the same
-        next step.
-
-        Sent as a list, not reply buttons — WhatsApp caps reply-button
-        messages at 3 buttons, and there are 4 cause options.
+        next step..
         """
         from app.crud import get_livestock_by_id_for_user
 

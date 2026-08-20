@@ -15,9 +15,7 @@ _ROW_PREFIX = "followup_"
 class OutcomeFollowUpJob(CronJob):
     """
     Sends the 24h/48h outcome check-in for a HealthObservation once its
-    due_at has passed — "Is the animal better, the same, or worse?" with
-    three tappable buttons. The reply is handled by the followup_ row-id
-    prefix in the WhatsApp pipeline, not by this job.
+    due_at has passed
     """
 
     name = "outcome-followup"

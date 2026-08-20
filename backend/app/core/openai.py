@@ -26,6 +26,7 @@ ONBOARDING_FIELDS = (
 )
 
 ONBOARDING_MODEL = "gpt-4o-mini"
+FARMER_AGENT_MODEL = "gpt-5-mini"
 
 ONBOARDING_FOLLOW_UP_PROMPT = (
     "You are the onboarding assistant responding after tool calls have already been executed. "
@@ -164,7 +165,7 @@ def run_onboarding_agent(
     user: WhatsAppUser,
     history: list[WhatsAppMessage],
     session: Session,
-    model: str = ONBOARDING_MODEL,
+    model: str = FARMER_AGENT_MODEL,
     limit: int = 10,
 ) -> str:
     """Run the onboarding agent with tool-calling over recent WhatsApp history."""
