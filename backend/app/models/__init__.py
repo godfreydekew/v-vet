@@ -31,6 +31,7 @@ from app.models.livestock import (
     LivestocksPublic,
     LivestockUpdate,
 )
+from app.models.livestock_parentage import LivestockParentage
 from app.models.livestock_image import (
     LivestockImage,
     LivestockImageBase,
@@ -142,6 +143,7 @@ __all__ = [
     "LivestockImagePublic",
     "LivestockImagesPublic",
     "LivestockImageUpdate",
+    "LivestockParentage",
     # HealthObservation
     "HealthObservation",
     "HealthObservationBase",

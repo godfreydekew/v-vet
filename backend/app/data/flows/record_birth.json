@@ -1,0 +1,86 @@
+{
+  "version": "7.3",
+  "screens": [
+    {
+      "id": "RECORD_BIRTH",
+      "title": "Record Birth",
+      "terminal": true,
+      "success": true,
+      "data": {},
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "record_birth_form",
+            "children": [
+              {
+                "type": "RadioButtonsGroup",
+                "label": "Did the calf survive?",
+                "name": "survived",
+                "required": true,
+                "data-source": [
+                  {"id": "yes", "title": "Yes, alive"},
+                  {"id": "no", "title": "No, stillborn / died"}
+                ]
+              },
+              {
+                "type": "RadioButtonsGroup",
+                "label": "Calf sex",
+                "name": "calf_sex",
+                "required": true,
+                "data-source": [
+                  {"id": "female", "title": "Female"},
+                  {"id": "male", "title": "Male"},
+                  {"id": "unknown", "title": "Unknown"}
+                ]
+              },
+              {
+                "type": "RadioButtonsGroup",
+                "label": "Colostrum within 1 hour of birth?",
+                "name": "colostrum",
+                "required": true,
+                "data-source": [
+                  {"id": "yes", "title": "Yes, within 1 hr"},
+                  {"id": "no", "title": "No / Missed"},
+                  {"id": "unsure", "title": "Not sure"}
+                ]
+              },
+              {
+                "type": "RadioButtonsGroup",
+                "label": "Any signs of mastitis in the mother?",
+                "name": "mastitis",
+                "required": true,
+                "data-source": [
+                  {"id": "no", "title": "No signs"},
+                  {"id": "yes", "title": "Yes, udder swollen/hot"},
+                  {"id": "unsure", "title": "Not sure"}
+                ]
+              },
+              {
+                "type": "DatePicker",
+                "label": "Date of birth",
+                "name": "date_of_birth",
+                "required": true
+              },
+              {
+                "type": "Footer",
+                "label": "Submit",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "survived": "${form.survived}",
+                    "calf_sex": "${form.calf_sex}",
+                    "colostrum": "${form.colostrum}",
+                    "mastitis": "${form.mastitis}",
+                    "date_of_birth": "${form.date_of_birth}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

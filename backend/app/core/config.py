@@ -75,6 +75,7 @@ class Settings(BaseSettings):
     FLOW_ID_REGISTER_ANIMAL: str | None = None
     FLOW_ID_IDENTIFY_ANIMAL: str | None = None
     FLOW_ID_PICK_DATE: str | None = None
+    FLOW_ID_RECORD_BIRTH: str | None = None
     
     ELEVENLABS_API_KEY: str | None = None
 

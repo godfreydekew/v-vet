@@ -32,6 +32,7 @@ def resolve_animal(
     user_id: uuid.UUID,
     query: str | None = None,
     pinned_animal_id: uuid.UUID | None = None,
+    gender: str | None = None,
 ) -> LookupResult:
     """
     Centralized service for resolving an animal by:
@@ -43,25 +44,32 @@ def resolve_animal(
        at all — this is the "farmer is continuing about the same animal"
        fallback, and is the only path that gets match_type "pinned" (trusted,
        no confirmation needed) unless the query happens to name that same animal.
+
+    gender, if given, restricts every path (pin included) to that gender —
+    e.g. record_birth's dam selection only ever matches females.
     """
     pinned_animal = (
         get_livestock_by_id_for_user(session=session, user_id=user_id, livestock_id=pinned_animal_id)
         if pinned_animal_id
         else None
     )
+    if gender is not None and pinned_animal is not None and pinned_animal.gender != gender:
+        pinned_animal = None
 
     clean_query = query.strip() if query and query.strip() else None
 
     if clean_query:
         # Name search (fuzzy)
         name_matches = get_livestock_by_name_for_user(session=session, user_id=user_id, name=clean_query)
+        if gender is not None:
+            name_matches = [a for a in name_matches if a.gender == gender]
         if len(name_matches) == 1:
             return _matched_result(name_matches[0], pinned_animal, fallback_match_type="fuzzy_name")
         if len(name_matches) > 1:
             return LookupResult(status=LookupStatus.MULTIPLE_MATCHES, candidates=name_matches, match_type="fuzzy_name")
 
         # Exact tag number search — across the whole herd, not just the first page.
-        all_animals = get_livestock_for_user(session=session, user_id=user_id, limit=None)
+        all_animals = get_livestock_for_user(session=session, user_id=user_id, limit=None, gender=gender)
         tag_matches = [a for a in all_animals if a.tag_number and a.tag_number.lower() == clean_query.lower()]
 
         if len(tag_matches) == 1:

@@ -40,6 +40,8 @@ class WhatsAppUserBase(SQLModel):
     active_death_animal_id: uuid.UUID | None = Field(default=None, foreign_key="livestock.id", ondelete="SET NULL")
     # Cause selected in step 2, held until the date is picked in step 3.
     active_death_cause: str | None = Field(default=None, max_length=100)
+    # Dam pinned mid-record_birth, held until the combined calving form is submitted.
+    active_birth_dam_id: uuid.UUID | None = Field(default=None, foreign_key="livestock.id", ondelete="SET NULL")
 
 
 class WhatsAppUserCreate(SQLModel):
@@ -64,6 +66,7 @@ class WhatsAppUserUpdate(SQLModel):
     pending_animal_photo_url: str | None = None
     active_death_animal_id: uuid.UUID | None = None
     active_death_cause: str | None = None
+    active_birth_dam_id: uuid.UUID | None = None
 
 
 class WhatsAppUser(WhatsAppUserBase, table=True):
