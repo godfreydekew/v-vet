@@ -204,8 +204,9 @@ class RecordBirthFlow(BaseFlow):
         if dob > today:
             dob = today
 
+        survived = data.get("survived") == "yes"
         user.active_birth_pending = {
-            "survived": data.get("survived") == "yes",
+            "survived": survived,
             "colostrum": data.get("colostrum"),
             "mastitis": data.get("mastitis"),
             "date_of_birth": dob.isoformat(),
@@ -219,11 +220,19 @@ class RecordBirthFlow(BaseFlow):
             )
             return "Sorry, something went wrong. Please send 'menu' and try again."
 
+        if survived:
+            transition_body = "Almost done! Now let's register the calf. 🐄"
+        else:
+            transition_body = (
+                "We're recording this so you have accurate records of what's been lost — "
+                "this matters for tracking your herd's statistics. Let's log a few details about the calf."
+            )
+
         response = send_flow_message(
             phone=user.phone,
             flow_id=settings.FLOW_ID_REGISTER_ANIMAL,
             flow_token=self.flow_id,
-            body="Almost done! Now let's register the calf itself.",
+            body=transition_body,
             cta="Register Calf",
             screen="REGISTER_ANIMAL",
         )
@@ -320,22 +329,24 @@ class RecordBirthFlow(BaseFlow):
             )
         else:
             summary = (
-                "We're so sorry — this has been recorded. 💙\n\n"
+                "💙 We're so sorry — the calf passed away. This has been recorded for your records.\n\n"
                 + (f"- Name: {calf.name}\n" if calf.name else "")
                 + f"- Calf Tag: {calf.tag_number}\n"
                 f"- Mother: {dam_name}"
             )
 
+        calf_name = calf.name or calf.tag_number or "the calf"
+
         warnings = []
         if survived and colostrum == "no":
             warnings.append(
-                "⚠️ *CRITICAL CALF ALERT*: Colostrum was missed in the first hour. "
+                f"⚠️ *CRITICAL CALF ALERT*: Colostrum was missed for {calf_name} in the first hour. "
                 "The calf lacks maternal antibodies and is at high risk of fatal infection. "
                 "Try feeding colostrum or warm milk immediately and contact a vet."
             )
         if mastitis == "yes":
             warnings.append(
-                "⚠️ *DAM HEALTH ALERT*: Mastitis suspected. Clean the udder with warm water, "
+                f"⚠️ *DAM HEALTH ALERT*: Mastitis suspected in {dam_name}. Clean the udder with warm water, "
                 "strip milk manually, and contact a vet to prevent starvation of the calf."
             )
 
