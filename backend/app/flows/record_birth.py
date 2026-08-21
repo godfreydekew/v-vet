@@ -1,5 +1,6 @@
 import logging
 import uuid
+from datetime import date as date_cls
 from datetime import datetime, timezone
 
 from sqlmodel import Session
@@ -17,10 +18,14 @@ _SEX_LABELS = {"female": "Female", "male": "Male", "unknown": "Unknown"}
 
 class RecordBirthFlow(BaseFlow):
     """
-    Records a calving event: select the dam (mother), capture survival,
-    calf sex, colostrum intake, dam mastitis signs, and date of birth in one
-    combined WhatsApp Flow form, then create the calf record and link it to
-    the dam via livestock_parentage.
+    Records a calving event in two steps:
+    1. record_birth Flow — survival, colostrum intake, dam mastitis signs,
+       date of birth. Dam-focused, time-sensitive facts.
+    2. register_animal Flow, reused as-is (same published Flow ID, launched
+       with this flow's own flow_token so the submission routes here instead
+       of to RegisterAnimalFlow) — the calf's own details: name, species,
+       breed, gender, weight. A calf is just a new animal, linked to a dam.
+
     """
 
     flow_id = "record_birth"
@@ -41,7 +46,16 @@ class RecordBirthFlow(BaseFlow):
             )
         )
         if dam_count == 0:
-            return False
+            response = send_whatsapp_message(
+                phone=phone,
+                text=(
+                    "You don't have any female cattle registered yet, so there's no mother cow to "
+                    "record a birth against. 🐄\n\n"
+                    "Please register the mother cow first (menu → Register Animal, and set her gender "
+                    "to female), then try Record Birth again."
+                ),
+            )
+            return response.status_code == 200
 
         if dam_count >= self.SMALL_HERD_THRESHOLD:
             if not settings.FLOW_ID_IDENTIFY_ANIMAL:
@@ -80,11 +94,13 @@ class RecordBirthFlow(BaseFlow):
 
     def handle(self, data: dict, user: WhatsAppUser, session: Session) -> str:
         """
-        Both the identify_animal and record_birth Flows share this flow_id
-        (mirrors RecordDeathFlow) — dispatch on payload shape.
+        Three Flows share this flow_id (identify_animal, record_birth, and
+        register_animal reused for calf details) — dispatch on payload shape.
         """
         if "survived" in data:
             return self._handle_calving_submission(data=data, user=user, session=session)
+        if "species" in data:
+            return self._handle_calf_registration_submission(data=data, user=user, session=session)
         return self._handle_identify_flow_submission(data=data, user=user, session=session)
 
     def _handle_identify_flow_submission(self, *, data: dict, user: WhatsAppUser, session: Session) -> str:
@@ -153,6 +169,7 @@ class RecordBirthFlow(BaseFlow):
             return False
 
         user.active_birth_dam_id = dam.id
+        user.active_birth_pending = None
         session.add(user)
         session.commit()
 
@@ -172,24 +189,11 @@ class RecordBirthFlow(BaseFlow):
         return response.status_code == 200
 
     def _handle_calving_submission(self, *, data: dict, user: WhatsAppUser, session: Session) -> str:
-        if user.active_birth_dam_id is None or not user.linked_user_id:
+        """Step 1 submitted — stash the answers and hand off to the calf's own registration form."""
+        if user.active_birth_dam_id is None:
             return "Sorry, something went wrong. Please send 'menu' and try again."
 
-        from app.crud import get_livestock_by_id_for_user
-
-        dam = get_livestock_by_id_for_user(
-            session=session, user_id=user.linked_user_id, livestock_id=user.active_birth_dam_id
-        )
-        if dam is None:
-            user.active_birth_dam_id = None
-            session.add(user)
-            session.commit()
-            return "Sorry, something went wrong finding that cow. Please send 'menu' and try again."
-
-        survived = data.get("survived") == "yes"
-        calf_gender = data.get("calf_sex") or "unknown"
-        colostrum = data.get("colostrum")
-        mastitis = data.get("mastitis")
+        from app.core.config import settings
 
         today = datetime.now(timezone.utc).date()
         raw_date = (data.get("date_of_birth") or "").strip()
@@ -200,14 +204,76 @@ class RecordBirthFlow(BaseFlow):
         if dob > today:
             dob = today
 
+        user.active_birth_pending = {
+            "survived": data.get("survived") == "yes",
+            "colostrum": data.get("colostrum"),
+            "mastitis": data.get("mastitis"),
+            "date_of_birth": dob.isoformat(),
+        }
+        session.add(user)
+        session.commit()
+
+        if not settings.FLOW_ID_REGISTER_ANIMAL:
+            logger.warning(
+                "[RecordBirthFlow] FLOW_ID_REGISTER_ANIMAL not configured — cannot send calf details form."
+            )
+            return "Sorry, something went wrong. Please send 'menu' and try again."
+
+        response = send_flow_message(
+            phone=user.phone,
+            flow_id=settings.FLOW_ID_REGISTER_ANIMAL,
+            flow_token=self.flow_id,
+            body="Almost done! Now let's register the calf itself.",
+            cta="Register Calf",
+            screen="REGISTER_ANIMAL",
+        )
+        return "" if response.status_code == 200 else (
+            "Sorry, something went wrong sending the calf details form. Please send 'menu' and try again."
+        )
+
+    def _handle_calf_registration_submission(self, *, data: dict, user: WhatsAppUser, session: Session) -> str:
+        """Step 2 (reused register_animal form) submitted — create the calf and link it to the dam."""
+        if user.active_birth_dam_id is None or user.active_birth_pending is None or not user.linked_user_id:
+            return "Sorry, something went wrong. Please send 'menu' and try again."
+
+        from app.crud import get_livestock_by_id_for_user
+
+        dam = get_livestock_by_id_for_user(
+            session=session, user_id=user.linked_user_id, livestock_id=user.active_birth_dam_id
+        )
+        if dam is None:
+            user.active_birth_dam_id = None
+            user.active_birth_pending = None
+            session.add(user)
+            session.commit()
+            return "Sorry, something went wrong finding that cow. Please send 'menu' and try again."
+
+        pending = user.active_birth_pending
+        survived = bool(pending.get("survived"))
+        colostrum = pending.get("colostrum")
+        mastitis = pending.get("mastitis")
+        dob = date_cls.fromisoformat(pending["date_of_birth"])
+
+        calf_name = (data.get("name") or "").strip() or None
+        calf_gender = data.get("gender") or "unknown"
+        calf_breed = (data.get("breed") or "").strip() or None
+        weight_raw = data.get("weight_kg")
+        try:
+            weight_kg = float(weight_raw) if weight_raw not in (None, "") else None
+        except (TypeError, ValueError):
+            weight_kg = None
+
         from app.crud import create_livestock_from_whatsapp
 
         calf = create_livestock_from_whatsapp(
             session=session,
             user_id=user.linked_user_id,
             district=user.district or "",
-            species=dam.species,
+            species=data.get("species") or dam.species,
+            name=calf_name,
             gender=calf_gender,
+            breed=calf_breed,
+            weight_kg=weight_kg,
             date_of_birth=dob,
         )
 
@@ -223,6 +289,7 @@ class RecordBirthFlow(BaseFlow):
         session.add(LivestockParentage(child_id=calf.id, mother_id=dam.id))
 
         user.active_birth_dam_id = None
+        user.active_birth_pending = None
         session.add(user)
         session.commit()
 
@@ -245,15 +312,17 @@ class RecordBirthFlow(BaseFlow):
 
         if survived:
             summary = (
-                f"✅ Birth recorded! 🎉\n\n"
-                f"- Calf Tag: {calf.tag_number}\n"
+                "✅ Birth recorded! 🎉\n\n"
+                + (f"- Name: {calf.name}\n" if calf.name else "")
+                + f"- Calf Tag: {calf.tag_number}\n"
                 f"- Mother: {dam_name}\n"
                 f"- Sex: {_SEX_LABELS.get(calf_gender, calf_gender)}"
             )
         else:
             summary = (
-                f"We're so sorry — this has been recorded. 💙\n\n"
-                f"- Calf Tag: {calf.tag_number}\n"
+                "We're so sorry — this has been recorded. 💙\n\n"
+                + (f"- Name: {calf.name}\n" if calf.name else "")
+                + f"- Calf Tag: {calf.tag_number}\n"
                 f"- Mother: {dam_name}"
             )
 

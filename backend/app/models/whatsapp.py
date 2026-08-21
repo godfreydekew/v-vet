@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Literal
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, JSON
 from sqlmodel import Field, SQLModel
 
 WhatsAppMessageRole = Literal["farmer", "assistant"]
@@ -40,8 +40,12 @@ class WhatsAppUserBase(SQLModel):
     active_death_animal_id: uuid.UUID | None = Field(default=None, foreign_key="livestock.id", ondelete="SET NULL")
     # Cause selected in step 2, held until the date is picked in step 3.
     active_death_cause: str | None = Field(default=None, max_length=100)
-    # Dam pinned mid-record_birth, held until the combined calving form is submitted.
+    # Dam pinned mid-record_birth, held until the calf's registration form is submitted.
     active_birth_dam_id: uuid.UUID | None = Field(default=None, foreign_key="livestock.id", ondelete="SET NULL")
+    # Answers from record_birth's calving-details form (survived/colostrum/
+    # mastitis/date_of_birth), held until the reused register_animal form
+    # (calf details) is submitted and the calf record can actually be made.
+    active_birth_pending: dict | None = Field(default=None, sa_column=Column(JSON))
 
 
 class WhatsAppUserCreate(SQLModel):
@@ -67,6 +71,7 @@ class WhatsAppUserUpdate(SQLModel):
     active_death_animal_id: uuid.UUID | None = None
     active_death_cause: str | None = None
     active_birth_dam_id: uuid.UUID | None = None
+    active_birth_pending: dict | None = None
 
 
 class WhatsAppUser(WhatsAppUserBase, table=True):
