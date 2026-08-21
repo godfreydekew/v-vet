@@ -83,11 +83,11 @@ MAIN_MENU_SECTIONS: list[dict] = [
                 "title": "Register Animal",
                 "description": "Add a new animal to your herd",
             },
-            # {
-            #     "id": "record_birth",
-            #     "title": "Record Birth",
-            #     "description": "Log a new calf born",
-            # },
+            {
+                "id": "record_birth",
+                "title": "Record Birth",
+                "description": "Log a new calf born",
+            },
             {
                 "id": "record_death",
                 "title": "Record Death",
@@ -272,6 +272,37 @@ class WhatsAppConversationService:
             flow = FLOW_REGISTRY.get(ReportSicknessFlow.flow_id)
             if isinstance(flow, ReportSicknessFlow):
                 offset_str = message_body.removeprefix("sickness_more_")
+                offset = int(offset_str) if offset_str.isdigit() else 0
+                if flow.show_more(offset=offset, phone=phone, user=user, session=session):
+                    self._persist_assistant(
+                        session=session, user=user, phone=phone, content="[More animals sent]"
+                    )
+                return
+
+        # Farmer tapped a cow in the record_birth interactive list.
+        if message_body.startswith("birth_animal_"):
+            from app.flows import FLOW_REGISTRY
+            from app.flows.record_birth import RecordBirthFlow
+
+            flow = FLOW_REGISTRY.get(RecordBirthFlow.flow_id)
+            if isinstance(flow, RecordBirthFlow):
+                animal_id = message_body.removeprefix("birth_animal_")
+                if flow.handle_dam_selection(
+                    animal_id=animal_id, phone=phone, user=user, session=session
+                ):
+                    self._persist_assistant(
+                        session=session, user=user, phone=phone, content="[Calving details form sent]"
+                    )
+                return
+
+        # Farmer tapped "Show more animals" in the record_birth list.
+        if message_body.startswith("birth_more_"):
+            from app.flows import FLOW_REGISTRY
+            from app.flows.record_birth import RecordBirthFlow
+
+            flow = FLOW_REGISTRY.get(RecordBirthFlow.flow_id)
+            if isinstance(flow, RecordBirthFlow):
+                offset_str = message_body.removeprefix("birth_more_")
                 offset = int(offset_str) if offset_str.isdigit() else 0
                 if flow.show_more(offset=offset, phone=phone, user=user, session=session):
                     self._persist_assistant(

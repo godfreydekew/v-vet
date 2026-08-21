@@ -9,7 +9,7 @@ from app.services.whatsapp.client import send_list_message
 
 logger = logging.getLogger(__name__)
 
-AnimalListIntent = Literal["view", "sickness", "death"]
+AnimalListIntent = Literal["view", "sickness", "death", "birth"]
 
 # WhatsApp list messages allow at most 10 rows total. Reserve one row for
 # "Show more animals" whenever there's a next page.
@@ -20,11 +20,13 @@ _ROW_ID_PREFIX: dict[AnimalListIntent, str] = {
     "view": "view_animal_",
     "sickness": "select_animal_",
     "death": "death_animal_",
+    "birth": "birth_animal_",
 }
 _MORE_ID_PREFIX: dict[AnimalListIntent, str] = {
     "view": "view_more_",
     "sickness": "sickness_more_",
     "death": "death_more_",
+    "birth": "birth_more_",
 }
 _HEADER_TEXT: dict[AnimalListIntent, str] = {
     "view": "Here is your registered herd. Tap an animal to view its details:",
@@ -36,16 +38,30 @@ _HEADER_TEXT: dict[AnimalListIntent, str] = {
         "We are so sorry for your loss. 💙\n\n"
         "Please select which animal passed away from your herd list below:"
     ),
+    "birth": (
+        "Congratulations on the new birth! 🐄🎉\n\n"
+        "Please select which cow gave birth from your herd list below:"
+    ),
 }
 _MORE_HEADER_TEXT: dict[AnimalListIntent, str] = {
     "view": "Here are more of your animals — tap one to view its details:",
     "sickness": "Here are more of your animals — select the one that's sick:",
     "death": "Here are more of your animals — select the one that passed away:",
+    "birth": "Here are more of your cows — select the one that gave birth:",
 }
 _BUTTON_LABEL: dict[AnimalListIntent, str] = {
     "view": "View Animal",
     "sickness": "Select Animal",
     "death": "Select Animal",
+    "birth": "Select Mother Cow",
+}
+# Restricts the underlying query for intents that only make sense for one
+# gender — dam selection only ever shows/matches females.
+_GENDER_FILTER: dict[AnimalListIntent, str | None] = {
+    "view": None,
+    "sickness": None,
+    "death": None,
+    "birth": "female",
 }
 
 
@@ -69,7 +85,9 @@ def send_interactive_animal_list(
     if not user.linked_user_id:
         return False
 
-    animals = get_livestock_for_user(session=session, user_id=user.linked_user_id, limit=MAX_ANIMALS)
+    animals = get_livestock_for_user(
+        session=session, user_id=user.linked_user_id, limit=MAX_ANIMALS, gender=_GENDER_FILTER[intent]
+    )
     if not animals:
         return False
 
