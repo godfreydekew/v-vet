@@ -439,9 +439,10 @@ def get_conversation_history(
 
 
 def get_livestock_for_user(
-    *, session: Session, user_id: uuid.UUID, limit: int | None = 10
+    *, session: Session, user_id: uuid.UUID, limit: int | None = 10, gender: str | None = None
 ) -> list[Livestock]:
-    """Return active livestock across all farms owned by user_id, capped at `limit` (None = no cap)."""
+    """Return active livestock across all farms owned by user_id, capped at `limit` (None = no cap).
+    gender, if given, restricts to that gender (e.g. record_birth's dam selection: females only)."""
     farm_ids = session.exec(
         select(Farm.id).where(Farm.farmer_id == user_id)
     ).all()
@@ -452,6 +453,8 @@ def get_livestock_for_user(
         .where(col(Livestock.farm_id).in_(farm_ids))
         .where(Livestock.lifecycle_status == "active")
     )
+    if gender is not None:
+        query = query.where(Livestock.gender == gender)
     if limit is not None:
         query = query.limit(limit)
     rows = session.exec(query).all()
