@@ -1,0 +1,40 @@
+{
+  "version": "7.3",
+  "screens": [
+    {
+      "id": "PICK_DATE",
+      "title": "Select Date",
+      "terminal": true,
+      "success": true,
+      "data": {},
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "pick_date_form",
+            "children": [
+              {
+                "type": "DatePicker",
+                "label": "Date of Death",
+                "name": "selected_date",
+                "required": true,
+                "helper-text": "Tap to select the date when the animal passed away"
+              },
+              {
+                "type": "Footer",
+                "label": "Continue",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "selected_date": "${form.selected_date}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

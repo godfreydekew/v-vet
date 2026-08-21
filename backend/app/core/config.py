@@ -74,6 +74,7 @@ class Settings(BaseSettings):
     # WhatsApp Flow IDs
     FLOW_ID_REGISTER_ANIMAL: str | None = None
     FLOW_ID_IDENTIFY_ANIMAL: str | None = None
+    FLOW_ID_PICK_DATE: str | None = None
     
     ELEVENLABS_API_KEY: str | None = None
 

@@ -95,10 +95,17 @@ class RecordDeathFlow(BaseFlow):
 
     def handle(self, data: dict, user: WhatsAppUser, session: Session) -> str:
         """
-        Processes the identify_animal Flow submission: {name_or_tag, show_list}.
-        Deterministic — no LLM involved in identifying the animal, since the
-        farmer chose directly on the form instead of us having to infer
-        intent from free text.
+        Both the identify_animal and pick_date Flows share this flow_id, so
+        their submissions both land here — dispatch on payload shape rather
+        than adding a second flow_token to FLOW_REGISTRY for the same flow.
+        """
+        if "selected_date" in data:
+            return self._handle_date_flow_submission(data=data, user=user, session=session)
+        return self._handle_identify_flow_submission(data=data, user=user, session=session)
+
+    def _handle_identify_flow_submission(self, *, data: dict, user: WhatsAppUser, session: Session) -> str:
+        """
+        Processes the identify_animal Flow submission: {name_or_tag, show_list}
         """
         if not user.linked_user_id:
             return "Sorry, something went wrong. Please send 'menu' and try again."
@@ -194,16 +201,37 @@ class RecordDeathFlow(BaseFlow):
         session.add(user)
         session.commit()
 
-        buttons = [
-            {"id": f"{_DATE_PREFIX}today", "title": "Today"},
-            {"id": f"{_DATE_PREFIX}yesterday", "title": "Yesterday"},
-        ]
-        response = send_reply_buttons(phone=phone, body="When did this happen?", buttons=buttons)
+        return self._ask_date(phone=phone)
+
+    def _ask_date(self, *, phone: str) -> bool:
+        from app.core.config import settings
+
+        if not settings.FLOW_ID_PICK_DATE:
+            logger.warning(
+                "[RecordDeathFlow] FLOW_ID_PICK_DATE not configured — falling back to Today/Yesterday buttons."
+            )
+            buttons = [
+                {"id": f"{_DATE_PREFIX}today", "title": "Today"},
+                {"id": f"{_DATE_PREFIX}yesterday", "title": "Yesterday"},
+            ]
+            response = send_reply_buttons(phone=phone, body="When did this happen?", buttons=buttons)
+            return response.status_code == 200
+
+        response = send_flow_message(
+            phone=phone,
+            flow_id=settings.FLOW_ID_PICK_DATE,
+            flow_token=self.flow_id,
+            body="When did this happen?",
+            cta="Continue",
+            screen="PICK_DATE",
+        )
         return response.status_code == 200
 
     def handle_date_selection(
         self, *, row_id: str, user: WhatsAppUser, session: Session
     ) -> str | None:
+        """Fallback path — only reached when FLOW_ID_PICK_DATE isn't configured
+        and _ask_date() sent the Today/Yesterday buttons instead."""
         if user.active_death_animal_id is None or user.active_death_cause is None:
             return None
         if not row_id.startswith(_DATE_PREFIX):
@@ -218,13 +246,32 @@ class RecordDeathFlow(BaseFlow):
         else:
             return None
 
+        return self._finalize_death(death_date=death_date, user=user, session=session)
+
+    def _handle_date_flow_submission(self, *, data: dict, user: WhatsAppUser, session: Session) -> str:
+        if user.active_death_animal_id is None or user.active_death_cause is None:
+            return "Sorry, something went wrong. Please send 'menu' and try again."
+
+        raw_date = (data.get("selected_date") or "").strip()
+        try:
+            death_date = datetime.strptime(raw_date, "%Y-%m-%d").date()
+        except ValueError:
+            return "Sorry, I couldn't understand that date. Please send 'menu' and try again."
+
+        today = datetime.now(timezone.utc).date()
+        if death_date > today:
+            return "That date is in the future — please send 'menu' and try again with today or an earlier date."
+
+        return self._finalize_death(death_date=death_date, user=user, session=session)
+
+    def _finalize_death(self, *, death_date, user: WhatsAppUser, session: Session) -> str:
         from app.crud import get_livestock_by_id_for_user
 
         animal = (
             get_livestock_by_id_for_user(
                 session=session, user_id=user.linked_user_id, livestock_id=user.active_death_animal_id
             )
-            if user.linked_user_id
+            if user.linked_user_id and user.active_death_animal_id
             else None
         )
         if animal is None:

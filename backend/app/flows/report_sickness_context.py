@@ -21,23 +21,6 @@ _DONE_OPTION_ID = "__done__"
 
 
 class TriageContextFlow:
-    """
-    Deterministic, no-LLM state machine that walks a farmer through the
-    "Establish basic context" questions (Step 2 of the triage spec) once an
-    animal has already been identified and confirmed — this is only ever
-    started from ReportSicknessFlow.handle_selection() (tap path) or the
-    report_sickness tool's confirmed path (free-text path), never before an
-    animal is settled.
-
-    Question content lives in triage_context_questions.py as data — adding
-    Step 3+ from the spec later means adding more Question entries there,
-    not new classes here.
-
-    Progress is tracked in a TriageSession row rather than on WhatsAppUser,
-    since this is genuinely multi-step state, unlike the single-value pins
-    used elsewhere (is_adding_animal, active_sickness_animal_id).
-    """
-
     def start(
         self,
         *,
@@ -167,7 +150,7 @@ class TriageContextFlow:
     def _record_answer(
         self, triage_session: TriageSession, question_id: str, value: object, *, session: Session
     ) -> None:
-        # Reassign (don't mutate in place) so SQLAlchemy detects the JSON column changed.
+        # Reassign so SQLAlchemy detects the JSON column changed.
         answers = dict(triage_session.answers)
         answers[question_id] = value
         triage_session.answers = answers
@@ -231,10 +214,7 @@ class TriageContextFlow:
     ) -> str:
         """
         Once every question is answered, run triage and give the farmer a
-        human-readable summary plus recommendation back. If start() had found
-        a danger flag it would have already finalized via the emergency exit
-        and this method would never run for that report, so no flags need
-        re-detecting here.
+        human-readable summary plus recommendation back.
         """
         return self._finalize(
             user=user,
