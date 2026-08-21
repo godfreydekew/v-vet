@@ -26,17 +26,6 @@
               },
               {
                 "type": "RadioButtonsGroup",
-                "label": "Calf sex",
-                "name": "calf_sex",
-                "required": true,
-                "data-source": [
-                  {"id": "female", "title": "Female"},
-                  {"id": "male", "title": "Male"},
-                  {"id": "unknown", "title": "Unknown"}
-                ]
-              },
-              {
-                "type": "RadioButtonsGroup",
                 "label": "Colostrum within 1 hour of birth?",
                 "name": "colostrum",
                 "required": true,
@@ -58,22 +47,14 @@
                 ]
               },
               {
-                "type": "DatePicker",
-                "label": "Date of birth",
-                "name": "date_of_birth",
-                "required": true
-              },
-              {
                 "type": "Footer",
                 "label": "Submit",
                 "on-click-action": {
                   "name": "complete",
                   "payload": {
                     "survived": "${form.survived}",
-                    "calf_sex": "${form.calf_sex}",
                     "colostrum": "${form.colostrum}",
-                    "mastitis": "${form.mastitis}",
-                    "date_of_birth": "${form.date_of_birth}"
+                    "mastitis": "${form.mastitis}"
                   }
                 }
               }
