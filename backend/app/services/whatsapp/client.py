@@ -154,6 +154,20 @@ def send_flow_message(
     return requests.post(url_endpoint, json=payload, headers=headers, timeout=15)
 
 
+def set_whatsapp_commands(commands: list[dict]) -> requests.Response:
+    
+    if not settings.WHATSAPP_PHONE_NUMBER_ID or not settings.WHATSAPP_ACCESS_TOKEN:
+        raise RuntimeError("WhatsApp configuration is missing in settings.")
+
+    url = f"https://graph.facebook.com/v25.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/conversational_automation"
+    payload = {"commands": commands}
+    headers = {
+        "Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    return requests.post(url, json=payload, headers=headers, timeout=15)
+
+
 def download_media(url: str) -> bytes | None:
     """Download raw media bytes from a Meta-signed URL."""
     if not settings.WHATSAPP_ACCESS_TOKEN:
