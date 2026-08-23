@@ -237,29 +237,8 @@ class WhatsAppConversationService:
             return
 
         # Farmer picked a "/" command from WhatsApp's native command picker
-        # (see app/setup_whatsapp_commands.py) — command names are defined to
-        # match INTENT_IDS exactly, so a selection routes just like a tapped
-        # menu row.
         if message_body.startswith("/"):
-            command = message_body[1:].strip().split()[0].lower() if message_body[1:].strip() else ""
-            if command in ("menu", ""):
-                self._send_main_menu(phone=phone)
-                self._persist_assistant(
-                    session=session, user=user, phone=phone, content="[Menu sent]"
-                )
-                return
-            if command in INTENT_IDS:
-                reply = self._handle_intent(
-                    intent=command, user=user, session=session, phone=phone
-                )
-                if reply:
-                    self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
-                else:
-                    self._persist_assistant(
-                        session=session, user=user, phone=phone, content=f"[Form/List sent: {command}]"
-                    )
-                return
-            # Unrecognized command — fall through to normal handling below.
+            message_body = message_body.removeprefix("/").strip().lower()
 
         # Farmer typed "my animals" / "show my herd" / etc. instead of tapping
         # the menu — route deterministically to the same flow the menu item

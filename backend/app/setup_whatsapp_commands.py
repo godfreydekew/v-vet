@@ -6,7 +6,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 WHATSAPP_COMMANDS: list[dict] = [
-    {"command_name": "menu", "command_description": "Show the main menu"},
     {"command_name": "register_animal", "command_description": "Add a new animal to your herd"},
     {"command_name": "record_birth", "command_description": "Log a new calf born"},
     {"command_name": "record_death", "command_description": "Log an animal death"},
