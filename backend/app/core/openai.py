@@ -158,6 +158,41 @@ def complete_onboarding(*, session: Session, user: WhatsAppUser) -> WhatsAppUser
     session.refresh(user)
     return user
 
+def _build_herd_context(*, user: WhatsAppUser, session: Session) -> str:
+    """
+    Compact, standing summary of the farmer's herd — name, species, gender,
+    health status, tag, and the most recent health observation.
+    """
+    if not user.linked_user_id:
+        return ""
+
+    from app.crud import get_latest_observations_for_user, get_livestock_for_user
+
+    animals = get_livestock_for_user(session=session, user_id=user.linked_user_id, limit=None)
+    if not animals:
+        return ""
+
+    latest_obs = get_latest_observations_for_user(session=session, user_id=user.linked_user_id)
+    today = date.today()
+
+    lines = [f"Farmer's registered animals ({len(animals)}):"]
+    for a in animals:
+        name = a.name or "(unnamed)"
+        detail = f"{a.gender or 'unknown sex'} {a.species}, {a.health_status}, tag {a.tag_number}"
+        obs = latest_obs.get(a.id)
+        if obs and obs.symptoms:
+            days_ago = (today - obs.observed_at.date()).days
+            if days_ago <= 0:
+                when = "today"
+            elif days_ago == 1:
+                when = "yesterday"
+            else:
+                when = f"{days_ago} days ago"
+            detail += f" (last observed {when}: {obs.symptoms})"
+        lines.append(f"- {name} — {detail}")
+
+    return "\n\n" + "\n".join(lines)
+
 
 def run_onboarding_agent(
     *,
@@ -819,7 +854,14 @@ def run_farmer_agent(
         profile_parts.append(f"Their main goal: {user.main_goal}.")
     if profile_parts:
         system_content += "\n\nFarmer profile: " + " ".join(profile_parts)
-
+    herd_context = _build_herd_context(user=user, session=session)
+    if herd_context:
+        system_content += herd_context
+        system_content += (
+            "\n\nAnswer questions about the herd above directly using this context. This is only for read only operations."
+            "lookup_animal just to answer a question. Only use tools when the farmer wants to "
+            "actually register, report, or record something."
+        )
     if user.is_adding_animal:
         system_content += FARMER_AGENT_ADDING_ANIMAL_HINT.format(today=date.today().isoformat())
 

@@ -10,6 +10,7 @@ from app.models import (
     Farm,
     FarmBase,
     FarmUpdate,
+    HealthObservation,
     Livestock,
     LivestockCreate,
     LivestockImage,
@@ -475,6 +476,35 @@ def get_livestock_by_id_for_user(
         .where(Livestock.id == livestock_id)
         .where(col(Livestock.farm_id).in_(farm_ids))
     ).first()
+
+
+def get_latest_observations_for_user(
+    *, session: Session, user_id: uuid.UUID
+) -> dict[uuid.UUID, HealthObservation]:
+    """
+    Most recent HealthObservation per animal, across all farms owned by
+    user_id — 
+    """
+    farm_ids = session.exec(
+        select(Farm.id).where(Farm.farmer_id == user_id)
+    ).all()
+    if not farm_ids:
+        return {}
+    livestock_ids = session.exec(
+        select(Livestock.id).where(col(Livestock.farm_id).in_(farm_ids))
+    ).all()
+    if not livestock_ids:
+        return {}
+    rows = session.exec(
+        select(HealthObservation)
+        .where(col(HealthObservation.livestock_id).in_(livestock_ids))
+        .order_by(col(HealthObservation.observed_at).desc())
+    ).all()
+    latest: dict[uuid.UUID, HealthObservation] = {}
+    for obs in rows:
+        if obs.livestock_id not in latest:
+            latest[obs.livestock_id] = obs
+    return latest
 
 
 def get_livestock_by_name_for_user(
