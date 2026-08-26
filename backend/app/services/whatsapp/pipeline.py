@@ -475,7 +475,12 @@ class WhatsAppConversationService:
         reply = self._handle_farmer_agent(
             user=user, message_body=message_body, session=session
         )
-        self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
+        if reply:
+            self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
+        else:
+            self._persist_assistant(
+                session=session, user=user, phone=phone, content="[Interactive message sent by agent tool]"
+            )
 
     # ------------------------------------------------------------------
     # Private — message extraction
