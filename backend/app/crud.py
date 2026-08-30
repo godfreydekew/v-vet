@@ -507,6 +507,19 @@ def get_latest_observations_for_user(
     return latest
 
 
+def get_observations_for_livestock(
+    *, session: Session, livestock_id: uuid.UUID, limit: int = 5
+) -> list[HealthObservation]:
+    """Most recent observations for one animal, newest first."""
+    rows = session.exec(
+        select(HealthObservation)
+        .where(HealthObservation.livestock_id == livestock_id)
+        .order_by(col(HealthObservation.observed_at).desc())
+        .limit(limit)
+    ).all()
+    return list(rows)
+
+
 def get_livestock_by_name_for_user(
     *, session: Session, user_id: uuid.UUID, name: str
 ) -> list[Livestock]:
