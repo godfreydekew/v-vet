@@ -26,6 +26,28 @@ def send_whatsapp_message(phone: str, text: str) -> requests.Response:
     return requests.post(url, json=payload, headers=headers, timeout=15)
 
 
+def send_whatsapp_image(phone: str, image_url: str, caption: str | None = None) -> requests.Response:
+    """Send an image via the Meta Cloud API"""
+    if not settings.WHATSAPP_PHONE_NUMBER_ID or not settings.WHATSAPP_ACCESS_TOKEN:
+        raise RuntimeError("WhatsApp configuration is missing in settings.")
+
+    url = f"https://graph.facebook.com/v25.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
+    image_payload: dict = {"link": image_url}
+    if caption:
+        image_payload["caption"] = caption
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone,
+        "type": "image",
+        "image": image_payload,
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    return requests.post(url, json=payload, headers=headers, timeout=15)
+
+
 def mark_whatsapp_message_as_read(message_id: str) -> requests.Response:
     """Mark a message as read via the Meta Cloud API."""
     if not settings.WHATSAPP_PHONE_NUMBER_ID or not settings.WHATSAPP_ACCESS_TOKEN:

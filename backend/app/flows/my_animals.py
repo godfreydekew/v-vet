@@ -17,15 +17,7 @@ class MyAnimalsFlow(BaseFlow):
     """
     Sends the farmer's registered animals as a WhatsApp interactive list for
     viewing — the "My Animals" menu item. Tapping an animal shows its
-    details. No LLM involved anywhere in this path, unlike the old behaviour
-    where the menu tap fell through to the FarmerAgent and could misfire
-    into calling the wrong tool (e.g. report_sickness).
-
-    List-sending/pagination is shared with ReportSicknessFlow via
-    app.flows.animal_list.send_interactive_animal_list.
-
-    This flow does not use native WhatsApp Flow forms (nfm_reply), so
-    handle() is never called by the pipeline's form-submission path.
+    details.
     """
 
     flow_id = "my_animals"

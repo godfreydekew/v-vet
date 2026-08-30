@@ -381,7 +381,12 @@ class WhatsAppConversationService:
             if isinstance(flow, MyAnimalsFlow):
                 animal_id = message_body.removeprefix("view_animal_")
                 reply = flow.handle_view(animal_id, user, session)
-                self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
+                if reply:
+                    self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
+                else:
+                    self._persist_assistant(
+                        session=session, user=user, phone=phone, content="[Animal photo + profile sent]"
+                    )
                 return
 
         # Farmer tapped "Show more animals" in the "My Animals" view list.
