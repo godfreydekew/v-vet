@@ -1,10 +1,12 @@
 import logging
 import uuid
+from datetime import date
 
 from sqlmodel import Session
 
 from app.flows.animal_list import send_interactive_animal_list
 from app.flows.base import BaseFlow
+from app.models.health_observation import HealthObservation
 from app.models.livestock import Livestock
 from app.models.whatsapp import WhatsAppUser
 
@@ -44,8 +46,10 @@ class MyAnimalsFlow(BaseFlow):
         )
 
     def handle_view(self, animal_id: str, user: WhatsAppUser, session: Session) -> str:
-        """Process the farmer tapping an animal to view its details."""
-        from app.crud import get_livestock_by_id_for_user
+        """
+        Process the farmer tapping an animal to view its details.
+        """
+        from app.crud import get_livestock_by_id_for_user, get_observations_for_livestock, list_livestock_images
 
         try:
             parsed_id = uuid.UUID(animal_id)
@@ -62,13 +66,33 @@ class MyAnimalsFlow(BaseFlow):
         if animal is None:
             return "Sorry, I couldn't find that animal. Please send 'menu' and try again."
 
-        return self._format_details(animal)
+        observations = get_observations_for_livestock(session=session, livestock_id=animal.id)
+        profile_text = self._format_details(animal, observations)
+
+        images = list_livestock_images(session=session, livestock_id=animal.id)
+        if images:
+            from app.services.whatsapp.client import send_whatsapp_image
+
+            caption = profile_text
+            if len(caption) > 1024:
+                caption = caption[:1000].rstrip() + "…"
+
+            response = send_whatsapp_image(
+                phone=user.phone, image_url=images[0].image_url, caption=caption
+            )
+            if response.status_code == 200:
+                return ""
+            logger.warning(
+                "[MyAnimalsFlow] Image send failed %s: %s — falling back to text.",
+                response.status_code, response.text,
+            )
+
+        return profile_text
 
     @staticmethod
-    def _format_details(animal: Livestock) -> str:
+    def _format_details(animal: Livestock, observations: list[HealthObservation]) -> str:
         name = animal.name or animal.tag_number or "Unnamed animal"
-        lines = [f"*{name}*", ""]
-        lines.append(f"Species: {animal.species.capitalize() if animal.species else 'Unknown'}")
+        lines = [f"*{name}* 🐄", ""]
         if animal.breed:
             lines.append(f"Breed: {animal.breed}")
         if animal.gender:
@@ -84,4 +108,21 @@ class MyAnimalsFlow(BaseFlow):
         )
         if animal.notes:
             lines.append(f"Notes: {animal.notes}")
+
+        lines += ["", "*Recent Health Observations*"]
+        if observations:
+            today = date.today()
+            for obs in observations:
+                days_ago = (today - obs.observed_at.date()).days
+                if days_ago <= 0:
+                    when = "Today"
+                elif days_ago == 1:
+                    when = "Yesterday"
+                else:
+                    when = f"{days_ago} days ago"
+                summary = obs.symptoms or obs.notes or "No details recorded"
+                lines.append(f"📅 {when} — {summary}")
+        else:
+            lines.append("_No health observations recorded yet._")
+
         return "\n".join(lines)
