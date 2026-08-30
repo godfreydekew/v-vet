@@ -49,7 +49,6 @@ def send_whatsapp_image(phone: str, image_url: str, caption: str | None = None) 
 
 
 def mark_whatsapp_message_as_read(message_id: str) -> requests.Response:
-    """Mark a message as read via the Meta Cloud API."""
     if not settings.WHATSAPP_PHONE_NUMBER_ID or not settings.WHATSAPP_ACCESS_TOKEN:
         raise RuntimeError("WhatsApp configuration is missing in settings.")
 
@@ -58,6 +57,7 @@ def mark_whatsapp_message_as_read(message_id: str) -> requests.Response:
         "messaging_product": "whatsapp",
         "status": "read",
         "message_id": message_id,
+        "typing_indicator": {"type": "text"},
     }
     headers = {
         "Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}",
