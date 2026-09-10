@@ -26,7 +26,7 @@ ONBOARDING_FIELDS = (
 )
 
 ONBOARDING_MODEL = "gpt-4o-mini"
-FARMER_AGENT_MODEL = "gpt-5-mini"
+FARMER_AGENT_MODEL = "gpt-5.6-luna"
 
 ONBOARDING_FOLLOW_UP_PROMPT = (
     "You are the onboarding assistant responding after tool calls have already been executed. "
@@ -59,6 +59,9 @@ def build_onboarding_message_list(
             "role": "system",
             "content": (
                 f"{system_prompt}\n\n"
+                f"Today's date is {date.today().isoformat()}. Use this for any question about "
+                "today's, tomorrow's, or another relative date — never guess or rely on your "
+                "training data for the current date.\n\n"
                 f"Current onboarding state: {json.dumps(onboarding_state, ensure_ascii=False)}\n\n"
                 "Use the recent conversation history to infer which onboarding fields are already answered. "
                 "If the farmer has provided one or more missing fields, call the relevant tool. "
@@ -847,6 +850,10 @@ def run_farmer_agent(
     to DB first. Used by Flow form handlers to pass clean structured data.
     """
     system_content = FARMER_AGENT_SYSTEM_PROMPT
+    system_content += (
+        f"\n\nToday's date is {date.today().isoformat()}. "
+        "Use this where knowledge of date is required"
+    )
 
     profile_parts = []
     if user.preferred_language and user.preferred_language.lower() != "english":
