@@ -25,8 +25,22 @@ ONBOARDING_FIELDS = (
     "main_goal",
 )
 
-ONBOARDING_MODEL = "gpt-4o-mini"
-FARMER_AGENT_MODEL = "gpt-5.6-luna"
+ONBOARDING_MODEL = getattr(settings, "OPENAI_MODEL", "gpt-5.6-luna") 
+FARMER_AGENT_MODEL = getattr(settings, "OPENAI_MODEL", "gpt-5.6-luna")
+
+
+def _create_chat_completion(**kwargs: Any) -> Any:
+    """Wrapper around client.chat.completions.create to handle reasoning models with function tools."""
+    model = kwargs.get("model", "")
+    if "tools" in kwargs and any(k in model.lower() for k in ("gpt-5", "luna", "o1", "o3", "o4")):
+        kwargs.setdefault("reasoning_effort", "none")
+    try:
+        return client.chat.completions.create(**kwargs)
+    except Exception as e:
+        if "reasoning_effort" in str(e).lower() and "reasoning_effort" not in kwargs:
+            kwargs["reasoning_effort"] = "none"
+            return client.chat.completions.create(**kwargs)
+        raise
 
 ONBOARDING_FOLLOW_UP_PROMPT = (
     "You are the onboarding assistant responding after tool calls have already been executed. "
@@ -215,7 +229,7 @@ def run_onboarding_agent(
     )
     tools = build_onboarding_tools()
 
-    response = client.chat.completions.create(
+    response = _create_chat_completion(
         model=model,
         messages=cast(Any, messages),
         tools=cast(Any, tools),
@@ -249,7 +263,7 @@ def run_onboarding_agent(
             }
         )
 
-    follow_up = client.chat.completions.create(
+    follow_up = _create_chat_completion(
         model=model,
         messages=cast(
             Any,
@@ -907,7 +921,7 @@ def run_farmer_agent(
         messages.append({"role": "user", "content": extra_user_message})
 
     tools = build_farmer_agent_tools()
-    response = client.chat.completions.create(
+    response = _create_chat_completion(
         model=model,
         messages=cast(Any, messages),
         tools=cast(Any, tools),
@@ -935,7 +949,7 @@ def run_farmer_agent(
     if any(r.get("status") in _DIRECT_SEND_STATUSES for r in tool_results):
         return ""
 
-    follow_up = client.chat.completions.create(
+    follow_up = _create_chat_completion(
         model=model,
         messages=cast(
             Any,
@@ -981,7 +995,7 @@ def compose_reminder_lead_in(*, history: list[WhatsAppMessage]) -> str:
         {"role": "user", "content": f"Recent conversation:\n{transcript}"},
     ]
 
-    response = client.chat.completions.create(
+    response = _create_chat_completion(
         model=ONBOARDING_MODEL,
         messages=cast(Any, messages),
     )
@@ -1044,7 +1058,7 @@ def detect_danger_flags(*, symptoms: str) -> list[str]:
         {"role": "user", "content": symptoms},
     ]
 
-    response = client.chat.completions.create(
+    response = _create_chat_completion(
         model=ONBOARDING_MODEL,
         messages=cast(Any, messages),
         tools=cast(Any, [tool]),
