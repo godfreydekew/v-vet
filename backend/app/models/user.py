@@ -48,12 +48,13 @@ class UserCreate(UserBase):
 
 
 class UserRegister(SQLModel):
-    """Public self-registration schema — minimal required fields."""
+
 
     email: EmailStr = Field(max_length=255)
     password: str = Field(min_length=8, max_length=128)
     full_name: str | None = Field(default=None, max_length=255)
-    role: UserRole = Field(default="farmer")
+    phone_number: str = Field(max_length=20)
+    address: str | None = Field(default=None, max_length=255)
 
 
 class UserUpdate(UserBase):

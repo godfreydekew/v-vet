@@ -18,6 +18,15 @@ export interface UserCreatePayload {
   address?: string | null;
 }
 
+export interface UserSignupPayload {
+  email: string;
+  password: string;
+  full_name?: string | null;
+  /** Digits only with country code, e.g. "263771234567" — see formatPhoneForWhatsApp. */
+  phone_number: string;
+  address?: string | null;
+}
+
 export interface UserUpdateMePayload {
   full_name?: string | null;
   email?: string | null;
@@ -54,6 +63,12 @@ export async function fetchUsers(params?: { skip?: number; limit?: number }): Pr
 /** Superuser — create a new user with any role. */
 export async function registerUser(payload: UserCreatePayload): Promise<User> {
   const { data } = await api.post<User>('/users/', payload);
+  return data;
+}
+
+/** Public — web signup for farmers who already use V-Vet on WhatsApp. */
+export async function signupUser(payload: UserSignupPayload): Promise<User> {
+  const { data } = await api.post<User>('/users/signup', payload);
   return data;
 }
 

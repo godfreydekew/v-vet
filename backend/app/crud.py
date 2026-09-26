@@ -20,6 +20,7 @@ from app.models import (
     LivestockUpdate,
     User,
     UserCreate,
+    UserRegister,
     UserUpdate,
 )
 from app.models.whatsapp import (
@@ -58,6 +59,50 @@ def create_user_for_new_whatsapp(*, session: Session, whatsapp_user: WhatsAppUse
     session.commit()
     session.refresh(db_obj)
     return db_obj
+
+def get_web_user_for_whatsapp(*, session: Session, whatsapp_user: WhatsAppUser) -> User | None:
+    """Find the web User that belongs to a WhatsApp farmer, if one exists yet."""
+    if whatsapp_user.linked_user_id is not None:
+        linked_user = session.get(User, whatsapp_user.linked_user_id)
+        if linked_user is not None:
+            return linked_user
+    return session.exec(
+        select(User).where(col(User.phone_number) == whatsapp_user.phone)
+    ).first()
+
+
+def register_web_user_for_whatsapp(
+    *, session: Session, whatsapp_user: WhatsAppUser, user_register: UserRegister
+) -> User:
+    """Give a WhatsApp farmer web login details.
+
+    Farmers who finished WhatsApp onboarding already have a web User without an
+    email, so that User is claimed. Otherwise a new User is created. Either way
+    the WhatsApp user ends up linked to it.
+    """
+    hashed_password = get_password_hash(user_register.password)
+    web_user = get_web_user_for_whatsapp(session=session, whatsapp_user=whatsapp_user)
+    if web_user is None:
+        web_user = User(
+            phone_number=whatsapp_user.phone,
+            district=whatsapp_user.district,
+            hashed_password=hashed_password,
+        )
+
+    web_user.email = user_register.email
+    web_user.hashed_password = hashed_password
+    web_user.full_name = user_register.full_name or whatsapp_user.full_name
+    if user_register.address:
+        web_user.address = user_register.address
+    session.add(web_user)
+    session.commit()
+    session.refresh(web_user)
+
+    whatsapp_user.linked_user_id = web_user.id
+    session.add(whatsapp_user)
+    session.commit()
+    return web_user
+
 
 def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> Any:
     user_data = user_in.model_dump(exclude_unset=True)

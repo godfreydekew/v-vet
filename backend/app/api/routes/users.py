@@ -156,16 +156,41 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
 @router.post("/signup", response_model=UserPublic)
 def register_user(session: SessionDep, user_in: UserRegister) -> Any:
     """
-    Create new user without the need to be logged in.
+    Web signup for farmers who already use V-Vet on WhatsApp.
+    The phone number must match an existing WhatsApp user.
     """
-    user = crud.get_user_by_email(session=session, email=user_in.email)
-    if user:
+    whatsapp_user = crud.get_whatsapp_user_by_phone(
+        session=session, phone=user_in.phone_number
+    )
+    if whatsapp_user is None:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "This phone number has no V-Vet WhatsApp account. "
+                "Please set up your account on V-Vet through WhatsApp first, "
+                "then come back to sign up."
+            ),
+        )
+
+    user_with_email = crud.get_user_by_email(session=session, email=user_in.email)
+    if user_with_email:
         raise HTTPException(
             status_code=400,
             detail="The user with this email already exists in the system",
         )
-    user_create = UserCreate.model_validate(user_in)
-    user = crud.create_user(session=session, user_create=user_create)
+
+    existing_web_user = crud.get_web_user_for_whatsapp(
+        session=session, whatsapp_user=whatsapp_user
+    )
+    if existing_web_user is not None and existing_web_user.email:
+        raise HTTPException(
+            status_code=400,
+            detail="This phone number is already registered on the web. Please sign in instead.",
+        )
+
+    user = crud.register_web_user_for_whatsapp(
+        session=session, whatsapp_user=whatsapp_user, user_register=user_in
+    )
     return user
 
 

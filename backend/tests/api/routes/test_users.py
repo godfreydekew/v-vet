@@ -8,6 +8,7 @@ from app import crud
 from app.core.config import settings
 from app.core.security import verify_password
 from app.models import User, UserCreate
+from app.models.whatsapp import WhatsAppUser, WhatsAppUserCreate
 from tests.utils.user import create_random_user
 from tests.utils.utils import random_email, random_lower_string
 
@@ -316,11 +317,29 @@ def test_update_password_me_same_password_error(
     )
 
 
+def _random_phone() -> str:
+    return "263" + str(uuid.uuid4().int)[:9]
+
+
+def _create_whatsapp_user(db: Session, phone: str) -> WhatsAppUser:
+    whatsapp_user = crud.create_whatsapp_user(
+        session=db, user_in=WhatsAppUserCreate(phone=phone, full_name="WhatsApp Name")
+    )
+    return whatsapp_user
+
+
 def test_register_user(client: TestClient, db: Session) -> None:
+    phone = _random_phone()
+    whatsapp_user = _create_whatsapp_user(db, phone)
     username = random_email()
     password = random_lower_string()
     full_name = random_lower_string()
-    data = {"email": username, "password": password, "full_name": full_name}
+    data = {
+        "email": username,
+        "password": password,
+        "full_name": full_name,
+        "phone_number": phone,
+    }
     r = client.post(
         f"{settings.API_V1_STR}/users/signup",
         json=data,
@@ -329,6 +348,8 @@ def test_register_user(client: TestClient, db: Session) -> None:
     created_user = r.json()
     assert created_user["email"] == username
     assert created_user["full_name"] == full_name
+    assert created_user["phone_number"] == phone
+    assert created_user["role"] == "farmer"
 
     user_query = select(User).where(User.email == username)
     user_db = db.exec(user_query).first()
@@ -338,14 +359,82 @@ def test_register_user(client: TestClient, db: Session) -> None:
     verified, _ = verify_password(password, user_db.hashed_password)
     assert verified
 
+    db.refresh(whatsapp_user)
+    assert whatsapp_user.linked_user_id == user_db.id
 
-def test_register_user_already_exists_error(client: TestClient) -> None:
+
+def test_register_user_claims_onboarded_whatsapp_account(
+    client: TestClient, db: Session
+) -> None:
+    phone = _random_phone()
+    whatsapp_user = _create_whatsapp_user(db, phone)
+    onboarded_web_user = crud.create_user_for_new_whatsapp(
+        session=db, whatsapp_user=whatsapp_user
+    )
+    whatsapp_user.linked_user_id = onboarded_web_user.id
+    db.add(whatsapp_user)
+    db.commit()
+
+    username = random_email()
+    data = {
+        "email": username,
+        "password": random_lower_string(),
+        "phone_number": phone,
+    }
+    r = client.post(f"{settings.API_V1_STR}/users/signup", json=data)
+    assert r.status_code == 200
+    created_user = r.json()
+    assert created_user["id"] == str(onboarded_web_user.id)
+    assert created_user["email"] == username
+    assert created_user["full_name"] == "WhatsApp Name"
+
+
+def test_register_user_without_whatsapp_account_error(client: TestClient) -> None:
+    data = {
+        "email": random_email(),
+        "password": random_lower_string(),
+        "phone_number": _random_phone(),
+    }
+    r = client.post(f"{settings.API_V1_STR}/users/signup", json=data)
+    assert r.status_code == 403
+    assert "through WhatsApp" in r.json()["detail"]
+
+
+def test_register_user_phone_already_registered_error(
+    client: TestClient, db: Session
+) -> None:
+    phone = _random_phone()
+    _create_whatsapp_user(db, phone)
+    first = {
+        "email": random_email(),
+        "password": random_lower_string(),
+        "phone_number": phone,
+    }
+    r = client.post(f"{settings.API_V1_STR}/users/signup", json=first)
+    assert r.status_code == 200
+
+    second = {
+        "email": random_email(),
+        "password": random_lower_string(),
+        "phone_number": phone,
+    }
+    r = client.post(f"{settings.API_V1_STR}/users/signup", json=second)
+    assert r.status_code == 400
+    assert r.json()["detail"] == (
+        "This phone number is already registered on the web. Please sign in instead."
+    )
+
+
+def test_register_user_already_exists_error(client: TestClient, db: Session) -> None:
+    phone = _random_phone()
+    _create_whatsapp_user(db, phone)
     password = random_lower_string()
     full_name = random_lower_string()
     data = {
         "email": settings.FIRST_SUPERUSER,
         "password": password,
         "full_name": full_name,
+        "phone_number": phone,
     }
     r = client.post(
         f"{settings.API_V1_STR}/users/signup",
