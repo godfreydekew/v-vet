@@ -1,5 +1,6 @@
 from app.flows.base import BaseFlow
 from app.flows.my_animals import MyAnimalsFlow
+from app.flows.onboarding import OnboardingFlow
 from app.flows.record_birth import RecordBirthFlow
 from app.flows.record_death import RecordDeathFlow
 from app.flows.register_animal import RegisterAnimalFlow
@@ -12,4 +13,5 @@ FLOW_REGISTRY: dict[str, BaseFlow] = {
     MyAnimalsFlow.flow_id: MyAnimalsFlow(),
     RecordDeathFlow.flow_id: RecordDeathFlow(),
     RecordBirthFlow.flow_id: RecordBirthFlow(),
+    OnboardingFlow.flow_id: OnboardingFlow(),
 }

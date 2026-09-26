@@ -15,6 +15,15 @@
             "name": "register_animal_form",
             "children": [
               {
+                "type": "PhotoPicker",
+                "label": "Photo of Animal",
+                "name": "animal_photo",
+                "description": "Optional — helps identify the animal",
+                "photo-source": "camera_gallery",
+                "min-uploaded-photos": 0,
+                "max-uploaded-photos": 1
+              },
+              {
                 "type": "Dropdown",
                 "label": "Species",
                 "name": "species",
@@ -68,16 +77,6 @@
                 "name": "weight_kg",
                 "input-type": "number",
                 "required": false
-              },
-              {
-                "type": "PhotoPicker",
-                "label": "Photo of Animal",
-                "name": "animal_photo",
-                "description": "Optional — helps identify the animal",
-                "photo-source": "camera_gallery",
-                "required": false,
-                "min-uploaded-photos": 0,
-                "max-uploaded-photos": 1
               },
               {
                 "type": "Footer",

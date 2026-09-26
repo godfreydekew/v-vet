@@ -23,33 +23,6 @@ logger = logging.getLogger(__name__)
 
 SUPPORTED_LANGUAGES = {"english", "shona", "ndebele"}
 
-ONBOARDING_STEPS: list[tuple[str, str]] = [
-    (
-        "animal_count",
-        "How many animals do you currently have on your farm? (reply with a number)",
-    ),
-    ("district", "Which district are you located in?"),
-    (
-        "preferred_language",
-        "What language do you prefer?\nReply with: English, Shona, or Ndebele",
-    ),
-    (
-        "main_goal",
-        "What is your main goal with V-Vet?\n"
-        "For example: health tracking, breeding management, record keeping, or general advice.",
-    ),
-]
-
-ONBOARDING_SYSTEM_PROMPT = (
-    "You are VVet's onboarding agent for a farmer using WhatsApp. "
-    "Review the recent conversation history and the user's current profile. "
-    "Your goal is to collect these onboarding fields when they are available: full_name, animal_count, district, preferred_language, and main_goal. "
-    "If the farmer provides one or more fields in one message, call the save-multiple-fields tool. "
-    "If all required fields are available, call the complete onboarding tool. "
-    "If the message is random or incomplete, ask one short clarifying question for the missing field that matters most. "
-    "Keep replies short, clear, and friendly."
-)
-
 # ---------------------------------------------------------------------------
 # Intent menu
 # ---------------------------------------------------------------------------
@@ -73,6 +46,10 @@ INTENT_IDS: set[str] = {
 
 # Words that trigger the main menu instead of the farmer agent.
 _MENU_TRIGGERS: set[str] = {"menu", "help", "hi", "hello", "start", "options"}
+
+# Matches the welcome message's "Reply YES to set up your farm" call to
+# action — deterministic, no LLM needed to recognize an affirmative reply.
+_AFFIRMATIVE_TRIGGERS: set[str] = {"yes", "yeah", "yep", "sure", "ok", "okay", "y"}
 
 MAIN_MENU_SECTIONS: list[dict] = [
     {
@@ -219,10 +196,20 @@ class WhatsAppConversationService:
             return
 
         if not user.is_fully_onboarded:
-            reply = self._handle_onboarding(
-                user=user, message_body=message_body, session=session
+            if message_body.strip().lower() in _AFFIRMATIVE_TRIGGERS:
+                from app.flows import FLOW_REGISTRY
+                from app.flows.onboarding import OnboardingFlow
+
+                flow = FLOW_REGISTRY.get(OnboardingFlow.flow_id)
+                if isinstance(flow, OnboardingFlow) and flow.start(phone, user, session):
+                    self._persist_assistant(
+                        session=session, user=user, phone=phone, content="[Onboarding form sent]"
+                    )
+                    return
+            self._send_and_persist(
+                session=session, user=user, phone=phone,
+                reply="Reply YES to get started, or ask me anything about V-Vet!",
             )
-            self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
             return
 
         # Show menu on greetings / explicit "menu" request.
@@ -747,24 +734,6 @@ class WhatsAppConversationService:
         )
 
     # ------------------------------------------------------------------
-    # Private — onboarding
-    # ------------------------------------------------------------------
-
-    def _handle_onboarding(
-        self, *, user: WhatsAppUser, message_body: str, session: Session
-    ) -> str:
-        from app.core import openai as openai_helpers
-
-        history = get_conversation_history(session=session, phone=user.phone, limit=10)
-        return openai_helpers.run_onboarding_agent(
-            system_prompt=f"{ONBOARDING_SYSTEM_PROMPT}\n\nLatest incoming message: {message_body}",
-            user=user,
-            history=history,
-            session=session,
-            limit=10,
-        )
-
-    # ------------------------------------------------------------------
     # Private — farmer agent
     # ------------------------------------------------------------------
 
@@ -802,13 +771,3 @@ class WhatsAppConversationService:
             "Ready to start? Reply YES to set up your farm (takes 2 minutes)."
         )
 
-    @staticmethod
-    def _returning_incomplete_message(user: WhatsAppUser) -> str:
-        name = user.full_name or "there"
-        for field, question in ONBOARDING_STEPS:
-            if getattr(user, field) is None:
-                return (
-                    f"Hi {name}, welcome back to V-Vet!\n\n"
-                    f"Let's finish setting up your profile.\n\n{question}"
-                )
-        return f"Hi {name}, welcome back! How can I help you today?"

@@ -1,0 +1,86 @@
+{
+  "version": "7.3",
+  "screens": [
+    {
+      "id": "ONBOARDING",
+      "title": "Join V-Vet",
+      "terminal": true,
+      "success": true,
+      "data": {},
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "onboarding_form",
+            "children": [
+              {
+                "type": "TextInput",
+                "label": "Full name",
+                "name": "full_name",
+                "input-type": "text",
+                "required": true
+              },
+              {
+                "type": "Dropdown",
+                "label": "District",
+                "name": "district",
+                "required": true,
+                "data-source": [
+                  {"id": "Chikomba", "title": "Chikomba"},
+                  {"id": "Gweru Rural", "title": "Gweru Rural"},
+                  {"id": "Lupane", "title": "Lupane"}
+                ]
+              },
+              {
+                "type": "Dropdown",
+                "label": "Preferred language",
+                "name": "preferred_language",
+                "required": true,
+                "data-source": [
+                  {"id": "english", "title": "English"},
+                  {"id": "shona", "title": "Shona"},
+                  {"id": "ndebele", "title": "Ndebele"}
+                ]
+              },
+              {
+                "type": "Dropdown",
+                "label": "Main goal with V-Vet",
+                "name": "main_goal",
+                "required": true,
+                "data-source": [
+                  {"id": "Health tracking", "title": "Health tracking"},
+                  {"id": "Breeding management", "title": "Breeding management"},
+                  {"id": "Record keeping", "title": "Record keeping"},
+                  {"id": "General advice", "title": "General advice"}
+                ]
+              },
+              {
+                "type": "TextInput",
+                "label": "How many animals do you have?",
+                "name": "animal_count",
+                "input-type": "number",
+                "required": false,
+                "helper-text": "Optional — a rough number is fine"
+              },
+              {
+                "type": "Footer",
+                "label": "Join V-Vet",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "full_name": "${form.full_name}",
+                    "district": "${form.district}",
+                    "preferred_language": "${form.preferred_language}",
+                    "main_goal": "${form.main_goal}",
+                    "animal_count": "${form.animal_count}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
