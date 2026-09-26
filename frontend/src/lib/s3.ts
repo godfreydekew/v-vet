@@ -22,7 +22,8 @@ export async function uploadLivestockImage(
   file: File
 ): Promise<string> {
   const ext = file.name.split('.').pop() ?? 'jpg';
-  const key = `livestock/${livestockId}/photo.${ext}`;
+  const uniqueSuffix = Math.random().toString(36).substring(2, 10);
+  const key = `livestock/${livestockId}/photo_${uniqueSuffix}.${ext}`;
 
   const arrayBuffer = await file.arrayBuffer();
   const body = new Uint8Array(arrayBuffer);

@@ -136,6 +136,16 @@ export default function Login() {
         </form>
 
         <p className="text-xs text-muted-foreground text-center">
+          Already using V-Vet on WhatsApp?{" "}
+          <Link
+            to="/signup"
+            className="text-foreground underline underline-offset-2 hover:opacity-75 transition-opacity"
+          >
+            Create your web account
+          </Link>
+        </p>
+
+        <p className="text-xs text-muted-foreground text-center">
           To join the pilot, contact{" "}
           <a
             href="mailto:dekewgodfrey@gmail.com"
