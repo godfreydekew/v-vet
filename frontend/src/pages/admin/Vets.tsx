@@ -49,7 +49,7 @@ export default function AdminVets() {
   const filtered = vets.filter(
     (v: User) =>
       (v.full_name ?? '').toLowerCase().includes(search.toLowerCase()) ||
-      v.email.toLowerCase().includes(search.toLowerCase())
+      (v.email ?? '').toLowerCase().includes(search.toLowerCase())
   );
 
   const field = (key: keyof typeof INITIAL_FORM) => ({

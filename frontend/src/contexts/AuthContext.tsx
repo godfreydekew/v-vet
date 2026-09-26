@@ -16,7 +16,8 @@ export type UserRole = 'farmer' | 'vet' | 'admin';
 
 export interface User {
   id: string;
-  email: string;
+  /** null for farmers created through WhatsApp who haven't signed up on the web. */
+  email: string | null;
   role: UserRole;
   is_active: boolean;
   is_superuser: boolean;

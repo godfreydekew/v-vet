@@ -101,6 +101,8 @@ class User(UserBase, table=True):
 
 class UserPublic(UserBase):
     id: uuid.UUID
+    # Farmers created through WhatsApp onboarding have no email until they sign up on the web.
+    email: EmailStr | None = None  # type: ignore[assignment]
     created_at: datetime | None = None
 
 

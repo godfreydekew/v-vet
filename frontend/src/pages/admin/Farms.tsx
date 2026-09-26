@@ -30,7 +30,7 @@ export default function AdminFarms() {
   const users = usersQuery.data?.data ?? [];
   const livestock = livestockQuery.data?.data ?? [];
 
-  const farmerMap = Object.fromEntries(users.map((u) => [u.id, u.full_name ?? u.email]));
+  const farmerMap = Object.fromEntries(users.map((u) => [u.id, u.full_name ?? u.email ?? u.phone_number]));
   const animalsByFarm = livestock.reduce<Record<string, number>>((acc, a) => {
     acc[a.farm_id] = (acc[a.farm_id] ?? 0) + 1;
     return acc;

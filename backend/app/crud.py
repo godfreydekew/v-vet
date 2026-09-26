@@ -1,11 +1,12 @@
 import uuid
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, func, select
 
 from app.ai.gemma import analyze_livestock_image
 from app.core.security import get_password_hash, verify_password
+from app.models.admin import AdminFarmerRow
 from app.models import (
     Farm,
     FarmBase,
@@ -612,3 +613,136 @@ def create_livestock_from_whatsapp(
     session.commit()
     session.refresh(animal)
     return animal
+
+
+# ---------------------------------------------------------------------------
+# Admin — farmer overview
+# ---------------------------------------------------------------------------
+
+
+def get_admin_farmer_rows(*, session: Session) -> list[AdminFarmerRow]:
+    """Build one summary row per farmer for the admin pages.
+
+    A farmer can exist as a web User, a WhatsAppUser, or both (linked via
+    WhatsAppUser.linked_user_id). Farmers still in WhatsApp onboarding only
+    have a WhatsAppUser, so both tables are read and merged here.
+    """
+    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+
+    farmer_users = session.exec(select(User).where(col(User.role) == "farmer")).all()
+    whatsapp_users = session.exec(select(WhatsAppUser)).all()
+
+    # Messages sent by each farmer, keyed by WhatsAppUser.id
+    message_stats_rows = session.exec(
+        select(
+            WhatsAppMessage.user_id,
+            func.count(col(WhatsAppMessage.id)),
+            func.count(col(WhatsAppMessage.id)).filter(
+                col(WhatsAppMessage.created_at) >= seven_days_ago
+            ),
+            func.max(col(WhatsAppMessage.created_at)),
+        )
+        .where(col(WhatsAppMessage.role) == "farmer")
+        .group_by(col(WhatsAppMessage.user_id))
+    ).all()
+    message_stats_by_whatsapp_id = {}
+    for whatsapp_user_id, total, last_7_days, last_message_at in message_stats_rows:
+        message_stats_by_whatsapp_id[whatsapp_user_id] = {
+            "message_count": total,
+            "messages_last_7_days": last_7_days,
+            "last_message_at": last_message_at,
+        }
+
+    # Farms per farmer, keyed by User.id
+    farm_count_rows = session.exec(
+        select(Farm.farmer_id, func.count(col(Farm.id))).group_by(col(Farm.farmer_id))
+    ).all()
+    farm_count_by_user_id = {}
+    for farmer_id, farm_count in farm_count_rows:
+        farm_count_by_user_id[farmer_id] = farm_count
+
+    # Animals still on the farm, per farmer, keyed by User.id
+    animal_stats_rows = session.exec(
+        select(
+            Farm.farmer_id,
+            func.count(col(Livestock.id)),
+            func.count(col(Livestock.id)).filter(col(Livestock.species) == "cattle"),
+            func.count(col(Livestock.id)).filter(
+                col(Livestock.health_status).in_(["sick", "recovering"])
+            ),
+        )
+        .join(Farm, col(Livestock.farm_id) == col(Farm.id))
+        .where(col(Livestock.lifecycle_status) == "active")
+        .group_by(col(Farm.farmer_id))
+    ).all()
+    animal_stats_by_user_id = {}
+    for farmer_id, animal_count, cattle_count, sick_count in animal_stats_rows:
+        animal_stats_by_user_id[farmer_id] = {
+            "animal_count": animal_count,
+            "cattle_count": cattle_count,
+            "sick_count": sick_count,
+        }
+
+    # Pair each WhatsApp user with their web User through linked_user_id.
+    farmer_user_ids = {user.id for user in farmer_users}
+    whatsapp_user_by_web_user_id = {}
+    unlinked_whatsapp_users = []
+    for whatsapp_user in whatsapp_users:
+        if whatsapp_user.linked_user_id in farmer_user_ids:
+            whatsapp_user_by_web_user_id[whatsapp_user.linked_user_id] = whatsapp_user
+        else:
+            unlinked_whatsapp_users.append(whatsapp_user)
+
+    rows: list[AdminFarmerRow] = []
+
+    for user in farmer_users:
+        whatsapp_user = whatsapp_user_by_web_user_id.get(user.id)
+        message_stats = {}
+        if whatsapp_user is not None:
+            message_stats = message_stats_by_whatsapp_id.get(whatsapp_user.id, {})
+        animal_stats = animal_stats_by_user_id.get(user.id, {})
+
+        # Farmers who came in through WhatsApp registered when they first messaged.
+        registered_at = user.created_at
+        if whatsapp_user is not None:
+            registered_at = whatsapp_user.created_at
+
+        rows.append(
+            AdminFarmerRow(
+                user_id=user.id,
+                whatsapp_user_id=whatsapp_user.id if whatsapp_user else None,
+                full_name=user.full_name or (whatsapp_user.full_name if whatsapp_user else None),
+                phone_number=user.phone_number,
+                email=user.email,
+                district=user.district or (whatsapp_user.district if whatsapp_user else None),
+                address=user.address,
+                preferred_language=whatsapp_user.preferred_language if whatsapp_user else None,
+                status="active",
+                has_web_account=user.email is not None,
+                registered_at=registered_at,
+                farm_count=farm_count_by_user_id.get(user.id, 0),
+                **message_stats,
+                **animal_stats,
+            )
+        )
+
+    for whatsapp_user in unlinked_whatsapp_users:
+        message_stats = message_stats_by_whatsapp_id.get(whatsapp_user.id, {})
+        rows.append(
+            AdminFarmerRow(
+                whatsapp_user_id=whatsapp_user.id,
+                full_name=whatsapp_user.full_name,
+                phone_number=whatsapp_user.phone,
+                district=whatsapp_user.district,
+                preferred_language=whatsapp_user.preferred_language,
+                status="active" if whatsapp_user.is_fully_onboarded else "onboarding",
+                has_web_account=False,
+                registered_at=whatsapp_user.created_at,
+                **message_stats,
+            )
+        )
+
+    # Newest registrations first; farmers with no date go last.
+    oldest_possible = datetime.min.replace(tzinfo=timezone.utc)
+    rows.sort(key=lambda row: row.registered_at or oldest_possible, reverse=True)
+    return rows
