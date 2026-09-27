@@ -1,35 +1,44 @@
 services:
 
-  db:
-    restart: "no"
-    ports:
-      - "5432:5432"
+  # db and adminer are disabled in compose.yml (the app uses Supabase).
+  # db:
+  #   restart: "no"
+  #   ports:
+  #     - "5432:5432"
 
-  adminer:
-    restart: "no"
+  # adminer:
+  #   restart: "no"
 
   backend:
     restart: "no"
     build:
-      context: .
-      dockerfile: backend/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     command:
       - fastapi
       - run
       - --reload
+      - --port
+      - "8000"
       - "app/main.py"
     develop:
       watch:
+        # Code changes are copied into the running container; --reload restarts the server.
+        # The image keeps its code in /app (see backend/Dockerfile).
         - path: ./backend
           action: sync
-          target: /app/backend
+          target: /app
           ignore:
-            - ./backend/.venv
-            - .venv
+            - .venv/
+            - __pycache__/
+            - htmlcov/
+        # Dependency changes need a fresh image.
         - path: ./backend/pyproject.toml
           action: rebuild
+        - path: ./backend/uv.lock
+          action: rebuild
     volumes:
-      - ./backend/htmlcov:/app/backend/htmlcov
+      - ./backend/htmlcov:/app/htmlcov
     environment:
       SMTP_HOST: "mailcatcher"
       SMTP_PORT: "1025"
