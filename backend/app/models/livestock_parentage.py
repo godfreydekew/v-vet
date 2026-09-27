@@ -18,9 +18,9 @@ class LivestockParentage(SQLModel, table=True):
     __tablename__ = "livestock_parentage"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    child_id: uuid.UUID = Field(foreign_key="livestock.id", unique=True, index=True)
-    mother_id: uuid.UUID = Field(foreign_key="livestock.id", index=True)
-    father_id: uuid.UUID | None = Field(default=None, foreign_key="livestock.id", index=True)
+    child_id: uuid.UUID = Field(foreign_key="livestock.id", unique=True, index=True, ondelete="CASCADE")
+    mother_id: uuid.UUID = Field(foreign_key="livestock.id", index=True, ondelete="CASCADE")
+    father_id: uuid.UUID | None = Field(default=None, foreign_key="livestock.id", index=True, ondelete="SET NULL")
 
     created_at: datetime = Field(
         default_factory=_utcnow,

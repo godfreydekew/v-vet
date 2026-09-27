@@ -18,8 +18,8 @@ class TriageSession(SQLModel, table=True):
     __tablename__ = "triage_session"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    whatsapp_user_id: uuid.UUID = Field(foreign_key="whatsapp_user.id", index=True)
-    livestock_id: uuid.UUID = Field(foreign_key="livestock.id", index=True)
+    whatsapp_user_id: uuid.UUID = Field(foreign_key="whatsapp_user.id", index=True, ondelete="CASCADE")
+    livestock_id: uuid.UUID = Field(foreign_key="livestock.id", index=True, ondelete="CASCADE")
 
     current_question_id: str | None = Field(default=None, max_length=64)
     answers: dict = Field(default_factory=dict, sa_column=Column(JSON))

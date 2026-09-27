@@ -80,7 +80,7 @@ class LivestockUpdate(SQLModel):
 
 class Livestock(LivestockBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    farm_id: uuid.UUID = Field(foreign_key="farm.id")
+    farm_id: uuid.UUID = Field(foreign_key="farm.id", ondelete="CASCADE")
     # Literal → str: SQLAlchemy doesn't understand Literal types.
     species: str  # type: ignore[assignment]
     gender: str | None = None  # type: ignore[assignment]

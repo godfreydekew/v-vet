@@ -62,9 +62,9 @@ class VetRequest(VetRequestBase, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     livestock_id: uuid.UUID = Field(foreign_key="livestock.id", ondelete="CASCADE")
-    farm_id: uuid.UUID = Field(foreign_key="farm.id")
-    farmer_id: uuid.UUID = Field(foreign_key="user.id")
-    vet_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")
+    farm_id: uuid.UUID = Field(foreign_key="farm.id", ondelete="CASCADE")
+    farmer_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
+    vet_id: uuid.UUID | None = Field(default=None, foreign_key="user.id", ondelete="SET NULL")
     # Literal → str: SQLAlchemy doesn't understand Literal types.
     status: str = "pending"
     urgency: str = "medium"  # type: ignore[assignment]

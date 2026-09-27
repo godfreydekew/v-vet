@@ -49,7 +49,7 @@ class VetProfile(VetProfileBase, table=True):
     __tablename__ = "vet_profile"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(foreign_key="user.id", unique=True)
+    user_id: uuid.UUID = Field(foreign_key="user.id", unique=True, ondelete="CASCADE")
     # Literal → str: SQLAlchemy doesn't understand Literal types.
     availability_status: str = "available"  # type: ignore[assignment]
     created_at: datetime = Field(

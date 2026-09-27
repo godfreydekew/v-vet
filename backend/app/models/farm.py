@@ -55,7 +55,7 @@ class FarmUpdate(SQLModel):
 
 class Farm(FarmBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    farmer_id: uuid.UUID = Field(foreign_key="user.id")
+    farmer_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
     # Literal → str: SQLAlchemy doesn't understand Literal types.
     farm_type: str  # type: ignore[assignment]
     created_at: datetime = Field(

@@ -20,9 +20,9 @@ class HealthObservationFollowUp(SQLModel, table=True):
     __tablename__ = "health_observation_follow_up"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    health_observation_id: uuid.UUID = Field(foreign_key="health_observation.id", index=True)
-    livestock_id: uuid.UUID = Field(foreign_key="livestock.id", index=True)
-    whatsapp_user_id: uuid.UUID = Field(foreign_key="whatsapp_user.id", index=True)
+    health_observation_id: uuid.UUID = Field(foreign_key="health_observation.id", index=True, ondelete="CASCADE")
+    livestock_id: uuid.UUID = Field(foreign_key="livestock.id", index=True, ondelete="CASCADE")
+    whatsapp_user_id: uuid.UUID = Field(foreign_key="whatsapp_user.id", index=True, ondelete="CASCADE")
 
     description: str = Field(max_length=500)
     due_at: datetime = Field(sa_column=Column(DateTime(timezone=True)))
