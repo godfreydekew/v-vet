@@ -94,7 +94,6 @@ export default function FarmerVetRequests() {
                   <p className="font-medium text-sm text-foreground">
                     {req.livestock_name ?? 'Unnamed'}
                     {req.livestock_tag && <span className="text-muted-foreground"> ({req.livestock_tag})</span>}
-                    {req.livestock_species && <span className="text-muted-foreground capitalize"> · {req.livestock_species}</span>}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">{fmt(req.submitted_at)}</p>
                 </div>

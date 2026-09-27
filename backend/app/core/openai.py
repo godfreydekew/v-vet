@@ -90,7 +90,7 @@ def complete_onboarding(*, session: Session, user: WhatsAppUser) -> WhatsAppUser
 
 def _build_herd_context(*, user: WhatsAppUser, session: Session) -> str:
     """
-    Compact, standing summary of the farmer's herd — name, species, gender,
+    Compact, standing summary of the farmer's herd — name, gender,
     health status, tag, and the most recent health observation.
     """
     if not user.linked_user_id:
@@ -108,7 +108,7 @@ def _build_herd_context(*, user: WhatsAppUser, session: Session) -> str:
     lines = [f"Farmer's registered animals ({len(animals)}):"]
     for a in animals:
         name = a.name or "(unnamed)"
-        detail = f"{a.gender or 'unknown sex'} {a.species}, {a.health_status}, tag {a.tag_number}"
+        detail = f"{a.gender or 'unknown sex'}, {a.health_status}, tag {a.tag_number}"
         obs = latest_obs.get(a.id)
         if obs and obs.symptoms:
             days_ago = (today - obs.observed_at.date()).days
@@ -153,7 +153,7 @@ CRITICAL INSTRUCTIONS:
      - If lookup_animal (or report_sickness) returns status "not_found_list_sent", a real name/tag was given but didn't match anything — their registered-animals list has already been sent as a separate message. Do not repeat the list yourself in text. Just tell them you couldn't find that specific animal and to pick from the list above.
      - If status is plain "not_found" (list couldn't be sent — e.g. no animals registered yet), tell them plainly and suggest registering an animal first.
   4. Once you have the farmer's problem description and a resolved animal (from lookup_animal, or given together in one message, e.g. "Bessie is sick, she is coughing and has a fever"), call report_sickness with that description as symptoms. If the animal was not pinned, leave confirmed false on this first call.
-     - If report_sickness returns "needs_confirmation", ask the farmer to confirm the named animal (by name and species) and wait for a yes — do not call report_sickness again until they confirm.
+     - If report_sickness returns "needs_confirmation", ask the farmer to confirm the named animal (by name and tag number) and wait for a yes — do not call report_sickness again until they confirm.
      - Once they confirm, call report_sickness again with the same details plus confirmed=true.
      - It then returns "context_flow_started" — it has handed off to a separate deterministic questionnaire that sends its own WhatsApp messages asking follow-up questions (onset, progression, herd context) and records the observation itself once done. Do not call report_sickness again for this animal, and do not claim anything was recorded yet — just add one brief, warm line (e.g. "Let's go through a few quick questions about Bessie.") since the next message the farmer sees is the questionnaire's first question, not yours.
 - Never tell the farmer an observation was recorded, or that you "will report" it, unless a tool call actually returned status "ok". If report_sickness returns "not_found", "not_found_list_sent", "no_animal_specified", "too_many_to_list", "needs_confirmation", or "context_flow_started", nothing has been recorded yet — do not claim otherwise.
@@ -164,7 +164,6 @@ CRITICAL INSTRUCTIONS:
 FARMER_AGENT_ADDING_ANIMAL_HINT = (
     "\n\nThe farmer is currently adding a new animal. "
     "Tag number is auto-generated — do NOT ask for it. "
-    "Species defaults to cattle if not stated. "
     "Collect: name, gender, breed, weight (kg), date of birth. "
     "Show a one-line example when asking: Bessie, female, Hereford, 250kg, born 2022-03-15\n"
     "If the farmer doesn't know the exact date of birth, kindly ask them to estimate the animal's age instead "
@@ -332,18 +331,12 @@ def build_farmer_agent_tools() -> list[dict[str, Any]]:
                 "name": "add_livestock",
                 "description": (
                     "Register a new animal on the farmer's account. "
-                    "Species defaults to 'cattle' if not stated. "
                     "Call this as soon as you have date of birth or an age estimate and any other details."
                     "Omit fields the farmer hasn't provided."
                 ),
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "species": {
-                            "type": "string",
-                            "enum": ["cattle", "sheep", "goat", "poultry", "pig", "other"],
-                            "description": "Defaults to cattle if not specified.",
-                        },
                         "name": {"type": ["string", "null"]},
                         "gender": {"type": ["string", "null"], "enum": ["male", "female", "unknown"]},
                         "breed": {"type": ["string", "null"]},
@@ -430,7 +423,6 @@ def _execute_farmer_tool(
                 {
                     "name": a.name,
                     "tag_number": a.tag_number,
-                    "species": a.species,
                     "health_status": a.health_status,
                 }
                 for a in animals
@@ -470,7 +462,7 @@ def _execute_farmer_tool(
             return {
                 "status": "multiple",
                 "matches": [
-                    {"name": a.name, "species": a.species, "tag_number": a.tag_number}
+                    {"name": a.name, "tag_number": a.tag_number}
                     for a in result.candidates
                 ],
             }
@@ -488,7 +480,6 @@ def _execute_farmer_tool(
             "animal": {
                 "name": a.name,
                 "tag_number": a.tag_number,
-                "species": a.species,
                 "breed": a.breed,
                 "gender": a.gender,
                 "health_status": a.health_status,
@@ -519,7 +510,7 @@ def _execute_farmer_tool(
             return {
                 "status": "multiple",
                 "matches": [
-                    {"name": a.name, "species": a.species, "tag_number": a.tag_number}
+                    {"name": a.name, "tag_number": a.tag_number}
                     for a in lookup.candidates
                 ],
             }
@@ -543,7 +534,6 @@ def _execute_farmer_tool(
             return {
                 "status": "needs_confirmation",
                 "animal_name": a.name or a.tag_number,
-                "species": a.species,
                 "tag_number": a.tag_number,
                 "match_type": lookup.match_type,
             }
@@ -580,7 +570,7 @@ def _execute_farmer_tool(
             return {
                 "status": "multiple",
                 "matches": [
-                    {"name": a.name, "species": a.species, "tag_number": a.tag_number}
+                    {"name": a.name, "tag_number": a.tag_number}
                     for a in lookup.candidates
                 ],
             }
@@ -605,7 +595,6 @@ def _execute_farmer_tool(
             return {
                 "status": "needs_confirmation",
                 "animal_name": a.name or a.tag_number,
-                "species": a.species,
                 "tag_number": a.tag_number,
                 "match_type": lookup.match_type,
             }
@@ -635,7 +624,6 @@ def _execute_farmer_tool(
             session=session,
             user_id=user.linked_user_id,
             district=user.district,
-            species=arguments.get("species", "cattle"),
             name=arguments.get("name"),
             gender=arguments.get("gender"),
             breed=arguments.get("breed"),
@@ -677,7 +665,6 @@ def _execute_farmer_tool(
             "status": "saved",
             "name": animal.name or "(unnamed)",
             "tag_number": animal.tag_number,
-            "species": animal.species,
             "breed": animal.breed,
             "gender": animal.gender,
             "weight_kg": animal.weight_kg,

@@ -20,7 +20,6 @@ export interface VetRequest {
   updated_at: string | null;
   livestock_name: string | null;
   livestock_tag: string | null;
-  livestock_species: string | null;
 }
 
 export interface VetRequestsListResponse {

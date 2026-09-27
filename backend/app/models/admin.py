@@ -30,7 +30,6 @@ class AdminFarmerRow(SQLModel):
     farm_count: int = 0
     # Only animals still on the farm (lifecycle_status "active").
     animal_count: int = 0
-    cattle_count: int = 0
     sick_count: int = 0
 
 

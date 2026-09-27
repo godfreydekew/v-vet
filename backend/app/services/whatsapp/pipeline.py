@@ -696,4 +696,3 @@ class WhatsAppConversationService:
             "I'll also help you get connected with a vet when needed.\n\n"
             "Ready to start? Reply YES to set up your farm (takes seconds)."
         )
-

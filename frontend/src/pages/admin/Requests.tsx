@@ -44,7 +44,6 @@ function AnimalCell({ livestockId }: { livestockId: string }) {
       <p className="font-medium text-sm text-foreground">
         {data.name ?? 'Unnamed'}{data.tag_number ? ` (${data.tag_number})` : ''}
       </p>
-      <p className="text-xs text-muted-foreground capitalize">{data.species}</p>
     </div>
   );
 }

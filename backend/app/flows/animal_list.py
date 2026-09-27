@@ -125,9 +125,8 @@ def send_interactive_animal_list(
 
 def _animal_row(a: Livestock, row_id_prefix: str) -> dict:
     title = a.name if a.name else f"Tag: {a.tag_number}"
-    species_str = a.species.capitalize() if a.species else "Cattle"
     health_str = a.health_status.capitalize() if a.health_status else "Healthy"
-    desc = f"{species_str} • {health_str}"
+    desc = health_str
     if a.tag_number and a.name:
         desc += f" • Tag: {a.tag_number}"
     return {

@@ -176,7 +176,7 @@ export default function CaseDetail() {
                 {animal ? `${animal.name ?? 'Unnamed'} ${animal.tag_number ? `(${animal.tag_number})` : ''}` : '—'}
               </h1>
               <p className="text-sm text-muted-foreground mt-1 capitalize">
-                {[animal?.species, animal?.breed, farm?.name].filter(Boolean).join(' · ')}
+                {[animal?.breed, farm?.name].filter(Boolean).join(' · ')}
               </p>
             </div>
           </div>

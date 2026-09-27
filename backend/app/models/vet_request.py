@@ -102,7 +102,6 @@ class VetRequestPublic(VetRequestBase):
     # Denormalised livestock fields — populated by the route layer to avoid N+1 queries
     livestock_name: str | None = None
     livestock_tag: str | None = None
-    livestock_species: str | None = None
 
 
 class VetRequestsPublic(SQLModel):

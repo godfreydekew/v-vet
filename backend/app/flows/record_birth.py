@@ -23,7 +23,7 @@ class RecordBirthFlow(BaseFlow):
        date of birth. Dam-focused, time-sensitive facts.
     2. register_animal Flow, reused as-is (same published Flow ID, launched
        with this flow's own flow_token so the submission routes here instead
-       of to RegisterAnimalFlow) — the calf's own details: name, species,
+       of to RegisterAnimalFlow) — the calf's own details: name,
        breed, gender, weight. A calf is just a new animal, linked to a dam.
 
     """
@@ -99,7 +99,8 @@ class RecordBirthFlow(BaseFlow):
         """
         if "survived" in data:
             return self._handle_calving_submission(data=data, user=user, session=session)
-        if "species" in data:
+        # Only the register_animal form sends "breed".
+        if "breed" in data:
             return self._handle_calf_registration_submission(data=data, user=user, session=session)
         return self._handle_identify_flow_submission(data=data, user=user, session=session)
 
@@ -278,7 +279,6 @@ class RecordBirthFlow(BaseFlow):
             session=session,
             user_id=user.linked_user_id,
             district=user.district or "",
-            species=data.get("species") or dam.species,
             name=calf_name,
             gender=calf_gender,
             breed=calf_breed,

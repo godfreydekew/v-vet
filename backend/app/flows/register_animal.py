@@ -27,7 +27,7 @@ class RegisterAnimalFlow(BaseFlow):
             phone=phone,
             flow_id=settings.FLOW_ID_REGISTER_ANIMAL,
             flow_token=self.flow_id,
-            body="Fill in your animal's details. All fields except Species are optional.",
+            body="Fill in your animal's details. All fields are optional.",
             cta="Register Animal",
             screen="REGISTER_ANIMAL",
         )
@@ -52,8 +52,6 @@ class RegisterAnimalFlow(BaseFlow):
             fields.append(f"name: {data['name']}")
         else:
             fields.append("name: null (unnamed)")
-        if data.get("species"):
-            fields.append(f"species: {data['species']}")
         if data.get("breed"):
             fields.append(f"breed: {data['breed']}")
         if data.get("gender"):

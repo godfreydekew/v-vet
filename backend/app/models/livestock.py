@@ -7,7 +7,6 @@ from sqlmodel import Field, SQLModel
 
 from app.models.livestock_image import LivestockImagePublic
 
-Species = Literal["cattle", "sheep", "goat", "poultry", "pig", "other"]
 Gender = Literal["male", "female", "unknown"]
 HealthStatus = Literal["healthy", "sick", "recovering", "deceased"]
 LifecycleStatus = Literal[
@@ -33,7 +32,6 @@ def _utcnow() -> datetime:
 class LivestockBase(SQLModel):
     name: str | None = Field(default=None, max_length=100)
     tag_number: str | None = Field(default=None, max_length=50)
-    species: Species
     breed: str | None = Field(default=None, max_length=100)
     gender: Gender | None = None
     weight_kg: float | None = Field(default=None)
@@ -58,7 +56,6 @@ class LivestockCreate(LivestockBase):
 class LivestockUpdate(SQLModel):
     name: str | None = Field(default=None, max_length=100)
     tag_number: str | None = Field(default=None, max_length=50)
-    species: Species | None = None
     breed: str | None = Field(default=None, max_length=100)
     gender: Gender | None = None
     weight_kg: float | None = None
@@ -82,7 +79,6 @@ class Livestock(LivestockBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     farm_id: uuid.UUID = Field(foreign_key="farm.id", ondelete="CASCADE")
     # Literal → str: SQLAlchemy doesn't understand Literal types.
-    species: str  # type: ignore[assignment]
     gender: str | None = None  # type: ignore[assignment]
     health_status: str = "healthy"  # type: ignore[assignment]
     lifecycle_status: str = "active"  # type: ignore[assignment]

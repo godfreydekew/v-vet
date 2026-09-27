@@ -61,7 +61,6 @@ const HEALTH_COLORS: Record<HealthStatus, string> = {
 
 const EMPTY_FORM: LivestockCreatePayload = {
   farm_id: "",
-  species: "cattle",
   name: "",
   breed: "",
   gender: null,
@@ -447,7 +446,7 @@ export default function FarmDetail() {
                         {animal.name ?? "Unnamed"}
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5 capitalize">
-                        {[animal.tag_number, animal.species, animal.breed]
+                        {[animal.tag_number, animal.breed]
                           .filter(Boolean)
                           .join(" · ")}
                       </p>

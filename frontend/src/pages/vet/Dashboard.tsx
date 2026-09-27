@@ -77,7 +77,6 @@ export default function VetDashboard() {
                           {c.livestock_name ?? 'Unnamed'}
                           {c.livestock_tag && <span className="text-muted-foreground"> ({c.livestock_tag})</span>}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-0.5 capitalize">{c.livestock_species}</p>
                       </div>
                       <span className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize ${URGENCY_COLORS[c.urgency]}`}>
                         {c.urgency}
@@ -114,7 +113,7 @@ export default function VetDashboard() {
                           {c.livestock_tag && <span className="text-muted-foreground"> ({c.livestock_tag})</span>}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5 capitalize">
-                          {c.livestock_species} · {new Date(c.submitted_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                          {new Date(c.submitted_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
                         </p>
                       </div>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${URGENCY_COLORS[c.urgency]}`}>

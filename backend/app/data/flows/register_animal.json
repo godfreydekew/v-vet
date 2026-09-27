@@ -18,32 +18,16 @@
                 "type": "PhotoPicker",
                 "label": "Photo of Animal",
                 "name": "animal_photo",
-                "description": "Optional — helps identify the animal",
                 "photo-source": "camera_gallery",
                 "min-uploaded-photos": 0,
                 "max-uploaded-photos": 1
-              },
-              {
-                "type": "Dropdown",
-                "label": "Species",
-                "name": "species",
-                "required": true,
-                "data-source": [
-                  {"id": "cattle",  "title": "Cattle"},
-                  {"id": "sheep",   "title": "Sheep"},
-                  {"id": "goat",    "title": "Goat"},
-                  {"id": "pig",     "title": "Pig"},
-                  {"id": "poultry", "title": "Poultry"},
-                  {"id": "other",   "title": "Other"}
-                ]
               },
               {
                 "type": "TextInput",
                 "label": "Name",
                 "name": "name",
                 "input-type": "text",
-                "required": false,
-                "helper-text": "Optional — leave blank to save as unnamed"
+                "required": false
               },
               {
                 "type": "TextInput",
@@ -84,7 +68,6 @@
                 "on-click-action": {
                   "name": "complete",
                   "payload": {
-                    "species":       "${form.species}",
                     "name":          "${form.name}",
                     "breed":         "${form.breed}",
                     "gender":        "${form.gender}",

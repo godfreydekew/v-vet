@@ -142,8 +142,7 @@ export default function AdminFarmers() {
                 <TableHead className="text-right">Messages</TableHead>
                 <TableHead>Last active</TableHead>
                 <TableHead className="text-right">Farms</TableHead>
-                <TableHead className="text-right">Cattle</TableHead>
-                <TableHead className="text-right">All animals</TableHead>
+                <TableHead className="text-right">Animals</TableHead>
                 <TableHead className="text-right">Sick</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
@@ -187,7 +186,6 @@ export default function AdminFarmers() {
                       : 'Never'}
                   </TableCell>
                   <TableCell className="text-right text-sm">{f.farm_count}</TableCell>
-                  <TableCell className="text-right text-sm">{f.cattle_count}</TableCell>
                   <TableCell className="text-right text-sm">{f.animal_count}</TableCell>
                   <TableCell className="text-right text-sm">
                     {f.sick_count > 0 ? (

@@ -588,7 +588,6 @@ def create_livestock_from_whatsapp(
     session: Session,
     user_id: uuid.UUID,
     district: str,
-    species: str,
     name: str | None = None,
     gender: str | None = None,
     breed: str | None = None,
@@ -601,7 +600,6 @@ def create_livestock_from_whatsapp(
     tag = generate_livestock_tag(session=session, user_id=user_id, district=district, year=birth_year)
     animal = Livestock(
         farm_id=farm.id,
-        species=species,
         name=name,
         tag_number=tag,
         gender=gender,
@@ -666,7 +664,6 @@ def get_admin_farmer_rows(*, session: Session) -> list[AdminFarmerRow]:
         select(
             Farm.farmer_id,
             func.count(col(Livestock.id)),
-            func.count(col(Livestock.id)).filter(col(Livestock.species) == "cattle"),
             func.count(col(Livestock.id)).filter(
                 col(Livestock.health_status).in_(["sick", "recovering"])
             ),
@@ -676,10 +673,9 @@ def get_admin_farmer_rows(*, session: Session) -> list[AdminFarmerRow]:
         .group_by(col(Farm.farmer_id))
     ).all()
     animal_stats_by_user_id = {}
-    for farmer_id, animal_count, cattle_count, sick_count in animal_stats_rows:
+    for farmer_id, animal_count, sick_count in animal_stats_rows:
         animal_stats_by_user_id[farmer_id] = {
             "animal_count": animal_count,
-            "cattle_count": cattle_count,
             "sick_count": sick_count,
         }
 

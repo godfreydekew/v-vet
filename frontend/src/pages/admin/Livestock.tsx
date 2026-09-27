@@ -170,7 +170,6 @@ export default function AdminLivestock() {
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5 capitalize">
                     {[
-                      animal.species,
                       animal.breed,
                       farmMap[animal.farm_id]
                         ? `@ ${farmMap[animal.farm_id]}`

@@ -1109,12 +1109,6 @@ export default function AnimalProfile() {
 
   const details: [string, string | null][] = [
     ["Tag Number", animal.tag_number],
-    [
-      "Species",
-      animal.species
-        ? animal.species.charAt(0).toUpperCase() + animal.species.slice(1)
-        : null,
-    ],
     ["Breed", animal.breed],
     [
       "Gender",
@@ -1152,7 +1146,7 @@ export default function AnimalProfile() {
               )}
             </div>
             <p className="text-sm text-muted-foreground capitalize">
-              {[animal.species, animal.breed].filter(Boolean).join(" · ")}
+              {animal.breed}
             </p>
           </div>
 

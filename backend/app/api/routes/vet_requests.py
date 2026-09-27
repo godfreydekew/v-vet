@@ -102,7 +102,6 @@ def list_vet_requests(
                 **item.model_dump(),
                 livestock_name=ls.name if ls else None,
                 livestock_tag=ls.tag_number if ls else None,
-                livestock_species=ls.species if ls else None,
             )
         )
 

@@ -156,8 +156,7 @@ export default function FarmerDashboard() {
                           )}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5 capitalize">
-                          {animal.species}
-                          {animal.breed ? ` · ${animal.breed}` : ''}
+                          {animal.breed ?? ''}
                         </p>
                       </div>
                       <span

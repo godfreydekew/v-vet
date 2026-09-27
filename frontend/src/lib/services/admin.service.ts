@@ -26,7 +26,6 @@ export interface AdminFarmer {
   farm_count: number;
   /** Animals still on the farm (not sold, deceased, etc.). */
   animal_count: number;
-  cattle_count: number;
   sick_count: number;
 }
 

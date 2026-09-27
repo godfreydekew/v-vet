@@ -33,12 +33,10 @@ export default function AdminDashboard() {
   let messagesThisWeek = 0;
   let farmCount = 0;
   let animalCount = 0;
-  let cattleCount = 0;
   for (const farmer of farmers) {
     messagesThisWeek += farmer.messages_last_7_days;
     farmCount += farmer.farm_count;
     animalCount += farmer.animal_count;
-    cattleCount += farmer.cattle_count;
   }
 
   const sickAnimals = livestock.filter(
@@ -62,8 +60,7 @@ export default function AdminDashboard() {
     { label: 'Active this week', value: activeThisWeekCount, color: 'text-foreground', href: '/admin/farmers' },
     { label: 'Messages this week', value: messagesThisWeek, color: 'text-foreground', href: '/admin/farmers' },
     { label: 'Farms', value: farmCount, color: 'text-foreground', href: '/admin/farms' },
-    { label: 'Cattle', value: cattleCount, color: 'text-foreground', href: '/admin/livestock' },
-    { label: 'All animals', value: animalCount, color: 'text-foreground', href: '/admin/livestock' },
+    { label: 'Animals', value: animalCount, color: 'text-foreground', href: '/admin/livestock' },
     { label: 'Sick / Recovering', value: sickCount, color: 'text-red-600 dark:text-red-400', href: '/admin/livestock' },
     { label: 'Vets', value: vetCount, color: 'text-foreground', href: '/admin/vets' },
   ];
@@ -123,7 +120,7 @@ export default function AdminDashboard() {
                           {farmer.full_name ?? (farmer.phone_number ? `+${farmer.phone_number}` : 'Unknown')}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {farmer.district ?? 'No district'} · {farmer.cattle_count} cattle ·{' '}
+                          {farmer.district ?? 'No district'} · {farmer.animal_count} animal{farmer.animal_count !== 1 ? 's' : ''} ·{' '}
                           {farmer.message_count} message{farmer.message_count !== 1 ? 's' : ''}
                         </p>
                       </div>
@@ -164,9 +161,6 @@ export default function AdminDashboard() {
                             {animal.tag_number && (
                               <span className="text-muted-foreground ml-1">({animal.tag_number})</span>
                             )}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-0.5 capitalize">
-                            {animal.species}
                           </p>
                         </div>
                         <span

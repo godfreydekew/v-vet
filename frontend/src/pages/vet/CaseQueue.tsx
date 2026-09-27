@@ -85,7 +85,6 @@ export default function CaseQueue() {
                   <p className="font-medium text-sm text-foreground">
                     {c.livestock_name ?? 'Unnamed'}
                     {c.livestock_tag && <span className="text-muted-foreground"> ({c.livestock_tag})</span>}
-                    {c.livestock_species && <span className="text-muted-foreground capitalize"> · {c.livestock_species}</span>}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">{fmt(c.submitted_at)}</p>
                 </div>
