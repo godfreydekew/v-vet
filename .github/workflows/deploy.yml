@@ -31,3 +31,15 @@ jobs:
           
           docker build -t $IMAGE_ID ./backend
           docker push $IMAGE_ID
+
+      - name: Trigger Azure App Service Deployment
+        env:
+          AZURE_WEBHOOK_URL: ${{ secrets.AZURE_WEBHOOK_URL }}
+        run: |
+          if [ -n "$AZURE_WEBHOOK_URL" ]; then
+            echo "Triggering Azure App Service container refresh..."
+            curl -s -X POST "$AZURE_WEBHOOK_URL"
+          else
+            echo "AZURE_WEBHOOK_URL is not set. Skipping deployment trigger."
+          fi
+
