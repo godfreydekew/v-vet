@@ -5,23 +5,12 @@ from sqlmodel import Session
 from app.flows.base import BaseFlow
 from app.models.whatsapp import WhatsAppUser
 from app.services.whatsapp.client import send_flow_message, send_whatsapp_message
+from app.services.whatsapp.menu import send_main_menu
 
 logger = logging.getLogger(__name__)
 
 
 class OnboardingFlow(BaseFlow):
-    """
-    Replaces the old free-text LLM onboarding agent with a single WhatsApp
-    Flow form: full_name, district, preferred_language, main_goal (all
-    required) and animal_count (optional). Fully deterministic — no LLM
-    involved in collecting or interpreting these fields.
-
-    Triggered from pipeline.py when a not-yet-onboarded farmer's reply
-    matches a small fixed set of affirmative words (see _AFFIRMATIVE_TRIGGERS
-    there) — the welcome message already asks them to "Reply YES", so this
-    only needs to recognize that, not general free text.
-    """
-
     flow_id = "onboarding"
 
     def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
@@ -39,7 +28,7 @@ class OnboardingFlow(BaseFlow):
             phone=phone,
             flow_id=settings.FLOW_ID_ONBOARDING,
             flow_token=self.flow_id,
-            body="Let's get your farm set up — just a few quick details.",
+            body="Let's get your farm set up. \n\nWe will collect some basic information about your farm and your animals. This will help us assist you better.",
             cta="Join V-Vet",
             screen="ONBOARDING",
         )
@@ -59,8 +48,12 @@ class OnboardingFlow(BaseFlow):
         user = complete_onboarding(session=session, user=user)
 
         name = user.full_name or "there"
-        return (
+        welcome = (
             f"🎉 You're all set, {name}! Welcome to V-Vet.\n\n"
-            "Would you like to register your first animal now? Just tap the menu "
-            "or reply 'register animal' to get started."
+            "Tap *View Menu* below to register your first animal or see "
+            "everything V-Vet can do."
         )
+        menu_sent = send_main_menu(phone=user.phone, body=welcome)
+        if menu_sent:
+            return ""
+        return welcome

@@ -14,9 +14,9 @@ from app.models.whatsapp import WhatsAppMessageCreate, WhatsAppUser, WhatsAppUse
 from app.services.whatsapp.client import (
     download_media,
     mark_whatsapp_message_as_read,
-    send_list_message,
     send_whatsapp_message,
 )
+from app.services.whatsapp.menu import send_main_menu
 from app.services.whatsapp.transcription import convert_speech_to_text
 
 logger = logging.getLogger(__name__)
@@ -51,66 +51,6 @@ _MENU_TRIGGERS: set[str] = {"menu", "help", "hi", "hello", "start", "options"}
 # action — deterministic, no LLM needed to recognize an affirmative reply.
 _AFFIRMATIVE_TRIGGERS: set[str] = {"yes", "yeah", "yep", "sure", "ok", "okay", "y"}
 
-MAIN_MENU_SECTIONS: list[dict] = [
-    {
-        "title": "Records",
-        "rows": [
-            {
-                "id": "register_animal",
-                "title": "Register Animal",
-                "description": "Add a new animal to your herd",
-            },
-            {
-                "id": "record_birth",
-                "title": "Record Birth",
-                "description": "Log a new calf born",
-            },
-            {
-                "id": "record_death",
-                "title": "Record Death",
-                "description": "Log an animal death",
-            },
-        ],
-    },
-    # {
-    #     "title": "Treatments",
-    #     "rows": [
-    #         {"id": "log_vaccination", "title": "Log Vaccination"},
-    #         {"id": "log_dipping", "title": "Log Dipping"},
-    #         {"id": "log_deworming", "title": "Log Deworming"},
-    #     ],
-    # },
-    {
-        "title": "Health & Support",
-        "rows": [
-            {
-                "id": "report_sickness",
-                "title": "Report Sickness",
-                "description": "Describe symptoms for advice",
-            },
-            # {
-            #     "id": "request_vet",
-            #     "title": "Request Vet Help",
-            #     "description": "Connect with a veterinarian",
-            # },
-        ],
-    },
-    {
-        "title": "My Farm",
-        "rows": [
-            {
-                "id": "my_animals",
-                "title": "My Animals",
-                "description": "View your herd",
-            },
-            # {
-            #     "id": "weekly_summary",
-            #     "title": "Weekly Summary",
-            #     "description": "Get a herd overview",
-            # },
-        ],
-    },
-]
 
 _ADD_ANIMAL_TRIGGERS = (
     "add animal",
@@ -214,7 +154,7 @@ class WhatsAppConversationService:
 
         # Show menu on greetings / explicit "menu" request.
         if message_body.strip().lower() in _MENU_TRIGGERS:
-            self._send_main_menu(phone=phone)
+            send_main_menu(phone=phone)
             self._persist_assistant(
                 session=session,
                 user=user,
@@ -547,20 +487,6 @@ class WhatsAppConversationService:
             ),
         )
 
-    def _send_main_menu(self, *, phone: str) -> None:
-        response = send_list_message(
-            phone=phone,
-            body="What would you like to do today?",
-            button_label="View Menu",
-            sections=MAIN_MENU_SECTIONS,
-        )
-        if response.status_code != 200:
-            logger.warning(
-                "[WhatsApp] Menu send failed %s: %s",
-                response.status_code,
-                response.text,
-            )
-
     # ------------------------------------------------------------------
     # Private — WhatsApp Flow form handling
     # ------------------------------------------------------------------
@@ -764,10 +690,10 @@ class WhatsAppConversationService:
             "👋 Welcome to V-Vet!\n\n"
             "I help farmers like you keep animals healthy and productive.\n\n"
             "💬 You can send me:\n"
-            "- Photos or videos of sick animals\n"
+            "- Text, audio, or photos of your animals\n"
             "- Questions about your livestock\n"
             "- Reports when animals are born, sick, or treated\n\n"
-            "I'll help you fast - and connect you to a vet when needed.\n\n"
-            "Ready to start? Reply YES to set up your farm (takes 2 minutes)."
+            "I'll also help you get connected with a vet when needed.\n\n"
+            "Ready to start? Reply YES to set up your farm (takes seconds)."
         )
 

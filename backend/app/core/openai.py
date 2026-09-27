@@ -225,7 +225,7 @@ def build_farmer_agent_tools() -> list[dict[str, Any]]:
                     "Do NOT format the list yourself in text using list_animals for this purpose — "
                     "this tool sends the real interactive picker, which lets the farmer tap the exact "
                     "animal instead of typing a name. The intent argument changes what tapping an "
-                    "animal actually does, so pick it carefully — it is not just cosmetic."
+                    "animal actually does, so pick it carefully"
                 ),
                 "parameters": {
                     "type": "object",
@@ -551,7 +551,6 @@ def _execute_farmer_tool(
         # Hand off to the deterministic "basic context" questionnaire
         # (app/flows/report_sickness_context.py) instead of recording from
         # free-text-extracted fields directly. It sends its own WhatsApp
-        # messages from here. (Emergency short-circuiting is out of scope
         # for now — every report goes through the basic-context questions.)
         from app.flows.report_sickness_context import TriageContextFlow
 
