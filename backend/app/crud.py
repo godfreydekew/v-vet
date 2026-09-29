@@ -4,7 +4,6 @@ from typing import Any
 
 from sqlmodel import Session, col, func, select
 
-from app.ai.gemma import analyze_livestock_image
 from app.core.security import get_password_hash, verify_password
 from app.models.admin import AdminFarmerRow
 from app.models import (
@@ -296,31 +295,6 @@ def delete_livestock_image(
     session.delete(image)
     session.commit()
     return True
-
-
-def analyze_and_store_livestock_image(
-    *,
-    session: Session,
-    livestock: Livestock,
-    image: LivestockImage,
-) -> LivestockImage:
-    if image.ai_analysis:
-        return image
-
-    analysis = analyze_livestock_image(
-        image_url=image.image_url,
-        livestock_name=livestock.name,
-        tag_number=livestock.tag_number,
-        breed=livestock.breed,
-        health_status=livestock.health_status,
-        lifecycle_status=livestock.lifecycle_status,
-    )
-    image.ai_analysis = analysis
-    session.add(image)
-    session.commit()
-    session.refresh(image)
-    return image
-
 
 def serialize_livestock(*, session: Session, livestock: Livestock) -> LivestockPublic:
     images = list_livestock_images(session=session, livestock_id=livestock.id)
