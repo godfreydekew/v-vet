@@ -30,6 +30,32 @@ $ source .venv/bin/activate
 
 Make sure your editor is using the correct Python virtual environment, with the interpreter at `backend/.venv/bin/python`.
 
+## Local Database
+
+For development, the backend should use a Postgres database running on your own machine, not the shared Supabase database.
+
+**1. Add your database details to `backend/.env`:**
+
+```env
+# Local Database
+POSTGRES_USER=
+POSTGRES_PASSWORD=
+POSTGRES_SERVER=
+POSTGRES_PORT=
+POSTGRES_DB=
+```
+
+**2. The first time, run the prestart script** from `./backend/` with the virtual environment active:
+
+```console
+$ bash scripts/prestart.sh
+```
+
+This creates all the tables (it runs the database migrations with `alembic upgrade head`) and adds the starting data:
+
+* the admin account from `FIRST_SUPERUSER` / `FIRST_SUPERUSER_PASSWORD`
+* demo accounts for trying the app, e.g. `vet@vvet.com` and `farmer@vvet.com` (password `demo1234`, see `app/initial_data.py`)
+
 Modify or add SQLModel models for data and SQL tables in `./backend/app/models.py`, API endpoints in `./backend/app/api/`, CRUD (Create, Read, Update, Delete) utils in `./backend/app/crud.py`.
 
 ## VS Code
