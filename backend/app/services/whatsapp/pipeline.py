@@ -3,14 +3,14 @@ from io import BytesIO
 
 from sqlmodel import Session
 
+from app.conversation.messages import IncomingMessage
 from app.crud import (
     authenticate,
-    create_whatsapp_user,
     get_conversation_history,
     get_whatsapp_user_by_phone,
     save_whatsapp_message,
 )
-from app.models.whatsapp import WhatsAppMessageCreate, WhatsAppUser, WhatsAppUserCreate
+from app.models.whatsapp import WhatsAppMessageCreate, WhatsAppUser
 from app.services.whatsapp.client import (
     download_media,
     mark_whatsapp_message_as_read,
@@ -46,10 +46,6 @@ INTENT_IDS: set[str] = {
 
 # Words that trigger the main menu instead of the farmer agent.
 _MENU_TRIGGERS: set[str] = {"menu", "help", "hi", "hello", "start", "options"}
-
-# Matches the welcome message's "Reply YES to set up your farm" call to
-# action — deterministic, no LLM needed to recognize an affirmative reply.
-_AFFIRMATIVE_TRIGGERS: set[str] = {"yes", "yeah", "yep", "sure", "ok", "okay", "y"}
 
 
 _ADD_ANIMAL_TRIGGERS = (
@@ -93,22 +89,27 @@ class WhatsAppConversationService:
             )
             return
 
+        # Imported here, not at the top: app.conversation imports the WhatsApp
+        # client, whose package imports this module.
+        from app.conversation.router import route_message
+
         message_body = self._extract_message_body(message_obj)
+        user = get_whatsapp_user_by_phone(session=session, phone=phone)
+
+        # Farmers who haven't finished onboarding (including brand-new numbers)
+        # are handled by the guest stage in app.conversation.
+        incoming = self._to_incoming_message(
+            phone=phone, message_obj=message_obj, message_body=message_body
+        )
+        if route_message(session=session, user=user, message=incoming):
+            return
+        # route_message only hands back onboarded farmers, so user exists here.
+        assert user is not None
+
         if message_body is None:
             return
 
         self._mark_read(message_obj["id"])
-
-        user = get_whatsapp_user_by_phone(session=session, phone=phone)
-        if user is None:
-            user = create_whatsapp_user(
-                session=session,
-                user_in=WhatsAppUserCreate(phone=phone),
-            )
-            self._send_and_persist(
-                session=session, user=user, phone=phone, reply=self._welcome_message()
-            )
-            return
 
         save_whatsapp_message(
             session=session,
@@ -133,23 +134,6 @@ class WhatsAppConversationService:
                 user=user, email=email, password=password, session=session
             )
             self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
-            return
-
-        if not user.is_fully_onboarded:
-            if message_body.strip().lower() in _AFFIRMATIVE_TRIGGERS:
-                from app.flows import FLOW_REGISTRY
-                from app.flows.onboarding import OnboardingFlow
-
-                flow = FLOW_REGISTRY.get(OnboardingFlow.flow_id)
-                if isinstance(flow, OnboardingFlow) and flow.start(phone, user, session):
-                    self._persist_assistant(
-                        session=session, user=user, phone=phone, content="[Onboarding form sent]"
-                    )
-                    return
-            self._send_and_persist(
-                session=session, user=user, phone=phone,
-                reply="Reply YES to get started, or ask me anything about V-Vet!",
-            )
             return
 
         # Show menu on greetings / explicit "menu" request.
@@ -418,6 +402,29 @@ class WhatsAppConversationService:
     # Private — message extraction
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _to_incoming_message(
+        *, phone: str, message_obj: dict, message_body: str | None
+    ) -> IncomingMessage:
+        """Package a webhook message for app.conversation.
+
+        Button and list taps go in button_id; text holds typed or transcribed words only.
+        """
+        message_type = message_obj.get("type", "")
+        button_id = None
+        if message_type == "interactive":
+            interactive = message_obj.get("interactive", {})
+            tapped = interactive.get("button_reply") or interactive.get("list_reply") or {}
+            button_id = tapped.get("id")
+
+        return IncomingMessage(
+            message_id=message_obj.get("id", ""),
+            phone=phone,
+            message_type=message_type,
+            text=None if button_id else message_body,
+            button_id=button_id,
+        )
+
     def _extract_message_body(self, message_obj: dict) -> str | None:
         msg_type: str = message_obj.get("type", "")
 
@@ -678,21 +685,4 @@ class WhatsAppConversationService:
         history = get_conversation_history(session=session, phone=user.phone, limit=20)
         return openai_helpers.run_farmer_agent(
             user=user, history=history, session=session
-        )
-
-    # ------------------------------------------------------------------
-    # Private — static message builders
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _welcome_message() -> str:
-        return (
-            "👋 Welcome to V-Vet!\n\n"
-            "I help farmers like you keep animals healthy and productive.\n\n"
-            "💬 You can send me:\n"
-            "- Text, audio, or photos of your animals\n"
-            "- Questions about your livestock\n"
-            "- Reports when animals are born, sick, or treated\n\n"
-            "I'll also help you get connected with a vet when needed.\n\n"
-            "Ready to start? Reply YES to set up your farm (takes seconds)."
         )
