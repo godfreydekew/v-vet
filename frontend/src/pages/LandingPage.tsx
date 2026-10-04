@@ -1,8 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useTheme } from "@/contexts/ThemeContext";
 import {
-  Sun,
-  Moon,
   ArrowRight,
   Heart,
   Shield,
@@ -10,10 +7,15 @@ import {
   Users,
   BarChart3,
   Leaf,
+  MessageSquare,
+  Smartphone,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { QRCodeSVG } from "qrcode.react";
 import heroImage from "@/assets/landing-hero.jpg";
+import whatsappScreenshot from "@/assets/whatsapp-screenshot.jpg";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16, filter: "blur(4px)" },
@@ -24,6 +26,8 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.08 } },
 };
 
+const WHATSAPP_LINK = "https://wa.me/447519132951?text=Hello";
+
 const features = [
   {
     icon: Heart,
@@ -33,7 +37,7 @@ const features = [
   {
     icon: Shield,
     title: "Vaccination Records",
-    desc: "Never miss a vaccination — track schedules and get overdue alerts.",
+    desc: "Never miss a vaccination, track schedules and get overdue alerts.",
   },
   {
     icon: Activity,
@@ -48,7 +52,7 @@ const features = [
   {
     icon: BarChart3,
     title: "Herd Analytics",
-    desc: "See your herd health at a glance with real-time status summaries.",
+    desc: "See your herd health at a glance with real time status summaries.",
   },
   {
     icon: Leaf,
@@ -59,10 +63,9 @@ const features = [
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Nav */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
@@ -77,20 +80,6 @@ export default function LandingPage() {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/login")}
-              className="text-foreground"
-            >
-              Sign in
-            </Button>
             <Button
               size="sm"
               onClick={() => navigate("/login")}
@@ -139,7 +128,7 @@ export default function LandingPage() {
               style={{ textWrap: "pretty" } as React.CSSProperties}
             >
               V-Vet helps African farmers track, monitor, and protect every
-              animal in their herd — with health logging, vet consultations, and
+              animal in their herd with health logging, vet consultations, and
               vaccination management.
             </motion.p>
 
@@ -183,13 +172,112 @@ export default function LandingPage() {
                 className="w-full h-[380px] md:h-[460px] object-cover"
               />
             </div>
-            {/* Floating card */}
+          </motion.div>
+        </motion.div>
+      </section>
+
+      {/* WhatsApp Integration Section */}
+      <section className="max-w-7xl mx-auto px-6 py-20 md:py-24 border-t border-border">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+          variants={stagger}
+          className="space-y-12"
+        >
+          {/* Section Heading */}
+          <motion.div
+            variants={fadeUp}
+            transition={{ duration: 0.6 }}
+            className="text-center max-w-2xl mx-auto space-y-3"
+          >
+            <h2
+              className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight"
+              style={{ textWrap: "balance" } as React.CSSProperties}
+            >
+              Start Directly on WhatsApp
+            </h2>
+            <p
+              className="text-muted-foreground text-base leading-relaxed"
+              style={{ textWrap: "pretty" } as React.CSSProperties}
+            >
+              WhatsApp is V-Vet’s primary user interface for farmers. To use the web platform, users must first set up their account on WhatsApp.
+            </p>
+          </motion.div>
+
+          {/* Centered Composition: QR Code + Phone Picture close together */}
+          <motion.div
+            variants={fadeUp}
+            transition={{ duration: 0.7 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-8 md:gap-12 max-w-3xl mx-auto"
+          >
+            {/* Left Side: QR Code, Action Button, Pre Pilot Notice */}
+            <div className="space-y-5 flex flex-col items-center text-center shrink-0">
+              {/* QR Code Box */}
+              <div className="space-y-2 flex flex-col items-center">
+                <div className="p-3.5 rounded-2xl border border-border/80 bg-background shadow-sm inline-block">
+                  <QRCodeSVG
+                    value={WHATSAPP_LINK}
+                    size={145}
+                    level="H"
+                    bgColor="transparent"
+                    fgColor="currentColor"
+                    className="text-foreground"
+                  />
+                </div>
+                <span className="text-xs text-muted-foreground font-medium">
+                  Scan to chat on WhatsApp
+                </span>
+              </div>
+
+              {/* WhatsApp Link Button matching Get Started button style */}
+              <a
+                href={WHATSAPP_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-medium text-sm transition-all shadow-sm group"
+              >
+                <span>Chat on WhatsApp</span>
+                <ArrowRight
+                  size={15}
+                  className="transition-transform group-hover:translate-x-0.5"
+                />
+              </a>
+
+              {/* Pre Pilot Stage Notice */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs border border-amber-500/20 font-medium">
+                <Smartphone size={14} className="text-amber-500" />
+                <span>V-Vet is currently in pre pilot stage</span>
+              </div>
+            </div>
+
+            {/* Right Side: Clean Smartphone Mockup */}
+            <div className="flex justify-center shrink-0">
+              <div className="relative max-w-[260px] w-full">
+                <div className="relative rounded-[2.4rem] bg-zinc-950 p-3 ring-1 ring-zinc-800 shadow-xl shadow-black/30">
+                  {/* Camera Speaker Notch */}
+                  <div className="absolute top-5 left-1/2 -translate-x-1/2 w-24 h-3.5 bg-zinc-900 rounded-full z-20 flex items-center justify-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-zinc-950" />
+                    <div className="w-8 h-1 bg-zinc-800 rounded-full" />
+                  </div>
+
+                  {/* Screen Content */}
+                  <div className="relative rounded-[1.9rem] overflow-hidden bg-black aspect-[9/18] border border-zinc-800">
+                    <img
+                      src={whatsappScreenshot}
+                      alt="V-Vet WhatsApp chat demonstration"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           </motion.div>
         </motion.div>
       </section>
 
       {/* Features */}
-      <section className="max-w-7xl mx-auto px-6 py-20 md:py-24">
+      <section className="max-w-7xl mx-auto px-6 py-20 md:py-24 border-t border-border">
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -206,13 +294,13 @@ export default function LandingPage() {
               className="text-2xl md:text-3xl font-bold text-foreground"
               style={{ textWrap: "balance" } as React.CSSProperties}
             >
-              Everything your farm needs
+              Complete Farm & Herd Intelligence
             </h2>
             <p
               className="text-muted-foreground"
               style={{ textWrap: "pretty" } as React.CSSProperties}
             >
-              From daily health checks to emergency vet consultations — all in
+              From daily health checks to emergency vet consultations, all in
               one place.
             </p>
           </motion.div>
@@ -300,3 +388,5 @@ export default function LandingPage() {
     </div>
   );
 }
+
+
