@@ -6,7 +6,7 @@ import logging
 from openai import OpenAI
 from openai.types.responses import ResponseInputParam
 
-from app.ai.schemas import AIResponseError, ChatMessage, OutputT
+from app.assistant.schemas import AIResponseError, ChatMessage, OutputT
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)

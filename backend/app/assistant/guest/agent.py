@@ -1,14 +1,12 @@
-"""Handles messages from farmers who have not finished onboarding (the guest stage).
-"""
-
 import logging
 import string
 
 from sqlmodel import Session
 
-from app.ai.guest_reply import answer_guest
-from app.ai.schemas import ChatMessage, GuestReply
-from app.conversation.messages import IncomingMessage
+from app.assistant.guest.reply import answer_guest
+from app.assistant.guest.schemas import GuestReply
+from app.assistant.messages import IncomingMessage
+from app.assistant.schemas import ChatMessage
 from app.crud import (
     create_whatsapp_user,
     get_conversation_history,

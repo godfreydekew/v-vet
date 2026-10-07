@@ -3,7 +3,7 @@ from io import BytesIO
 
 from sqlmodel import Session
 
-from app.conversation.messages import IncomingMessage
+from app.assistant.messages import IncomingMessage
 from app.crud import (
     authenticate,
     get_conversation_history,
@@ -89,15 +89,15 @@ class WhatsAppConversationService:
             )
             return
 
-        # Imported here, not at the top: app.conversation imports the WhatsApp
+        # Imported here, not at the top: app.assistant imports the WhatsApp
         # client, whose package imports this module.
-        from app.conversation.router import route_message
+        from app.assistant.router import route_message
 
         message_body = self._extract_message_body(message_obj)
         user = get_whatsapp_user_by_phone(session=session, phone=phone)
 
         # Farmers who haven't finished onboarding (including brand-new numbers)
-        # are handled by the guest stage in app.conversation.
+        # are handled by the guest agent in app.assistant.
         incoming = self._to_incoming_message(
             phone=phone, message_obj=message_obj, message_body=message_body
         )
@@ -406,7 +406,7 @@ class WhatsAppConversationService:
     def _to_incoming_message(
         *, phone: str, message_obj: dict, message_body: str | None
     ) -> IncomingMessage:
-        """Package a webhook message for app.conversation.
+        """Package a webhook message for app.assistant.
 
         Button and list taps go in button_id; text holds typed or transcribed words only.
         """
