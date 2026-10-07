@@ -1,10 +1,13 @@
 """Calls AI models, tracks retries, timeouts, logging
 """
 
+import json
 import logging
+from collections.abc import Callable
+from typing import Any
 
 from openai import OpenAI
-from openai.types.responses import ResponseInputParam
+from openai.types.responses import FunctionToolParam, ResponseInputParam
 
 from app.assistant.schemas import AIResponseError, ChatMessage, OutputT
 from app.core.config import settings
@@ -49,3 +52,67 @@ def generate_structured(
         raise AIResponseError("The model returned no usable output.")
 
     return answer
+
+
+# Most tool rounds per message, so a confused model can't loop forever.
+_MAX_TOOL_ROUNDS = 4
+
+
+def generate_with_tools(
+    *,
+    system_prompt: str,
+    messages: list[ChatMessage],
+    tools: list[FunctionToolParam],
+    run_tool: Callable[[str, dict[str, Any]], dict[str, Any]],
+    model: str | None = None,
+) -> str:
+    """Let the model call tools until it gives its final reply, and return that reply.
+
+    run_tool(name, arguments) does what the tool asks and returns a result the model
+    can read. Returns "" if the model's last answer has no text (e.g. a tool already
+    sent the farmer everything they need).
+    """
+    chosen_model = model or settings.OPENAI_MODEL
+    client = _get_client()
+
+    input_messages: ResponseInputParam = [*messages]
+    response = client.responses.create(
+        model=chosen_model,
+        instructions=system_prompt,
+        input=input_messages,
+        tools=tools,
+    )
+
+    for _ in range(_MAX_TOOL_ROUNDS):
+        tool_calls = [item for item in response.output if item.type == "function_call"]
+        if not tool_calls:
+            break
+
+        tool_outputs: ResponseInputParam = []
+        for call in tool_calls:
+            try:
+                arguments = json.loads(call.arguments or "{}")
+            except json.JSONDecodeError:
+                arguments = {}
+            logger.info("[AI] Tool call %s %s", call.name, arguments)
+            result = run_tool(call.name, arguments)
+            tool_outputs.append(
+                {
+                    "type": "function_call_output",
+                    "call_id": call.call_id,
+                    "output": json.dumps(result, default=str),
+                }
+            )
+
+        # Continue the same conversation on OpenAI's side with the tool results.
+        response = client.responses.create(
+            model=chosen_model,
+            instructions=system_prompt,
+            previous_response_id=response.id,
+            input=tool_outputs,
+            tools=tools,
+        )
+    else:
+        logger.warning("[AI] %s still calling tools after %d rounds", chosen_model, _MAX_TOOL_ROUNDS)
+
+    return response.output_text.strip()

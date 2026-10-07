@@ -1,20 +1,28 @@
 import logging
+from datetime import date, datetime, timezone
+from typing import Any
 
 from sqlmodel import Session
 
 from app.core.config import settings
 from app.flows.base import BaseFlow
+from app.models.conversation_state import ConversationState
+from app.models.livestock import Livestock
 from app.models.whatsapp import WhatsAppMessageCreate, WhatsAppUser
 from app.services.whatsapp.client import send_flow_message
 
 logger = logging.getLogger(__name__)
 
 
+STEP_FORM_SENT = "form_sent"
+STEP_DONE = "done"
+
+SAVE_FAILED_MESSAGE = "Sorry, something went wrong saving your animal. Please try again from the *menu*."
+
+
 class RegisterAnimalFlow(BaseFlow):
     """
     Sends a WhatsApp Flow form with all animal fields at once.
-    When the farmer submits, the clean JSON is passed to the farmer agent
-    which validates and saves the record.
     """
 
     flow_id = "register_animal"
@@ -39,6 +47,11 @@ class RegisterAnimalFlow(BaseFlow):
                 response.text,
             )
             return False
+
+        if settings.USE_FARMER_AGENT:
+            from app.assistant.state import start_state
+
+            start_state(session=session, user=user, flow=self.flow_id, step=STEP_FORM_SENT)
         return True
 
     def handle(self, data: dict, user: WhatsAppUser, session: Session) -> str:
@@ -46,6 +59,9 @@ class RegisterAnimalFlow(BaseFlow):
         from app.crud import get_conversation_history, save_whatsapp_message
 
         logger.info("[RegisterAnimalFlow] Handling flow submission for %s: %s", user.phone, data)
+
+        if settings.USE_FARMER_AGENT:
+            return self._register_from_form(data=data, user=user, session=session)
 
         fields = []
         if data.get("name"):
@@ -65,8 +81,10 @@ class RegisterAnimalFlow(BaseFlow):
         if photo:
             logger.info("[RegisterAnimalFlow] Received animal photo(s) for %s: %s", user.phone, photo)
             try:
-                from app.services.whatsapp_flow_media import download_whatsapp_flow_media
                 from app.services.storage import upload_livestock_image_bytes
+                from app.services.whatsapp_flow_media import (
+                    download_whatsapp_flow_media,
+                )
 
                 download_res = download_whatsapp_flow_media(photo)
                 if download_res:
@@ -111,3 +129,119 @@ class RegisterAnimalFlow(BaseFlow):
             session=session,
             extra_user_message=message,
         )
+
+    def describe(self, state: ConversationState) -> str:
+        minutes = int((datetime.now(timezone.utc) - state.started_at).total_seconds() // 60)
+        return (
+            f"Registering an animal: V-Vet sent the registration form {minutes} minutes ago "
+            "and the farmer hasn't submitted it yet."
+        )
+
+    def _register_from_form(self, *, data: dict[str, Any], user: WhatsAppUser, session: Session) -> str:
+        """Save the animal from the submitted form and close the farmer's register_animal state."""
+        from app.assistant.state import (
+            close_state,
+            get_active_state,
+            start_state,
+            update_state,
+        )
+        from app.crud import create_livestock_from_whatsapp
+
+        if not user.linked_user_id or not user.district:
+            return "Sorry, your account isn't fully set up yet, so I can't register animals."
+
+        state = get_active_state(session=session, user=user)
+        if state is None or state.flow != self.flow_id:
+            # A form submitted from an older message: record it as its own attempt.
+            state = start_state(session=session, user=user, flow=self.flow_id, step=STEP_FORM_SENT)
+
+        # The form sends every field as text, with "" for anything left empty.
+        name = data.get("name") or None
+        breed = data.get("breed") or None
+        gender = data.get("gender") or None
+        weight_kg = float(data["weight_kg"]) if data.get("weight_kg") else None
+        date_of_birth = date.fromisoformat(data["date_of_birth"]) if data.get("date_of_birth") else None
+
+        try:
+            animal = create_livestock_from_whatsapp(
+                session=session,
+                user_id=user.linked_user_id,
+                district=user.district,
+                name=name,
+                gender=gender,
+                breed=breed,
+                weight_kg=weight_kg,
+                date_of_birth=date_of_birth,
+            )
+        except Exception:
+            logger.exception("[RegisterAnimalFlow] Saving the animal failed for %s", user.phone)
+            session.rollback()
+            close_state(session=session, state=state, status="failed")
+            return SAVE_FAILED_MESSAGE
+
+        # The form only sends a WhatsApp reference to the photo: download it, store it,
+        # and link it to the animal. A photo problem must not fail the registration.
+        photo_url = _upload_photo(data.get("animal_photo"), phone=user.phone)
+        if photo_url:
+            try:
+                _attach_photo(session=session, animal=animal, photo_url=photo_url)
+            except Exception:
+                logger.exception("[RegisterAnimalFlow] Attaching the photo failed for %s", animal.id)
+                session.rollback()
+
+        submitted = {
+            "name": name,
+            "breed": breed,
+            "gender": gender,
+            "weight_kg": weight_kg,
+            "date_of_birth": date_of_birth.isoformat() if date_of_birth else None,
+            "livestock_id": str(animal.id),
+        }
+        update_state(session=session, state=state, step=STEP_DONE, data=submitted)
+        close_state(session=session, state=state, status="completed")
+        return _confirmation_message(animal)
+
+
+def _upload_photo(photo: object, *, phone: str) -> str | None:
+    """Download the form's photo from WhatsApp and store it. Returns its URL, or None."""
+    if not photo:
+        return None
+    try:
+        from app.services.storage import upload_livestock_image_bytes
+        from app.services.whatsapp_flow_media import download_whatsapp_flow_media
+
+        downloaded = download_whatsapp_flow_media(photo)
+        if downloaded is None:
+            return None
+        image_bytes, content_type, filename = downloaded
+        return upload_livestock_image_bytes(image_bytes, filename=filename, content_type=content_type)
+    except Exception:
+        # A missing photo shouldn't stop the animal being registered.
+        logger.exception("[RegisterAnimalFlow] Photo upload failed for %s", phone)
+        return None
+
+
+def _attach_photo(*, session: Session, animal: Livestock, photo_url: str) -> None:
+    from app.crud import create_livestock_image
+    from app.models.livestock_image import LivestockImageCreate
+    from app.services.storage import move_pending_image_to_livestock
+
+    final_url = move_pending_image_to_livestock(pending_url=photo_url, livestock_id=animal.id) or photo_url
+    create_livestock_image(
+        session=session,
+        livestock_id=animal.id,
+        image_in=LivestockImageCreate(image_url=final_url, is_primary=True),
+    )
+
+
+def _confirmation_message(animal: Livestock) -> str:
+    title = f"*{animal.name}* is registered" if animal.name else "Your animal is registered"
+    lines = [f"✅ {title}.", "", f"Tag: {animal.tag_number}"]
+    if animal.breed:
+        lines.append(f"Breed: {animal.breed}")
+    if animal.gender:
+        lines.append(f"Gender: {animal.gender.capitalize()}")
+    lines.append(f"Date of birth: {animal.date_of_birth}" if animal.date_of_birth else "Date of birth: not given")
+    if animal.weight_kg:
+        lines.append(f"Weight: {animal.weight_kg:g}kg")
+    return "\n".join(lines)

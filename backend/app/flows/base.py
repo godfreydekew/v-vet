@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from sqlmodel import Session
 
+from app.models.conversation_state import ConversationState
 from app.models.whatsapp import WhatsAppUser
 
 
@@ -17,6 +18,7 @@ class BaseFlow(ABC):
       - flow_id   : matches the flow_token sent with the form
       - start()   : sends the interactive form to the farmer
       - handle()  : processes the submitted form data, returns a reply string
+      - describe(): (optional) one line for the farmer agent about an active state row
     """
 
     flow_id: str
@@ -37,3 +39,10 @@ class BaseFlow(ABC):
         Returns the reply text to send back to the farmer.
         """
         ...
+
+    def describe(self, state: ConversationState) -> str:
+        """One line for the farmer agent's prompt saying where the farmer is in this flow.
+
+        Flows that keep a conversation_state row override this with something clearer.
+        """
+        return f"In the {self.flow_id} flow, at step '{state.step}'."
