@@ -1,7 +1,7 @@
 """Decides which part of V-Vet handles an incoming WhatsApp message.
 
 For now there are two paths:
-- farmers who haven't finished onboarding go to the guest stage (app.conversation.guest)
+- farmers who haven't finished onboarding go to the guest agent (app.assistant.guest)
 - onboarded farmers stay in the existing WhatsApp pipeline
 """
 
@@ -9,8 +9,8 @@ import logging
 
 from sqlmodel import Session
 
-from app.conversation.guest import handle_guest_message
-from app.conversation.messages import IncomingMessage
+from app.assistant.guest.agent import handle_guest_message
+from app.assistant.messages import IncomingMessage
 from app.models.whatsapp import WhatsAppUser
 from app.services.whatsapp.client import mark_whatsapp_message_as_read
 
