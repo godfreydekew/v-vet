@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlmodel import Session, col, select
 
+from app.flows.report_sickness import STEP_DONE, STEP_QUESTIONS, ReportSicknessFlow
 from app.flows.triage_context_questions import (
     BASIC_CONTEXT_QUESTIONS,
     Question,
@@ -15,6 +16,10 @@ from app.models.whatsapp import WhatsAppUser
 from app.services.whatsapp.client import send_list_message, send_reply_buttons, send_whatsapp_message
 
 logger = logging.getLogger(__name__)
+
+# The questions and final recording are steps of the report_sickness flow, so they
+# are recorded against it in conversation_state.
+_SICKNESS_FLOW = ReportSicknessFlow()
 
 _ROW_PREFIX = "ctx_"
 _DONE_OPTION_ID = "__done__"
@@ -60,6 +65,13 @@ class TriageContextFlow:
         )
         session.add(triage_session)
         session.commit()
+
+        _SICKNESS_FLOW.record_step(
+            session=session,
+            user=user,
+            step=STEP_QUESTIONS,
+            data={"problem_description": problem_description},
+        )
 
         return self._send_question(phone=phone, question=BASIC_CONTEXT_QUESTIONS[0])
 
@@ -254,6 +266,7 @@ class TriageContextFlow:
             else None
         )
         if animal is None:
+            _SICKNESS_FLOW.record_step(session=session, user=user, step=STEP_QUESTIONS, close_as="failed")
             return "Sorry, something went wrong finding that animal. Please send 'menu' and try reporting again."
 
         symptoms = answers.get("problem_description") or "No description given."
@@ -279,6 +292,18 @@ class TriageContextFlow:
             animal_name=animal_name,
             symptoms=symptoms,
             urgency_level=result.triage.urgency_level,
+        )
+
+        _SICKNESS_FLOW.record_step(
+            session=session,
+            user=user,
+            step=STEP_DONE,
+            data={
+                "problem_description": symptoms,
+                "urgency_level": result.triage.urgency_level,
+                "observation_id": str(result.observation.id),
+            },
+            close_as="completed",
         )
 
         if is_emergency_exit:
