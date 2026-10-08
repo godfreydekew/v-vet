@@ -4,13 +4,20 @@ from datetime import date
 
 from sqlmodel import Session
 
+from app.crud import get_livestock_for_user
 from app.flows.animal_list import send_interactive_animal_list
 from app.flows.base import BaseFlow
 from app.models.health_observation import HealthObservation
 from app.models.livestock import Livestock
 from app.models.whatsapp import WhatsAppUser
+from app.services.whatsapp.menu import send_main_menu
 
 logger = logging.getLogger(__name__)
+
+NO_ANIMALS_MESSAGE = (
+    "You don't have any animals registered yet. "
+    "Tap *View Menu* below and choose *Register Animal* to add your first one."
+)
 
 
 class MyAnimalsFlow(BaseFlow):
@@ -23,7 +30,16 @@ class MyAnimalsFlow(BaseFlow):
     flow_id = "my_animals"
 
     def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
+        if not self.has_animals(user=user, session=session):
+            return send_main_menu(phone=phone, body=NO_ANIMALS_MESSAGE)
         return send_interactive_animal_list(phone=phone, user=user, session=session, intent="view")
+
+    def has_animals(self, *, user: WhatsAppUser, session: Session) -> bool:
+        """Whether the farmer has at least one animal still on the farm."""
+        if user.linked_user_id is None:
+            return False
+        animals = get_livestock_for_user(session=session, user_id=user.linked_user_id, limit=1)
+        return len(animals) > 0
 
     def show_more(self, *, offset: int, phone: str, user: WhatsAppUser, session: Session) -> bool:
         """Send the next page of animals, triggered by the 'Show more animals' row."""
@@ -41,7 +57,11 @@ class MyAnimalsFlow(BaseFlow):
         """
         Process the farmer tapping an animal to view its details.
         """
-        from app.crud import get_livestock_by_id_for_user, get_observations_for_livestock, list_livestock_images
+        from app.crud import (
+            get_livestock_by_id_for_user,
+            get_observations_for_livestock,
+            list_livestock_images,
+        )
 
         try:
             parsed_id = uuid.UUID(animal_id)

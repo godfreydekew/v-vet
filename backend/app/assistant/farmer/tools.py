@@ -11,7 +11,7 @@ from app.services.whatsapp.menu import send_main_menu
 logger = logging.getLogger(__name__)
 
 # Flows the agent may start. Each must be in app.flows.FLOW_REGISTRY.
-STARTABLE_FLOWS = ["register_animal"]
+STARTABLE_FLOWS = ["register_animal", "my_animals"]
 
 # WhatsApp rejects list message bodies longer than this.
 _MENU_BODY_LIMIT = 1024
@@ -42,7 +42,8 @@ TOOLS: list[FunctionToolParam] = [
         "name": "start_flow",
         "description": (
             "Start a task for the farmer, exactly as if they tapped it in the menu. "
-            "register_animal sends the animal registration form."
+            "register_animal sends the animal registration form. "
+            "my_animals sends a tappable list of the farmer's animals; tapping one shows its details and photo."
         ),
         "parameters": {
             "type": "object",
@@ -86,6 +87,6 @@ def _start_flow(*, session: Session, user: WhatsAppUser, flow_name: str) -> dict
 
     # The flow sends its own message and records the farmer's state, as a menu tap does.
     if not flow.start(phone=user.phone, user=user, session=session):
-        return {"status": "error", "message": "The form could not be sent. Suggest trying again from the menu."}
+        return {"status": "error", "message": f"{flow_name} could not be started."}
     save_message(session=session, user=user, role="assistant", content=f"[Flow started: {flow_name}]")
     return {"status": "started", "flow": flow_name, "ends_turn": True}
