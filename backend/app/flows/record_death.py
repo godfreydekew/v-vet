@@ -1,11 +1,14 @@
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from sqlmodel import Session
 
+from app.core.config import settings
 from app.flows.animal_list import send_interactive_animal_list
 from app.flows.base import BaseFlow
+from app.models.conversation_state import ConversationState, ConversationStatus
 from app.models.whatsapp import WhatsAppUser
 from app.services.whatsapp.client import (
     send_flow_message,
@@ -27,17 +30,17 @@ _CAUSE_OPTIONS = [
 ]
 _CAUSE_LABELS = dict(_CAUSE_OPTIONS)
 
+# Steps stored in conversation_state when USE_FARMER_AGENT is on.
+STEP_PICK_ANIMAL = "pick_animal"
+STEP_PICK_CAUSE = "pick_cause"
+STEP_PICK_DATE = "pick_date"
+STEP_DONE = "done"
+
 
 class RecordDeathFlow(BaseFlow):
     """
     Records an animal's death: select the animal, its cause of death, then
-    the date it happened. All three steps are deterministic WhatsApp
-    buttons/lists — no LLM involvement once the animal is identified.
-
-    Mirrors ReportSicknessFlow's herd-size branching and pin pattern.
-    active_death_animal_id / active_death_cause on WhatsAppUser carry state
-    between steps — a generic flow-state mechanism would be overkill for
-    two values with no reminders or follow-ups attached to this flow.
+    the date it happened.
     """
 
     flow_id = "record_death"
@@ -45,7 +48,14 @@ class RecordDeathFlow(BaseFlow):
     SMALL_HERD_THRESHOLD = 10
 
     def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
-        from app.core.config import settings
+        sent = self._send_first_step(phone=phone, user=user, session=session)
+        if sent and settings.USE_FARMER_AGENT:
+            from app.assistant.state import start_state
+
+            start_state(session=session, user=user, flow=self.flow_id, step=STEP_PICK_ANIMAL)
+        return sent
+
+    def _send_first_step(self, *, phone: str, user: WhatsAppUser, session: Session) -> bool:
         from app.crud import get_livestock_for_user
         from app.flows.animal_list import MAX_ANIMALS
 
@@ -96,8 +106,7 @@ class RecordDeathFlow(BaseFlow):
     def handle(self, data: dict, user: WhatsAppUser, session: Session) -> str:
         """
         Both the identify_animal and pick_date Flows share this flow_id, so
-        their submissions both land here — dispatch on payload shape rather
-        than adding a second flow_token to FLOW_REGISTRY for the same flow.
+        their submissions both land here
         """
         if "selected_date" in data:
             return self._handle_date_flow_submission(data=data, user=user, session=session)
@@ -178,6 +187,12 @@ class RecordDeathFlow(BaseFlow):
         session.commit()
 
         animal_name = animal.name or animal.tag_number or "the animal"
+        self._record_step(
+            session=session,
+            user=user,
+            step=STEP_PICK_CAUSE,
+            data={"animal_id": str(animal.id), "animal_name": animal_name},
+        )
         rows = [{"id": f"{_CAUSE_PREFIX}{key}", "title": label} for key, label in _CAUSE_OPTIONS]
         response = send_list_message(
             phone=phone,
@@ -201,11 +216,10 @@ class RecordDeathFlow(BaseFlow):
         session.add(user)
         session.commit()
 
+        self._record_step(session=session, user=user, step=STEP_PICK_DATE, data={"cause": cause})
         return self._ask_date(phone=phone)
 
     def _ask_date(self, *, phone: str) -> bool:
-        from app.core.config import settings
-
         if not settings.FLOW_ID_PICK_DATE:
             logger.warning(
                 "[RecordDeathFlow] FLOW_ID_PICK_DATE not configured — falling back to Today/Yesterday buttons."
@@ -279,6 +293,7 @@ class RecordDeathFlow(BaseFlow):
             user.active_death_cause = None
             session.add(user)
             session.commit()
+            self._record_step(session=session, user=user, step=STEP_PICK_DATE, close_as="failed")
             return "Sorry, something went wrong finding that animal. Please send 'menu' and try again."
 
         animal.lifecycle_status = "deceased"
@@ -292,8 +307,62 @@ class RecordDeathFlow(BaseFlow):
         session.add(user)
         session.commit()
 
+        self._record_step(
+            session=session,
+            user=user,
+            step=STEP_DONE,
+            data={"date_of_death": death_date.isoformat()},
+            close_as="completed",
+        )
+
         animal_name = animal.name or animal.tag_number or "The animal"
         return (
             f"Recorded. {animal_name} has been marked as deceased in your herd records. "
             "We send our heartfelt thoughts. 💙"
         )
+
+    def describe(self, state: ConversationState) -> str:
+        animal_name = state.data.get("animal_name", "the animal")
+        if state.step == STEP_PICK_CAUSE:
+            return (
+                f"Recording a death for {animal_name}: waiting for the farmer to choose "
+                "the cause of death from the list V-Vet sent."
+            )
+        if state.step == STEP_PICK_DATE:
+            cause = _CAUSE_LABELS.get(state.data.get("cause", ""), "unknown")
+            return (
+                f"Recording a death for {animal_name} (cause: {cause}): waiting for the farmer "
+                "to pick the date it died."
+            )
+        return (
+            "Recording a death: V-Vet sent the farmer a way to choose which animal died, "
+            "and they haven't chosen yet."
+        )
+
+    def _record_step(
+        self,
+        *,
+        session: Session,
+        user: WhatsAppUser,
+        step: str,
+        data: dict[str, Any] | None = None,
+        close_as: ConversationStatus | None = None,
+    ) -> None:
+        """Store the farmer's progress in conversation_state (only with USE_FARMER_AGENT on)."""
+        if not settings.USE_FARMER_AGENT:
+            return
+        from app.assistant.state import (
+            close_state,
+            get_active_state,
+            start_state,
+            update_state,
+        )
+
+        state = get_active_state(session=session, user=user)
+        if state is None or state.flow != self.flow_id:
+            # A tap on a message from an earlier attempt: track it as its own attempt.
+            state = start_state(session=session, user=user, flow=self.flow_id, step=step)
+
+        update_state(session=session, state=state, step=step, data={**state.data, **(data or {})})
+        if close_as is not None:
+            close_state(session=session, state=state, status=close_as)
