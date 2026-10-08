@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 # Flows the agent may start. Each must be in app.flows.FLOW_REGISTRY.
 STARTABLE_FLOWS = ["register_animal", "my_animals", "record_death", "record_birth", "report_sickness"]
 
+LANGUAGES = ["english", "shona", "ndebele"]
+
 # WhatsApp rejects list message bodies longer than this.
 _MENU_BODY_LIMIT = 1024
 
@@ -62,6 +64,23 @@ TOOLS: list[FunctionToolParam] = [
     },
     {
         "type": "function",
+        "name": "set_language",
+        "description": (
+            "Change the language V-Vet uses with this farmer from now on. "
+            "Use it when the farmer asks to switch language, or sends just a language name such as 'Shona'."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "language": {"type": "string", "enum": LANGUAGES},
+            },
+            "required": ["language"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
+    {
+        "type": "function",
         "name": "submit_symptoms",
         "description": (
             "Pass the farmer's description of their sick animal's symptoms to V-Vet's sickness check, "
@@ -91,6 +110,8 @@ def run_tool(
         return _send_menu(session=session, user=user, message=arguments.get("message", ""))
     if name == "start_flow":
         return _start_flow(session=session, user=user, flow_name=arguments.get("flow", ""))
+    if name == "set_language":
+        return _set_language(session=session, user=user, language=arguments.get("language", ""))
     if name == "submit_symptoms":
         return _submit_symptoms(session=session, user=user, symptoms=arguments.get("symptoms", ""))
     logger.warning("[FarmerTools] Unknown tool %s", name)
@@ -149,3 +170,12 @@ def _submit_symptoms(*, session: Session, user: WhatsAppUser, symptoms: str) -> 
         return {"status": "error", "message": "The symptoms could not be processed."}
     save_message(session=session, user=user, role="assistant", content="[Symptoms submitted]")
     return {"status": "submitted", "ends_turn": True}
+
+
+def _set_language(*, session: Session, user: WhatsAppUser, language: str) -> dict[str, Any]:
+    if language not in LANGUAGES:
+        return {"status": "error", "message": f"V-Vet doesn't support {language}."}
+    user.preferred_language = language
+    session.add(user)
+    session.commit()
+    return {"status": "saved", "language": language}
