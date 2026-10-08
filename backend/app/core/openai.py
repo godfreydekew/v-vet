@@ -10,22 +10,14 @@ from openai import OpenAI
 from sqlmodel import Session
 
 from app.core.config import settings
-from app.models.whatsapp import WhatsAppMessage, WhatsAppUser
 from app.crud import create_user_for_new_whatsapp
+from app.models.whatsapp import WhatsAppMessage, WhatsAppUser
 
 logger = logging.getLogger(__name__)
 
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
-ONBOARDING_FIELDS = (
-    "full_name",
-    "animal_count",
-    "district",
-    "preferred_language",
-    "main_goal",
-)
-
-ONBOARDING_MODEL = getattr(settings, "OPENAI_MODEL", "gpt-5.6-luna") 
+ONBOARDING_MODEL = getattr(settings, "OPENAI_MODEL", "gpt-5.6-luna")
 FARMER_AGENT_MODEL = getattr(settings, "OPENAI_MODEL", "gpt-5.6-luna")
 
 
@@ -41,42 +33,6 @@ def _create_chat_completion(**kwargs: Any) -> Any:
             kwargs["reasoning_effort"] = "none"
             return client.chat.completions.create(**kwargs)
         raise
-
-def _apply_onboarding_fields(
-    *,
-    session: Session,
-    user: WhatsAppUser,
-    fields: dict[str, Any],
-) -> WhatsAppUser:
-    updated = False
-
-    for field_name, value in fields.items():
-        if field_name not in ONBOARDING_FIELDS:
-            continue
-        if value in (None, ""):
-            continue
-        if field_name == "animal_count" and value is not None:
-            value = int(value)
-        setattr(user, field_name, value)
-        updated = True
-
-    if updated:
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-
-    return user
-
-
-def save_onboarding_fields(
-    *,
-    session: Session,
-    user: WhatsAppUser,
-    fields: dict[str, Any],
-) -> WhatsAppUser:
-    """Persist one or more onboarding fields on the WhatsApp user."""
-    return _apply_onboarding_fields(session=session, user=user, fields=fields)
-
 
 def complete_onboarding(*, session: Session, user: WhatsAppUser) -> WhatsAppUser:
     """Mark the WhatsApp user as fully onboarded."""
@@ -636,7 +592,7 @@ def _execute_farmer_tool(
             from app.models.livestock_image import LivestockImageCreate
             from app.services.storage import move_pending_image_to_livestock
 
-            final_url = (   
+            final_url = (
                 move_pending_image_to_livestock(
                     pending_url=user.pending_animal_photo_url,
                     livestock_id=animal.id,

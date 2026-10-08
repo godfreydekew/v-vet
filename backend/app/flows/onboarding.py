@@ -1,13 +1,19 @@
 import logging
 
+from pydantic import ValidationError
 from sqlmodel import Session
 
 from app.flows.base import BaseFlow
+from app.models.flows import OnboardingForm
 from app.models.whatsapp import WhatsAppUser
 from app.services.whatsapp.client import send_flow_message, send_whatsapp_message
 from app.services.whatsapp.menu import send_main_menu
 
 logger = logging.getLogger(__name__)
+
+FORM_INVALID_MESSAGE = (
+    "Sorry, some details in the form were missing. Please reply *yes* to open the form again."
+)
 
 
 class OnboardingFlow(BaseFlow):
@@ -35,16 +41,24 @@ class OnboardingFlow(BaseFlow):
         return response.status_code == 200
 
     def handle(self, data: dict, user: WhatsAppUser, session: Session) -> str:
-        from app.core.openai import complete_onboarding, save_onboarding_fields
+        from app.core.openai import complete_onboarding
 
-        fields = {
-            "full_name": (data.get("full_name") or "").strip() or None,
-            "district": (data.get("district") or "").strip() or None,
-            "preferred_language": (data.get("preferred_language") or "").strip() or None,
-            "main_goal": (data.get("main_goal") or "").strip() or None,
-            "animal_count": data.get("animal_count"),
-        }
-        user = save_onboarding_fields(session=session, user=user, fields=fields)
+        try:
+            form = OnboardingForm.model_validate(data)
+        except ValidationError as error:
+            logger.warning("[OnboardingFlow] Invalid form from %s: %s", user.phone, error)
+            return FORM_INVALID_MESSAGE
+
+        user.full_name = form.full_name
+        user.district = form.district
+        user.preferred_language = form.preferred_language
+        user.main_goal = form.main_goal
+        if form.animal_count is not None:
+            user.animal_count = form.animal_count
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+
         user = complete_onboarding(session=session, user=user)
 
         name = user.full_name or "there"
