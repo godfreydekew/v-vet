@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 from sqlmodel import Session
 
-from app.models.conversation_state import ConversationState
+from app.core.config import settings
+from app.models.conversation_state import ConversationState, ConversationStatus
 from app.models.whatsapp import WhatsAppUser
 
 
@@ -19,6 +21,9 @@ class BaseFlow(ABC):
       - start()   : sends the interactive form to the farmer
       - handle()  : processes the submitted form data, returns a reply string
       - describe(): (optional) one line for the farmer agent about an active state row
+
+    Flows that track the farmer's progress call start_tracking() when they start
+    and record_step() at each later step.
     """
 
     flow_id: str
@@ -46,3 +51,42 @@ class BaseFlow(ABC):
         Flows that keep a conversation_state row override this with something clearer.
         """
         return f"In the {self.flow_id} flow, at step '{state.step}'."
+
+    def start_tracking(self, *, session: Session, user: WhatsAppUser, step: str) -> None:
+        """Begin a new attempt at this flow in conversation_state, replacing any active one."""
+        if not settings.USE_FARMER_AGENT:
+            return
+        from app.assistant.state import start_state
+
+        start_state(session=session, user=user, flow=self.flow_id, step=step)
+
+    def record_step(
+        self,
+        *,
+        session: Session,
+        user: WhatsAppUser,
+        step: str,
+        data: dict[str, Any] | None = None,
+        close_as: ConversationStatus | None = None,
+    ) -> None:
+        """Store the farmer's progress in this flow: the new step, plus data added to state.data.
+
+        close_as ends the attempt ("completed" or "failed"). If this flow isn't the active
+        one (e.g. a tap on an older message), a new attempt is started first.
+        """
+        if not settings.USE_FARMER_AGENT:
+            return
+        from app.assistant.state import (
+            close_state,
+            get_active_state,
+            start_state,
+            update_state,
+        )
+
+        state = get_active_state(session=session, user=user)
+        if state is None or state.flow != self.flow_id:
+            state = start_state(session=session, user=user, flow=self.flow_id, step=step)
+
+        update_state(session=session, state=state, step=step, data={**state.data, **(data or {})})
+        if close_as is not None:
+            close_state(session=session, state=state, status=close_as)
