@@ -4,7 +4,6 @@ from io import BytesIO
 from sqlmodel import Session
 
 from app.crud import (
-    authenticate,
     get_conversation_history,
     get_whatsapp_user_by_phone,
     save_whatsapp_message,
@@ -122,15 +121,6 @@ class WhatsAppConversationService:
         if new_lang:
             reply = self._handle_language_change(
                 user=user, language=new_lang, session=session
-            )
-            self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
-            return
-
-        sync_creds = self._detect_sync_command(message_body)
-        if sync_creds:
-            email, password = sync_creds
-            reply = self._handle_sync(
-                user=user, email=email, password=password, session=session
             )
             self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
             return
@@ -634,36 +624,6 @@ class WhatsAppConversationService:
         session.commit()
         return (
             f"Language updated to {language}. I'll respond in {language} from now on."
-        )
-
-    # ------------------------------------------------------------------
-    # Private — account sync (legacy manual link)
-    # ------------------------------------------------------------------
-
-    def _detect_sync_command(self, message_body: str) -> tuple[str, str] | None:
-        text = message_body.strip()
-        for prefix in ("sync ", "link "):
-            if text.lower().startswith(prefix):
-                parts = text[len(prefix) :].strip().split(None, 1)
-                if len(parts) == 2:
-                    return parts[0], parts[1]
-        return None
-
-    def _handle_sync(
-        self, *, user: WhatsAppUser, email: str, password: str, session: Session
-    ) -> str:
-        web_user = authenticate(session=session, email=email, password=password)
-        if web_user is None:
-            return "Wrong email or password. Please try again:\nsync your@email.com yourpassword"
-        user.linked_user_id = web_user.id
-        session.add(user)
-        session.commit()
-        name = web_user.full_name or email
-        return (
-            f"Account linked! Welcome, {name}.\n\n"
-            "You can now ask about your livestock. Try:\n"
-            "• *cows* — list your first 10 animals\n"
-            "• *cow <name>* — get full details on a specific animal"
         )
 
     # ------------------------------------------------------------------

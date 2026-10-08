@@ -365,7 +365,7 @@ def _execute_farmer_tool(
     if user.linked_user_id is None:
         return {
             "status": "error",
-            "message": "Account not linked. Ask the farmer to send: sync their@email.com theirpassword",
+            "message": "The farmer's account isn't fully set up yet. Ask them to finish setting up their account.",
         }
 
     if tool_name == "list_animals":
