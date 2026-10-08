@@ -6,19 +6,9 @@ from sqlmodel import Session
 from app.assistant.client import ChatMessage
 from app.assistant.guest.reply import answer_guest
 from app.assistant.guest.schemas import GuestReply
-from app.crud import (
-    create_whatsapp_user,
-    get_conversation_history,
-    save_whatsapp_message,
-)
-from app.models.whatsapp import (
-    IncomingMessage,
-    WhatsAppMessageCreate,
-    WhatsAppMessageRole,
-    WhatsAppUser,
-    WhatsAppUserCreate,
-)
-from app.services.whatsapp.client import send_reply_buttons, send_whatsapp_message
+from app.assistant.messaging import save_message, send_buttons
+from app.crud import create_whatsapp_user, get_conversation_history
+from app.models.whatsapp import IncomingMessage, WhatsAppUser, WhatsAppUserCreate
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +18,6 @@ _GET_STARTED_BUTTON = {"id": GET_STARTED_BUTTON_ID, "title": "Get started"}
 _YES_WORDS = {"yes", "yeah", "yep", "sure", "ok", "okay", "y", "ehe", "hongu", "yebo", "👍"}
 
 _HISTORY_LIMIT = 10
-
-_BUTTON_MESSAGE_BODY_LIMIT = 1024
 
 WELCOME_MESSAGE = (
     "👋 Welcome to V-Vet!\n\n"
@@ -73,7 +61,7 @@ def handle_guest_message(
         )
 
     history = _load_history(session=session, phone=message.phone)
-    _save_message(
+    save_message(
         session=session,
         user=user,
         role="farmer",
@@ -146,28 +134,13 @@ def _start_onboarding(*, session: Session, user: WhatsAppUser) -> None:
 
     flow = FLOW_REGISTRY.get(OnboardingFlow.flow_id)
     if isinstance(flow, OnboardingFlow) and flow.start(user.phone, user, session):
-        _save_message(session=session, user=user, role="assistant", content="[Onboarding form sent]")
+        save_message(session=session, user=user, role="assistant", content="[Onboarding form sent]")
         return
     _send_with_button(session=session, user=user, text=FORM_FAILED_MESSAGE)
 
 
 def _send_with_button(*, session: Session, user: WhatsAppUser, text: str) -> None:
-    body = text[:_BUTTON_MESSAGE_BODY_LIMIT]
-    _save_message(session=session, user=user, role="assistant", content=body)
-
-    response = send_reply_buttons(phone=user.phone, body=body, buttons=[_GET_STARTED_BUTTON])
-    if response.status_code == 200:
-        return
-
-    # Still reply if the button message is rejected, just without the button.
-    logger.warning(
-        "[Guest] Button message failed %s: %s, sending plain text",
-        response.status_code,
-        response.text,
-    )
-    fallback = send_whatsapp_message(phone=user.phone, text=body)
-    if fallback.status_code != 200:
-        logger.warning("[Guest] Send failed %s: %s", fallback.status_code, fallback.text)
+    send_buttons(session=session, user=user, text=text, buttons=[_GET_STARTED_BUTTON])
 
 
 def _load_history(*, session: Session, phone: str) -> list[ChatMessage]:
@@ -180,12 +153,3 @@ def _load_history(*, session: Session, phone: str) -> list[ChatMessage]:
             history.append({"role": "assistant", "content": past.content})
     return history
 
-
-def _save_message(
-    *, session: Session, user: WhatsAppUser, role: WhatsAppMessageRole, content: str
-) -> None:
-    save_whatsapp_message(
-        session=session,
-        user=user,
-        msg_in=WhatsAppMessageCreate(phone=user.phone, role=role, content=content),
-    )

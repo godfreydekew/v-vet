@@ -54,14 +54,15 @@ class Settings(BaseSettings):
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
-    
+
     GEMMA_BASE_URL: HttpUrl | None = None
     GEMMA_MODEL: str | None = None
     GEMMA_MAX_TOKENS: int = 2048
     GEMMA_API_KEY: str | None = None
     OPENAI_API_KEY: str | None = None
     OPENAI_MODEL: str = "gpt-5.6-luna"
-    
+    USE_FARMER_AGENT: bool = False
+
     WHATSAPP_APP_ID: str | None = None
     WHATSAPP_APP_SECRET: str | None = None
     WHATSAPP_BUSINESS_ACCOUNT_ID: str | None = None
@@ -78,7 +79,7 @@ class Settings(BaseSettings):
     FLOW_ID_PICK_DATE: str | None = None
     FLOW_ID_RECORD_BIRTH: str | None = None
     FLOW_ID_ONBOARDING: str | None = None
-    
+
     ELEVENLABS_API_KEY: str | None = None
 
     # Superbase S3 configuration
