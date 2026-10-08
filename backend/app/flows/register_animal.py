@@ -52,10 +52,7 @@ class RegisterAnimalFlow(BaseFlow):
             )
             return False
 
-        if settings.USE_FARMER_AGENT:
-            from app.assistant.state import start_state
-
-            start_state(session=session, user=user, flow=self.flow_id, step=STEP_FORM_SENT)
+        self.start_tracking(session=session, user=user, step=STEP_FORM_SENT)
         return True
 
     def handle(self, data: dict, user: WhatsAppUser, session: Session) -> str:

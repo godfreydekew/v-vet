@@ -11,7 +11,7 @@ from app.services.whatsapp.menu import send_main_menu
 logger = logging.getLogger(__name__)
 
 # Flows the agent may start. Each must be in app.flows.FLOW_REGISTRY.
-STARTABLE_FLOWS = ["register_animal", "my_animals", "record_death"]
+STARTABLE_FLOWS = ["register_animal", "my_animals", "record_death", "record_birth"]
 
 # WhatsApp rejects list message bodies longer than this.
 _MENU_BODY_LIMIT = 1024
@@ -44,7 +44,9 @@ TOOLS: list[FunctionToolParam] = [
             "Start a task for the farmer, exactly as if they tapped it in the menu. "
             "register_animal sends the animal registration form. "
             "my_animals sends a tappable list of the farmer's animals; tapping one shows its details and photo. "
-            "record_death starts recording an animal's death: the farmer picks the animal, the cause and the date."
+            "record_death starts recording an animal's death: the farmer picks the animal, the cause and the date. "
+            "record_birth starts recording a calf's birth: the farmer picks the mother cow, fills in "
+            "the birth details, then registers the calf."
         ),
         "parameters": {
             "type": "object",
