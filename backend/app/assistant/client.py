@@ -66,12 +66,7 @@ def generate_with_tools(
     run_tool: Callable[[str, dict[str, Any]], dict[str, Any]],
     model: str | None = None,
 ) -> str:
-    """Let the model call tools until it gives its final reply, and return that reply.
 
-    run_tool(name, arguments) does what the tool asks and returns a result the model
-    can read. Returns "" if the model's last answer has no text (e.g. a tool already
-    sent the farmer everything they need).
-    """
     chosen_model = model or settings.OPENAI_MODEL
     client = _get_client()
 
@@ -89,6 +84,7 @@ def generate_with_tools(
             break
 
         tool_outputs: ResponseInputParam = []
+        ends_turn = False
         for call in tool_calls:
             try:
                 arguments = json.loads(call.arguments or "{}")
@@ -96,6 +92,8 @@ def generate_with_tools(
                 arguments = {}
             logger.info("[AI] Tool call %s %s", call.name, arguments)
             result = run_tool(call.name, arguments)
+            if result.get("ends_turn"):
+                ends_turn = True
             tool_outputs.append(
                 {
                     "type": "function_call_output",
@@ -103,6 +101,9 @@ def generate_with_tools(
                     "output": json.dumps(result, default=str),
                 }
             )
+
+        if ends_turn:
+            return ""
 
         # Continue the same conversation on OpenAI's side with the tool results.
         response = client.responses.create(

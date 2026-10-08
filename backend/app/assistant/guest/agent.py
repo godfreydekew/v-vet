@@ -5,7 +5,6 @@ from sqlmodel import Session
 
 from app.assistant.guest.reply import answer_guest
 from app.assistant.guest.schemas import GuestReply
-from app.assistant.messages import IncomingMessage
 from app.assistant.schemas import ChatMessage
 from app.crud import (
     create_whatsapp_user,
@@ -13,6 +12,7 @@ from app.crud import (
     save_whatsapp_message,
 )
 from app.models.whatsapp import (
+    IncomingMessage,
     WhatsAppMessageCreate,
     WhatsAppMessageRole,
     WhatsAppUser,

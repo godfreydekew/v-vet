@@ -3,14 +3,13 @@ from io import BytesIO
 
 from sqlmodel import Session
 
-from app.assistant.messages import IncomingMessage
 from app.crud import (
     authenticate,
     get_conversation_history,
     get_whatsapp_user_by_phone,
     save_whatsapp_message,
 )
-from app.models.whatsapp import WhatsAppMessageCreate, WhatsAppUser
+from app.models.whatsapp import IncomingMessage, WhatsAppMessageCreate, WhatsAppUser
 from app.services.whatsapp.client import (
     download_media,
     mark_whatsapp_message_as_read,
@@ -509,6 +508,7 @@ class WhatsAppConversationService:
         self, *, session: Session, phone: str, message_obj: dict
     ) -> None:
         import json
+
         from app.flows import FLOW_REGISTRY
 
         self._mark_read(message_obj["id"])

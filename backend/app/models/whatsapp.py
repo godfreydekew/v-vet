@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Literal
 
-from sqlalchemy import Column, DateTime, JSON
+from sqlalchemy import JSON, Column, DateTime
 from sqlmodel import Field, SQLModel
 
 WhatsAppMessageRole = Literal["farmer", "assistant"]
@@ -133,3 +133,11 @@ class WhatsAppMessagePublic(WhatsAppMessageBase):
 class WhatsAppMessagesPublic(SQLModel):
     data: list[WhatsAppMessagePublic]
     count: int
+
+
+class IncomingMessage(SQLModel):
+    message_id: str
+    phone: str
+    message_type: str
+    text: str | None
+    button_id: str | None

@@ -6,6 +6,7 @@
 
 from sqlmodel import SQLModel
 
+from app.models.conversation_state import ConversationState
 from app.models.farm import (
     Farm,
     FarmBase,
@@ -31,19 +32,23 @@ from app.models.livestock import (
     LivestocksPublic,
     LivestockUpdate,
 )
-from app.models.livestock_parentage import LivestockParentage
 from app.models.livestock_image import (
     LivestockImage,
+    LivestockImageAnalyzeRequest,
     LivestockImageBase,
     LivestockImageCreate,
-    LivestockImageAnalyzeRequest,
     LivestockImagePublic,
     LivestockImagesPublic,
     LivestockImageUpdate,
 )
-from app.models.shared import Message, NewPassword, Token, TokenPayload, BroadcastEmailRequest
-from app.models.triage_session import TriageSession
-from app.models.conversation_state import ConversationState
+from app.models.livestock_parentage import LivestockParentage
+from app.models.shared import (
+    BroadcastEmailRequest,
+    Message,
+    NewPassword,
+    Token,
+    TokenPayload,
+)
 from app.models.treatment import (
     Treatment,
     TreatmentBase,
@@ -52,6 +57,7 @@ from app.models.treatment import (
     TreatmentsPublic,
     TreatmentUpdate,
 )
+from app.models.triage_session import TriageSession
 from app.models.user import (
     UpdatePassword,
     User,
@@ -95,6 +101,7 @@ from app.models.vet_response import (
     VetResponseUpdate,
 )
 from app.models.whatsapp import (
+    IncomingMessage,
     WhatsAppMessage,
     WhatsAppMessageCreate,
     WhatsAppMessagePublic,
@@ -192,6 +199,7 @@ __all__ = [
     "VetResponsePublic",
     "VetResponseUpdate",
     # WhatsApp
+    "IncomingMessage",
     "WhatsAppUser",
     "WhatsAppUserCreate",
     "WhatsAppUserPublic",

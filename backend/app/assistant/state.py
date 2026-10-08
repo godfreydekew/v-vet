@@ -1,10 +1,3 @@
-"""Reads and writes conversation_state: what an onboarded farmer is currently doing.
-
-A row is created when V-Vet starts a flow for the farmer (e.g. sends the
-register-animal form) and closed when the flow finishes or is replaced.
-This is the only module that touches the conversation_state table.
-"""
-
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any

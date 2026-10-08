@@ -1,8 +1,3 @@
-"""The farmer agent's tools: what each one is (for the model) and what it does.
-
-Every tool returns a small dict the model reads, e.g. {"status": "sent"}.
-"""
-
 import logging
 from typing import Any
 
@@ -93,4 +88,4 @@ def _start_flow(*, session: Session, user: WhatsAppUser, flow_name: str) -> dict
     if not flow.start(phone=user.phone, user=user, session=session):
         return {"status": "error", "message": "The form could not be sent. Suggest trying again from the menu."}
     save_message(session=session, user=user, role="assistant", content=f"[Flow started: {flow_name}]")
-    return {"status": "started", "flow": flow_name}
+    return {"status": "started", "flow": flow_name, "ends_turn": True}

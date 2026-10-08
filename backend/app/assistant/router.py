@@ -5,9 +5,8 @@ from sqlmodel import Session
 
 from app.assistant.farmer.agent import handle_farmer_message
 from app.assistant.guest.agent import handle_guest_message
-from app.assistant.messages import IncomingMessage
 from app.core.config import settings
-from app.models.whatsapp import WhatsAppUser
+from app.models.whatsapp import IncomingMessage, WhatsAppUser
 from app.services.whatsapp.client import mark_whatsapp_message_as_read
 
 logger = logging.getLogger(__name__)
