@@ -4,15 +4,30 @@
 import json
 import logging
 from collections.abc import Callable
-from typing import Any
+from typing import Any, TypeVar
 
 from openai import OpenAI
-from openai.types.responses import FunctionToolParam, ResponseInputParam
+from openai.types.responses import (
+    EasyInputMessageParam,
+    FunctionToolParam,
+    ResponseInputParam,
+)
+from pydantic import BaseModel
 
-from app.assistant.schemas import AIResponseError, ChatMessage, OutputT
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+# One message in a conversation sent to the model, e.g. {"role": "user", "content": "Hi"}.
+ChatMessage = EasyInputMessageParam
+
+# The Pydantic model a structured model call returns.
+OutputT = TypeVar("OutputT", bound=BaseModel)
+
+
+class AIResponseError(Exception):
+    """The model answered, but not with output we can use (e.g. it refused)."""
+
 
 _client: OpenAI | None = None
 

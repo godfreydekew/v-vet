@@ -4,11 +4,10 @@ from typing import Any
 
 from sqlmodel import Session
 
-from app.assistant.client import generate_with_tools
+from app.assistant.client import ChatMessage, generate_with_tools
 from app.assistant.farmer.context import build_farmer_context
 from app.assistant.farmer.tools import TOOLS, run_tool
 from app.assistant.messaging import save_message, send_text
-from app.assistant.schemas import ChatMessage
 from app.crud import get_conversation_history
 from app.models.whatsapp import IncomingMessage, WhatsAppUser
 

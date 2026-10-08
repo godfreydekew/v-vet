@@ -2,9 +2,8 @@
 
 from pathlib import Path
 
-from app.assistant.client import generate_structured
+from app.assistant.client import ChatMessage, generate_structured
 from app.assistant.guest.schemas import GuestReply
-from app.assistant.schemas import ChatMessage
 
 _GUEST_DIR = Path(__file__).parent
 _ASSISTANT_DIR = _GUEST_DIR.parent

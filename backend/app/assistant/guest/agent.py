@@ -3,9 +3,9 @@ import string
 
 from sqlmodel import Session
 
+from app.assistant.client import ChatMessage
 from app.assistant.guest.reply import answer_guest
 from app.assistant.guest.schemas import GuestReply
-from app.assistant.schemas import ChatMessage
 from app.crud import (
     create_whatsapp_user,
     get_conversation_history,
