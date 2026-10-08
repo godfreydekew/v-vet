@@ -1,12 +1,13 @@
 import logging
-from datetime import date, datetime, timezone
-from typing import Any
+from datetime import datetime, timezone
 
+from pydantic import ValidationError
 from sqlmodel import Session
 
 from app.core.config import settings
 from app.flows.base import BaseFlow
 from app.models.conversation_state import ConversationState
+from app.models.flows import RegisterAnimalForm
 from app.models.livestock import Livestock
 from app.models.whatsapp import WhatsAppMessageCreate, WhatsAppUser
 from app.services.whatsapp.client import send_flow_message
@@ -18,6 +19,9 @@ STEP_FORM_SENT = "form_sent"
 STEP_DONE = "done"
 
 SAVE_FAILED_MESSAGE = "Sorry, something went wrong saving your animal. Please try again from the *menu*."
+FORM_INVALID_MESSAGE = (
+    "Sorry, some details in the form weren't right. Please tap *Register Animal* in the *menu* to try again."
+)
 
 
 class RegisterAnimalFlow(BaseFlow):
@@ -60,24 +64,32 @@ class RegisterAnimalFlow(BaseFlow):
 
         logger.info("[RegisterAnimalFlow] Handling flow submission for %s: %s", user.phone, data)
 
+        try:
+            form = RegisterAnimalForm.model_validate(data)
+        except ValidationError as error:
+            logger.warning("[RegisterAnimalFlow] Invalid form from %s: %s", user.phone, error)
+            if settings.USE_FARMER_AGENT:
+                self._close_active_state_as_failed(session=session, user=user)
+            return FORM_INVALID_MESSAGE
+
         if settings.USE_FARMER_AGENT:
-            return self._register_from_form(data=data, user=user, session=session)
+            return self._register_from_form(form=form, user=user, session=session)
 
         fields = []
-        if data.get("name"):
-            fields.append(f"name: {data['name']}")
+        if form.name:
+            fields.append(f"name: {form.name}")
         else:
             fields.append("name: null (unnamed)")
-        if data.get("breed"):
-            fields.append(f"breed: {data['breed']}")
-        if data.get("gender"):
-            fields.append(f"gender: {data['gender']}")
-        if data.get("date_of_birth"):
-            fields.append(f"date of birth: {data['date_of_birth']}")
-        if data.get("weight_kg"):
-            fields.append(f"weight: {data['weight_kg']}kg")
+        if form.breed:
+            fields.append(f"breed: {form.breed}")
+        if form.gender:
+            fields.append(f"gender: {form.gender}")
+        if form.date_of_birth:
+            fields.append(f"date of birth: {form.date_of_birth.isoformat()}")
+        if form.weight_kg:
+            fields.append(f"weight: {form.weight_kg:g}kg")
 
-        photo = data.get("animal_photo")
+        photo = form.animal_photo
         if photo:
             logger.info("[RegisterAnimalFlow] Received animal photo(s) for %s: %s", user.phone, photo)
             try:
@@ -102,7 +114,7 @@ class RegisterAnimalFlow(BaseFlow):
         # Save the partial details to history, flag the user as mid-registration,
         # and ask for an age estimate. The next message goes through the farmer
         # agent which has the today-aware hint and will calculate a DOB.
-        if not data.get("date_of_birth"):
+        if form.date_of_birth is None:
             partial = "Register this animal — " + ", ".join(fields) if fields else "Register an animal."
             save_whatsapp_message(
                 session=session,
@@ -137,7 +149,14 @@ class RegisterAnimalFlow(BaseFlow):
             "and the farmer hasn't submitted it yet."
         )
 
-    def _register_from_form(self, *, data: dict[str, Any], user: WhatsAppUser, session: Session) -> str:
+    def _close_active_state_as_failed(self, *, session: Session, user: WhatsAppUser) -> None:
+        from app.assistant.state import close_state, get_active_state
+
+        state = get_active_state(session=session, user=user)
+        if state is not None and state.flow == self.flow_id:
+            close_state(session=session, state=state, status="failed")
+
+    def _register_from_form(self, *, form: RegisterAnimalForm, user: WhatsAppUser, session: Session) -> str:
         """Save the animal from the submitted form and close the farmer's register_animal state."""
         from app.assistant.state import (
             close_state,
@@ -155,23 +174,16 @@ class RegisterAnimalFlow(BaseFlow):
             # A form submitted from an older message: record it as its own attempt.
             state = start_state(session=session, user=user, flow=self.flow_id, step=STEP_FORM_SENT)
 
-        # The form sends every field as text, with "" for anything left empty.
-        name = data.get("name") or None
-        breed = data.get("breed") or None
-        gender = data.get("gender") or None
-        weight_kg = float(data["weight_kg"]) if data.get("weight_kg") else None
-        date_of_birth = date.fromisoformat(data["date_of_birth"]) if data.get("date_of_birth") else None
-
         try:
             animal = create_livestock_from_whatsapp(
                 session=session,
                 user_id=user.linked_user_id,
                 district=user.district,
-                name=name,
-                gender=gender,
-                breed=breed,
-                weight_kg=weight_kg,
-                date_of_birth=date_of_birth,
+                name=form.name,
+                gender=form.gender,
+                breed=form.breed,
+                weight_kg=form.weight_kg,
+                date_of_birth=form.date_of_birth,
             )
         except Exception:
             logger.exception("[RegisterAnimalFlow] Saving the animal failed for %s", user.phone)
@@ -181,7 +193,7 @@ class RegisterAnimalFlow(BaseFlow):
 
         # The form only sends a WhatsApp reference to the photo: download it, store it,
         # and link it to the animal. A photo problem must not fail the registration.
-        photo_url = _upload_photo(data.get("animal_photo"), phone=user.phone)
+        photo_url = _upload_photo(form.animal_photo, phone=user.phone)
         if photo_url:
             try:
                 _attach_photo(session=session, animal=animal, photo_url=photo_url)
@@ -189,14 +201,8 @@ class RegisterAnimalFlow(BaseFlow):
                 logger.exception("[RegisterAnimalFlow] Attaching the photo failed for %s", animal.id)
                 session.rollback()
 
-        submitted = {
-            "name": name,
-            "breed": breed,
-            "gender": gender,
-            "weight_kg": weight_kg,
-            "date_of_birth": date_of_birth.isoformat() if date_of_birth else None,
-            "livestock_id": str(animal.id),
-        }
+        submitted = form.model_dump(mode="json", exclude={"animal_photo"})
+        submitted["livestock_id"] = str(animal.id)
         update_state(session=session, state=state, step=STEP_DONE, data=submitted)
         close_state(session=session, state=state, status="completed")
         return _confirmation_message(animal)
