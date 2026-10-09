@@ -29,7 +29,7 @@ _CAUSE_OPTIONS = [
 ]
 _CAUSE_LABELS = dict(_CAUSE_OPTIONS)
 
-# Steps stored in conversation_state when USE_FARMER_AGENT is on.
+# Steps stored in conversation_state.
 STEP_PICK_ANIMAL = "pick_animal"
 STEP_PICK_CAUSE = "pick_cause"
 STEP_PICK_DATE = "pick_date"

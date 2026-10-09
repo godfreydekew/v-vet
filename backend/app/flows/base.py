@@ -3,7 +3,6 @@ from typing import Any
 
 from sqlmodel import Session
 
-from app.core.config import settings
 from app.models.conversation_state import ConversationState, ConversationStatus
 from app.models.whatsapp import WhatsAppUser
 
@@ -54,8 +53,6 @@ class BaseFlow(ABC):
 
     def start_tracking(self, *, session: Session, user: WhatsAppUser, step: str) -> None:
         """Begin a new attempt at this flow in conversation_state, replacing any active one."""
-        if not settings.USE_FARMER_AGENT:
-            return
         from app.assistant.state import start_state
 
         start_state(session=session, user=user, flow=self.flow_id, step=step)
@@ -74,8 +71,6 @@ class BaseFlow(ABC):
         close_as ends the attempt ("completed" or "failed"). If this flow isn't the active
         one (e.g. a tap on an older message), a new attempt is started first.
         """
-        if not settings.USE_FARMER_AGENT:
-            return
         from app.assistant.state import (
             close_state,
             get_active_state,

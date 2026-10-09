@@ -4,7 +4,6 @@ from io import BytesIO
 from sqlmodel import Session
 
 from app.crud import (
-    get_conversation_history,
     get_whatsapp_user_by_phone,
     save_whatsapp_message,
 )
@@ -14,63 +13,24 @@ from app.services.whatsapp.client import (
     mark_whatsapp_message_as_read,
     send_whatsapp_message,
 )
-from app.services.whatsapp.menu import send_main_menu
 from app.services.whatsapp.transcription import convert_speech_to_text
 
 logger = logging.getLogger(__name__)
-
-SUPPORTED_LANGUAGES = {"english", "shona", "ndebele"}
 
 # ---------------------------------------------------------------------------
 # Intent menu
 # ---------------------------------------------------------------------------
 
-# Row IDs returned by WhatsApp when a farmer taps a menu item.
-# These become the message_body in the pipeline, so routing is a dict lookup.
+# Row IDs returned by WhatsApp when a farmer taps a main-menu item. Each is a flow in FLOW_REGISTRY.
 INTENT_IDS: set[str] = {
     "register_animal",
     "record_birth",
     "record_death",
-    "log_vaccination",
-    "log_dipping",
-    "log_deworming",
-    "log_bull_soundness",
-    "manage_weaning",
     "report_sickness",
-    "request_vet",
     "my_animals",
-    "weekly_summary",
 }
 
-# Words that trigger the main menu instead of the farmer agent.
-_MENU_TRIGGERS: set[str] = {"menu", "help", "hi", "hello", "start", "options"}
-
-
-_ADD_ANIMAL_TRIGGERS = (
-    "add animal",
-    "add cow",
-    "add cattle",
-    "add goat",
-    "add sheep",
-    "add pig",
-    "add poultry",
-    "new animal",
-    "register animal",
-)
-
-# Free-text phrasings that mean the same thing as tapping "My Animals" on the
-# menu — checked before the agent so this can't misfire into the wrong tool
-# (e.g. report_sickness), same reasoning as the menu-tap fix.
-_MY_ANIMALS_TRIGGERS = (
-    "my animals",
-    "my herd",
-    "view my animals",
-    "view my herd",
-    "show my animals",
-    "show my herd",
-    "list my animals",
-    "my livestock",
-)
+INTENT_FAILED_MESSAGE = "Sorry, I couldn't start that just now. Please try again from the *menu*."
 
 
 class WhatsAppConversationService:
@@ -87,8 +47,6 @@ class WhatsAppConversationService:
             )
             return
 
-        # Imported here, not at the top: app.assistant imports the WhatsApp
-        # client, whose package imports this module.
         from app.assistant.router import route_message
 
         message_body = self._extract_message_body(message_obj)
@@ -101,7 +59,8 @@ class WhatsAppConversationService:
         )
         if route_message(session=session, user=user, message=incoming):
             return
-        # route_message only hands back onboarded farmers, so user exists here.
+        # route_message only hands back onboarded farmers' taps (typed and spoken
+        # messages go to the farmer agent), so user exists and message_body is a tap id.
         assert user is not None
 
         if message_body is None:
@@ -116,44 +75,6 @@ class WhatsAppConversationService:
                 phone=phone, role="farmer", content=message_body
             ),
         )
-
-        new_lang = self._detect_language_change(message_body)
-        if new_lang:
-            reply = self._handle_language_change(
-                user=user, language=new_lang, session=session
-            )
-            self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
-            return
-
-        # Show menu on greetings / explicit "menu" request.
-        if message_body.strip().lower() in _MENU_TRIGGERS:
-            send_main_menu(phone=phone)
-            self._persist_assistant(
-                session=session,
-                user=user,
-                phone=phone,
-                content="[Menu sent]",
-            )
-            return
-
-        # Farmer picked a "/" command from WhatsApp's native command picker
-        if message_body.startswith("/"):
-            message_body = message_body.removeprefix("/").strip().lower()
-
-        # Farmer typed "my animals" / "show my herd" / etc. instead of tapping
-        # the menu — route deterministically to the same flow the menu item
-        # uses, rather than letting the agent decide which tool to call.
-        if any(trigger in message_body.strip().lower() for trigger in _MY_ANIMALS_TRIGGERS):
-            reply = self._handle_intent(
-                intent="my_animals", user=user, session=session, phone=phone
-            )
-            if reply:
-                self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
-            else:
-                self._persist_assistant(
-                    session=session, user=user, phone=phone, content="[Form/List sent: my_animals]"
-                )
-            return
 
         # Farmer tapped an animal in the report_sickness interactive list.
         if message_body.startswith("select_animal_"):
@@ -354,38 +275,7 @@ class WhatsAppConversationService:
                 )
             return
 
-        # An animal is pinned (tapped from the report_sickness list) and this
-        # is the farmer's first free-text reply since then — that's the
-        # "describe the problem" step. Hand off to the deterministic
-        # questionnaire instead of the general agent; it takes over from here.
-        if user.active_sickness_animal_id is not None:
-            from app.flows.report_sickness_context import TriageContextFlow
-
-            flow = TriageContextFlow()
-            sent = flow.start(
-                phone=phone,
-                user=user,
-                session=session,
-                livestock_id=user.active_sickness_animal_id,
-                problem_description=message_body,
-            )
-            if sent:
-                self._persist_assistant(
-                    session=session, user=user, phone=phone, content="[Context questionnaire started]"
-                )
-                return
-            # If the interactive send failed for some reason, fall through to
-            # the agent rather than silently dropping the farmer's message.
-
-        reply = self._handle_farmer_agent(
-            user=user, message_body=message_body, session=session
-        )
-        if reply:
-            self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
-        else:
-            self._persist_assistant(
-                session=session, user=user, phone=phone, content="[Interactive message sent by agent tool]"
-            )
+        logger.info("[WhatsApp] Unhandled tap %r from %s", message_body, phone)
 
     # ------------------------------------------------------------------
     # Private — message extraction
@@ -572,77 +462,10 @@ class WhatsAppConversationService:
 
         Flows that launch a WhatsApp Form call flow.start() and return None
         (the reply is the form itself, not a text message).
-        Unimplemented intents fall back to the farmer agent.
         """
         from app.flows import FLOW_REGISTRY
 
-        # If the intent maps to a registered Flow, try to send the form.
-        # If the form can't be sent (no flow ID configured, Meta API error),
-        # fall through to the farmer agent which guides them step by step.
         flow = FLOW_REGISTRY.get(intent)
         if flow and flow.start(phone=phone, user=user, session=session):
             return None  # form/list sent — no additional text reply needed
-
-        # Fallback: farmer agent handles anything not yet a dedicated flow.
-        intent_labels = {
-            "record_birth": "record a birth",
-            "record_death": "record a death",
-            "log_vaccination": "log a vaccination",
-            "log_dipping": "log a dipping treatment",
-            "log_deworming": "log a deworming treatment",
-            "log_bull_soundness": "log a bull soundness evaluation",
-            "manage_weaning": "manage weaning",
-            "report_sickness": "report a sick animal",
-            "request_vet": "request vet help",
-            "my_animals": "list my animals",
-            "weekly_summary": "get a weekly summary",
-        }
-        label = intent_labels.get(intent, intent)
-        return self._handle_farmer_agent(
-            user=user,
-            message_body=f"I want to {label}",
-            session=session,
-        )
-
-    # ------------------------------------------------------------------
-    # Private — language change
-    # ------------------------------------------------------------------
-
-    def _detect_language_change(self, message_body: str) -> str | None:
-        text = message_body.strip().lower().rstrip(".")
-        for prefix in ("language:", "language"):
-            if text.startswith(prefix):
-                text = text[len(prefix) :].strip()
-                break
-        return text.capitalize() if text in SUPPORTED_LANGUAGES else None
-
-    def _handle_language_change(
-        self, *, user: WhatsAppUser, language: str, session: Session
-    ) -> str:
-        user.preferred_language = language
-        session.add(user)
-        session.commit()
-        return (
-            f"Language updated to {language}. I'll respond in {language} from now on."
-        )
-
-    # ------------------------------------------------------------------
-    # Private — farmer agent
-    # ------------------------------------------------------------------
-
-    def _handle_farmer_agent(
-        self, *, user: WhatsAppUser, message_body: str, session: Session
-    ) -> str:
-        from app.core import openai as openai_helpers
-
-        if not user.is_adding_animal:
-            lower = message_body.strip().lower()
-            if any(trigger in lower for trigger in _ADD_ANIMAL_TRIGGERS):
-                user.is_adding_animal = True
-                session.add(user)
-                session.commit()
-
-        history = get_conversation_history(session=session, phone=user.phone, limit=20)
-        return openai_helpers.run_farmer_agent(
-            user=user, history=history, session=session
-        )
+        return INTENT_FAILED_MESSAGE

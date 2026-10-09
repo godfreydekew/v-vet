@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 _SEX_LABELS = {"female": "Female", "male": "Male", "unknown": "Unknown"}
 
-# Steps stored in conversation_state when USE_FARMER_AGENT is on.
+# Steps stored in conversation_state.
 STEP_PICK_MOTHER = "pick_mother"
 STEP_CALVING_DETAILS = "calving_details"
 STEP_CALF_DETAILS = "calf_details"
@@ -33,7 +33,7 @@ class RecordBirthFlow(BaseFlow):
        of to RegisterAnimalFlow) — the calf's own details: name,
        breed, gender, weight. A calf is just a new animal, linked to a dam.
 
-    With USE_FARMER_AGENT on, each step is also recorded in conversation_state
+    Each step is also recorded in conversation_state
     (pick_mother → calving_details → calf_details → done) so the farmer agent
     knows where the farmer is.
     """

@@ -76,10 +76,6 @@ def record_sickness_report(
         )
         session.add(vr)
 
-    if user.active_sickness_animal_id is not None:
-        user.active_sickness_animal_id = None
-        session.add(user)
-
     session.commit()
 
     return SicknessReportResult(

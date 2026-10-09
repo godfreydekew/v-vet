@@ -1,6 +1,5 @@
 import logging
 import uuid
-from datetime import datetime, timezone
 
 from sqlmodel import Session
 
@@ -12,7 +11,7 @@ from app.services.whatsapp.client import send_whatsapp_message
 
 logger = logging.getLogger(__name__)
 
-# Steps stored in conversation_state when USE_FARMER_AGENT is on.
+# Steps stored in conversation_state.
 STEP_PICK_ANIMAL = "pick_animal"
 STEP_DESCRIBE_SYMPTOMS = "describe_symptoms"
 STEP_QUESTIONS = "questions"
@@ -20,13 +19,6 @@ STEP_DONE = "done"
 
 
 class ReportSicknessFlow(BaseFlow):
-    """
-    Sends the farmer's registered animals as a WhatsApp interactive list.
-    When the farmer taps one, handle_selection() pins the animal on the
-    WhatsAppUser record so the farmer agent knows which animal the
-    follow-up symptom description refers to, instead of re-inferring it
-    from chat history.
-    """
 
     flow_id = "report_sickness"
 
@@ -98,12 +90,6 @@ class ReportSicknessFlow(BaseFlow):
         if animal is None:
             return "Sorry, I couldn't find that animal. Please send 'menu' and try again."
 
-        user.active_sickness_animal_id = animal.id
-        user.active_sickness_updated_at = datetime.now(timezone.utc)
-        user.active_sickness_reminded_at = None
-        session.add(user)
-        session.commit()
-
         animal_name = animal.name or animal.tag_number
         self.record_step(
             session=session,
@@ -115,6 +101,32 @@ class ReportSicknessFlow(BaseFlow):
             f"Thank you. I have selected **{animal_name}**. \n\n"
             "Please describe what symptoms or health problems you have noticed (e.g. not eating, coughing, limping)"
         )
+
+    def submit_symptoms(self, *, session: Session, user: WhatsAppUser, symptoms: str) -> str | None:
+        """Hand the farmer's description to the sickness check, once the sick animal is chosen.
+
+        The sickness check sends its own message: urgent advice, or the first follow-up question.
+        Returns None when that happened, otherwise the reason it couldn't.
+        """
+        from app.assistant.state import get_active_state
+        from app.flows.report_sickness_context import TriageContextFlow
+
+        state = get_active_state(session=session, user=user)
+        if state is None or state.flow != self.flow_id or state.step != STEP_DESCRIBE_SYMPTOMS:
+            return "V-Vet isn't waiting for symptoms right now."
+        if not symptoms.strip():
+            return "The symptoms were empty."
+
+        sent = TriageContextFlow().start(
+            phone=user.phone,
+            user=user,
+            session=session,
+            livestock_id=uuid.UUID(state.data["animal_id"]),
+            problem_description=symptoms.strip(),
+        )
+        if not sent:
+            return "The symptoms could not be processed."
+        return None
 
     def describe(self, state: ConversationState) -> str:
         animal_name = state.data.get("animal_name", "the animal")

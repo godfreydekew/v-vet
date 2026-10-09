@@ -142,32 +142,11 @@ def _start_flow(*, session: Session, user: WhatsAppUser, flow_name: str) -> dict
 
 
 def _submit_symptoms(*, session: Session, user: WhatsAppUser, symptoms: str) -> dict[str, Any]:
-    from app.assistant.state import get_active_state
-    from app.flows.report_sickness import STEP_DESCRIBE_SYMPTOMS
-    from app.flows.report_sickness_context import TriageContextFlow
+    from app.flows.report_sickness import ReportSicknessFlow
 
-    state = get_active_state(session=session, user=user)
-    sick_animal_id = user.active_sickness_animal_id
-    if (
-        state is None
-        or state.flow != "report_sickness"
-        or state.step != STEP_DESCRIBE_SYMPTOMS
-        or sick_animal_id is None
-    ):
-        return {"status": "error", "message": "V-Vet isn't waiting for symptoms right now."}
-    if not symptoms.strip():
-        return {"status": "error", "message": "The symptoms were empty."}
-
-    # The sickness check sends its own message: urgent advice or the first follow-up question.
-    sent = TriageContextFlow().start(
-        phone=user.phone,
-        user=user,
-        session=session,
-        livestock_id=sick_animal_id,
-        problem_description=symptoms.strip(),
-    )
-    if not sent:
-        return {"status": "error", "message": "The symptoms could not be processed."}
+    problem = ReportSicknessFlow().submit_symptoms(session=session, user=user, symptoms=symptoms)
+    if problem is not None:
+        return {"status": "error", "message": problem}
     save_message(session=session, user=user, role="assistant", content="[Symptoms submitted]")
     return {"status": "submitted", "ends_turn": True}
 

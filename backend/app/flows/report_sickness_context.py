@@ -37,7 +37,7 @@ class TriageContextFlow:
     ) -> bool:
         self._discard_open_sessions(user=user, session=session)
 
-        from app.core.openai import detect_danger_flags
+        from app.assistant.farmer.danger_flags import detect_danger_flags
 
         try:
             danger_flags = detect_danger_flags(symptoms=problem_description)

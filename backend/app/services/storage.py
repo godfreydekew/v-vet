@@ -1,7 +1,6 @@
 import logging
 import uuid
 from typing import Any
-import httpx
 
 import boto3
 
@@ -104,39 +103,3 @@ def delete_livestock_image_by_url(image_url: str) -> bool:
     except Exception as err:
         logger.exception("[Storage] Supabase S3 delete failed for key %s: %s", key, err)
         return False
-
-def move_pending_image_to_livestock(
-    pending_url: str,
-    livestock_id: str | uuid.UUID,
-) -> str | None:
-    """
-    Download pending image bytes from pending_url, upload them to livestock/{livestock_id}/,
-    and delete the old pending file.
-    """
-    if not pending_url or "livestock/pending/" not in pending_url:
-        return pending_url
-    try:
-        # 1. Download image bytes from the pending public URL
-        response = httpx.get(pending_url, timeout=10.0)
-        if response.status_code != 200:
-            logger.error("[Storage] Failed to download pending image: status %s", response.status_code)
-            return pending_url
-        image_bytes = response.content
-        content_type = response.headers.get("content-type", "image/jpeg")
-        # 2. Upload to the final livestock path (livestock/{livestock_id}/...)
-        new_url = upload_livestock_image_bytes(
-            image_bytes=image_bytes,
-            filename="photo.jpg",
-            content_type=content_type,
-            livestock_id=str(livestock_id),
-        )
-        # 3. Clean up the pending file
-        if new_url:
-            delete_livestock_image_by_url(pending_url)
-            return new_url
-        return pending_url
-    except Exception as err:
-        logger.exception("[Storage] Failed to transfer pending image to livestock %s: %s", livestock_id, err)
-        return pending_url
-
-

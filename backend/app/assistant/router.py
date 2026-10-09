@@ -5,7 +5,6 @@ from sqlmodel import Session
 
 from app.assistant.farmer.agent import handle_farmer_message
 from app.assistant.guest.agent import handle_guest_message
-from app.core.config import settings
 from app.models.whatsapp import IncomingMessage, WhatsAppUser
 from app.services.whatsapp.client import mark_whatsapp_message_as_read
 
@@ -26,7 +25,7 @@ def route_message(
         return True
 
     is_typed_or_spoken = message.text is not None and message.button_id is None
-    if settings.USE_FARMER_AGENT and is_typed_or_spoken:
+    if is_typed_or_spoken:
         _mark_read(message.message_id)
         handle_farmer_message(session=session, user=user, message=message)
         return True
