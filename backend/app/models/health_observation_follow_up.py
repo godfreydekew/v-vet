@@ -25,13 +25,13 @@ class HealthObservationFollowUp(SQLModel, table=True):
     whatsapp_user_id: uuid.UUID = Field(foreign_key="whatsapp_user.id", index=True, ondelete="CASCADE")
 
     description: str = Field(max_length=500)
-    due_at: datetime = Field(sa_column=Column(DateTime(timezone=True)))
+    due_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
     status: str = Field(default="pending", max_length=20)  # pending | sent | resolved
     outcome: str | None = Field(default=None, max_length=20)  # better | same | worse
 
     created_at: datetime = Field(
         default_factory=_utcnow,
-        sa_column=Column(DateTime(timezone=True)),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
     )
     sent_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     resolved_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))

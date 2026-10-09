@@ -159,7 +159,6 @@ class TriageContextFlow:
         answers = dict(triage_session.answers)
         answers[question_id] = value
         triage_session.answers = answers
-        triage_session.reminded_at = None
 
         # Commit here rather than leaving it to the caller: each WhatsApp tap
         # is a separate webhook request with its own DB session, so an answer
