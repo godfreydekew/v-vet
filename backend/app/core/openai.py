@@ -34,16 +34,6 @@ def _create_chat_completion(**kwargs: Any) -> Any:
             return client.chat.completions.create(**kwargs)
         raise
 
-def complete_onboarding(*, session: Session, user: WhatsAppUser) -> WhatsAppUser:
-    """Mark the WhatsApp user as fully onboarded."""
-    new_user = create_user_for_new_whatsapp(session=session, whatsapp_user=user)
-    user.linked_user_id = new_user.id
-    user.is_fully_onboarded = True
-    session.add(user)
-    session.commit()
-    session.refresh(user)
-    return user
-
 def _build_herd_context(*, user: WhatsAppUser, session: Session) -> str:
     """
     Compact, standing summary of the farmer's herd — name, gender,

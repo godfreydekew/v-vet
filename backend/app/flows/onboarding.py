@@ -41,7 +41,7 @@ class OnboardingFlow(BaseFlow):
         return response.status_code == 200
 
     def handle(self, data: dict, user: WhatsAppUser, session: Session) -> str:
-        from app.core.openai import complete_onboarding
+        from app.crud import complete_onboarding
 
         try:
             form = OnboardingForm.model_validate(data)

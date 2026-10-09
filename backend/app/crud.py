@@ -429,6 +429,16 @@ def create_whatsapp_user(
     session.refresh(user)
     return user
 
+def complete_onboarding(*, session: Session, user: WhatsAppUser) -> WhatsAppUser:
+    """Mark the WhatsApp user as fully onboarded."""
+    new_user = create_user_for_new_whatsapp(session=session, whatsapp_user=user)
+    user.linked_user_id = new_user.id
+    user.is_fully_onboarded = True
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
 
 def save_whatsapp_message(
     *, session: Session, user: WhatsAppUser, msg_in: WhatsAppMessageCreate
