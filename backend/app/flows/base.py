@@ -51,6 +51,15 @@ class BaseFlow(ABC):
         """
         return f"In the {self.flow_id} flow, at step '{state.step}'."
 
+    def active_state(self, *, session: Session, user: WhatsAppUser) -> ConversationState | None:
+        """The farmer's active attempt at this flow, or None if they aren't in it."""
+        from app.assistant.state import get_active_state
+
+        state = get_active_state(session=session, user=user)
+        if state is None or state.flow != self.flow_id:
+            return None
+        return state
+
     def start_tracking(self, *, session: Session, user: WhatsAppUser, step: str) -> None:
         """Begin a new attempt at this flow in conversation_state, replacing any active one."""
         from app.assistant.state import start_state
