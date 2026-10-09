@@ -1,17 +1,11 @@
-"""Decides which part of V-Vet handles an incoming WhatsApp message.
-
-For now there are two paths:
-- farmers who haven't finished onboarding go to the guest agent (app.assistant.guest)
-- onboarded farmers stay in the existing WhatsApp pipeline
-"""
 
 import logging
 
 from sqlmodel import Session
 
+from app.assistant.farmer.agent import handle_farmer_message
 from app.assistant.guest.agent import handle_guest_message
-from app.assistant.messages import IncomingMessage
-from app.models.whatsapp import WhatsAppUser
+from app.models.whatsapp import IncomingMessage, WhatsAppUser
 from app.services.whatsapp.client import mark_whatsapp_message_as_read
 
 logger = logging.getLogger(__name__)
@@ -24,14 +18,19 @@ def route_message(
 
     Returns False when the existing pipeline should handle it instead.
     """
-    is_guest = user is None or not user.is_fully_onboarded
-    if not is_guest:
-        return False
+    if user is None or not user.is_fully_onboarded:
+        # Marks the message read and shows the typing indicator while the reply is written.
+        _mark_read(message.message_id)
+        handle_guest_message(session=session, user=user, message=message)
+        return True
 
-    # Marks the message read and shows the typing indicator while the reply is written.
-    _mark_read(message.message_id)
-    handle_guest_message(session=session, user=user, message=message)
-    return True
+    is_typed_or_spoken = message.text is not None and message.button_id is None
+    if is_typed_or_spoken:
+        _mark_read(message.message_id)
+        handle_farmer_message(session=session, user=user, message=message)
+        return True
+
+    return False
 
 
 def _mark_read(message_id: str) -> None:

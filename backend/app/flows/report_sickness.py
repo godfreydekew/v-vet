@@ -1,45 +1,36 @@
 import logging
 import uuid
-from datetime import datetime, timezone
 
 from sqlmodel import Session
 
 from app.flows.animal_list import send_interactive_animal_list
 from app.flows.base import BaseFlow
+from app.models.conversation_state import ConversationState
 from app.models.whatsapp import WhatsAppUser
 from app.services.whatsapp.client import send_whatsapp_message
 
 logger = logging.getLogger(__name__)
 
+# Steps stored in conversation_state.
+STEP_PICK_ANIMAL = "pick_animal"
+STEP_DESCRIBE_SYMPTOMS = "describe_symptoms"
+STEP_QUESTIONS = "questions"
+STEP_DONE = "done"
+
 
 class ReportSicknessFlow(BaseFlow):
-    """
-    Sends the farmer's registered animals as a WhatsApp interactive list.
-    When the farmer taps one, handle_selection() pins the animal on the
-    WhatsAppUser record so the farmer agent knows which animal the
-    follow-up symptom description refers to, instead of re-inferring it
-    from chat history.
-
-    Herds under SMALL_HERD_THRESHOLD get the list immediately — it fits on
-    one page, so tapping is strictly easier than typing a name. Larger herds
-    are asked for a name/tag instead by default (paging through a long list
-    is worse UX than typing); the farmer agent falls back to sending the list
-    anyway if they say they don't know which animal it is.
-
-    The actual list-sending/pagination is shared with MyAnimalsFlow via
-    app.flows.animal_list.send_interactive_animal_list — this class only
-    owns the sickness-specific bits: the size-aware entry point and pinning
-    the tapped animal.
-
-    This flow does not use native WhatsApp Flow forms (nfm_reply), so
-    handle() is never called by the pipeline's form-submission path.
-    """
 
     flow_id = "report_sickness"
 
     SMALL_HERD_THRESHOLD = 10
 
     def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
+        sent = self._send_first_step(phone=phone, user=user, session=session)
+        if sent:
+            self.start_tracking(session=session, user=user, step=STEP_PICK_ANIMAL)
+        return sent
+
+    def _send_first_step(self, *, phone: str, user: WhatsAppUser, session: Session) -> bool:
         from app.crud import get_livestock_for_user
         from app.flows.animal_list import MAX_ANIMALS
 
@@ -99,14 +90,57 @@ class ReportSicknessFlow(BaseFlow):
         if animal is None:
             return "Sorry, I couldn't find that animal. Please send 'menu' and try again."
 
-        user.active_sickness_animal_id = animal.id
-        user.active_sickness_updated_at = datetime.now(timezone.utc)
-        user.active_sickness_reminded_at = None
-        session.add(user)
-        session.commit()
-
         animal_name = animal.name or animal.tag_number
+        self.record_step(
+            session=session,
+            user=user,
+            step=STEP_DESCRIBE_SYMPTOMS,
+            data={"animal_id": str(animal.id), "animal_name": animal_name},
+        )
         return (
             f"Thank you. I have selected **{animal_name}**. \n\n"
             "Please describe what symptoms or health problems you have noticed (e.g. not eating, coughing, limping)"
+        )
+
+    def submit_symptoms(self, *, session: Session, user: WhatsAppUser, symptoms: str) -> str | None:
+        """Hand the farmer's description to the sickness check, once the sick animal is chosen.
+
+        The sickness check sends its own message: urgent advice, or the first follow-up question.
+        Returns None when that happened, otherwise the reason it couldn't.
+        """
+        from app.assistant.state import get_active_state
+        from app.flows.report_sickness_context import TriageContextFlow
+
+        state = get_active_state(session=session, user=user)
+        if state is None or state.flow != self.flow_id or state.step != STEP_DESCRIBE_SYMPTOMS:
+            return "V-Vet isn't waiting for symptoms right now."
+        if not symptoms.strip():
+            return "The symptoms were empty."
+
+        sent = TriageContextFlow().start(
+            phone=user.phone,
+            user=user,
+            session=session,
+            livestock_id=uuid.UUID(state.data["animal_id"]),
+            problem_description=symptoms.strip(),
+        )
+        if not sent:
+            return "The symptoms could not be processed."
+        return None
+
+    def describe(self, state: ConversationState) -> str:
+        animal_name = state.data.get("animal_name", "the animal")
+        if state.step == STEP_DESCRIBE_SYMPTOMS:
+            return (
+                f"Reporting a sick animal ({animal_name}): V-Vet asked the farmer to describe the "
+                "symptoms and is waiting for their description."
+            )
+        if state.step == STEP_QUESTIONS:
+            return (
+                f"Reporting a sick animal ({animal_name}): the symptoms are saved and the farmer is "
+                "answering V-Vet's follow-up questions by tapping the options on the latest question."
+            )
+        return (
+            "Reporting a sick animal: V-Vet asked the farmer which animal is sick, "
+            "and they haven't chosen yet."
         )

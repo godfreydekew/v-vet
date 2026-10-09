@@ -1,9 +1,18 @@
 import uuid
+
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from app.core.config import settings
-from app.models import Farm, Livestock, HealthObservation, Treatment, Vaccination, VetRequest, WhatsAppUser, User
+from app.models import (
+    Farm,
+    HealthObservation,
+    Livestock,
+    Treatment,
+    User,
+    Vaccination,
+    VetRequest,
+)
 
 
 def test_delete_livestock_cascade(client: TestClient, db: Session, normal_user_token_headers: dict[str, str]) -> None:
@@ -46,14 +55,11 @@ def test_delete_livestock_cascade(client: TestClient, db: Session, normal_user_t
     treat = Treatment(livestock_id=animal.id, logged_by=user_id, treatment_name="Meds", date_given="2026-08-01", administered_by="farmer")
     vax = Vaccination(livestock_id=animal.id, logged_by=user_id, vaccine_name="FMD", date_given="2026-08-01", administered_by="farmer")
     vet_req = VetRequest(livestock_id=animal.id, farm_id=farm.id, farmer_id=user_id, urgency="medium")
-    unique_phone = f"+256700{uuid.uuid4().hex[:6]}"
-    wa_user = WhatsAppUser(phone=unique_phone, hashed_password="hash", active_sickness_animal_id=animal.id)
 
     db.add(obs)
     db.add(treat)
     db.add(vax)
     db.add(vet_req)
-    db.add(wa_user)
     db.commit()
 
     # Call DELETE /api/v1/livestock/{id}
@@ -75,6 +81,4 @@ def test_delete_livestock_cascade(client: TestClient, db: Session, normal_user_t
     assert db.exec(select(Treatment).where(Treatment.livestock_id == animal_id)).first() is None
     assert db.exec(select(Vaccination).where(Vaccination.livestock_id == animal_id)).first() is None
     assert db.exec(select(VetRequest).where(VetRequest.livestock_id == animal_id)).first() is None
-    
-    db.refresh(wa_user)
-    assert wa_user.active_sickness_animal_id is None
+

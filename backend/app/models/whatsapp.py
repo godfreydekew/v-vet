@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Literal
 
-from sqlalchemy import Column, DateTime, JSON
+from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
 
 WhatsAppMessageRole = Literal["farmer", "assistant"]
@@ -25,27 +25,7 @@ class WhatsAppUserBase(SQLModel):
     preferred_language: str | None = Field(default=None, max_length=100)
     main_goal: str | None = Field(default=None, max_length=500)
     is_fully_onboarded: bool = Field(default=False)
-    is_adding_animal: bool = Field(default=False)
-    active_sickness_animal_id: uuid.UUID | None = Field(default=None, foreign_key="livestock.id", ondelete="SET NULL")
     linked_user_id: uuid.UUID | None = Field(default=None, foreign_key="user.id", ondelete="CASCADE")
-    pending_animal_photo_url: str | None = Field(default=None, max_length=1024)
-    # Set when active_sickness_animal_id is pinned; used by the sickness-followup cron job.
-    active_sickness_updated_at: datetime | None = Field(
-        default=None, sa_column=Column(DateTime(timezone=True))
-    )
-    active_sickness_reminded_at: datetime | None = Field(
-        default=None, sa_column=Column(DateTime(timezone=True))
-    )
-    # Pinned mid-record_death, mirroring active_sickness_animal_id.
-    active_death_animal_id: uuid.UUID | None = Field(default=None, foreign_key="livestock.id", ondelete="SET NULL")
-    # Cause selected in step 2, held until the date is picked in step 3.
-    active_death_cause: str | None = Field(default=None, max_length=100)
-    # Dam pinned mid-record_birth, held until the calf's registration form is submitted.
-    active_birth_dam_id: uuid.UUID | None = Field(default=None, foreign_key="livestock.id", ondelete="SET NULL")
-    # Answers from record_birth's calving-details form (survived/colostrum/
-    # mastitis/date_of_birth), held until the reused register_animal form
-    # (calf details) is submitted and the calf record can actually be made.
-    active_birth_pending: dict | None = Field(default=None, sa_column=Column(JSON))
 
 
 class WhatsAppUserCreate(SQLModel):
@@ -64,14 +44,7 @@ class WhatsAppUserUpdate(SQLModel):
     preferred_language: str | None = None
     main_goal: str | None = None
     is_fully_onboarded: bool | None = None
-    is_adding_animal: bool | None = None
-    active_sickness_animal_id: uuid.UUID | None = None
     linked_user_id: uuid.UUID | None = None
-    pending_animal_photo_url: str | None = None
-    active_death_animal_id: uuid.UUID | None = None
-    active_death_cause: str | None = None
-    active_birth_dam_id: uuid.UUID | None = None
-    active_birth_pending: dict | None = None
 
 
 class WhatsAppUser(WhatsAppUserBase, table=True):
@@ -133,3 +106,11 @@ class WhatsAppMessagePublic(WhatsAppMessageBase):
 class WhatsAppMessagesPublic(SQLModel):
     data: list[WhatsAppMessagePublic]
     count: int
+
+
+class IncomingMessage(SQLModel):
+    message_id: str
+    phone: str
+    message_type: str
+    text: str | None
+    button_id: str | None

@@ -7,6 +7,7 @@ from sqlmodel import Session
 
 from app.flows.animal_list import send_interactive_animal_list
 from app.flows.base import BaseFlow
+from app.models.conversation_state import ConversationState
 from app.models.livestock import Livestock
 from app.models.whatsapp import WhatsAppUser
 from app.services.whatsapp.client import send_flow_message, send_whatsapp_message
@@ -14,6 +15,12 @@ from app.services.whatsapp.client import send_flow_message, send_whatsapp_messag
 logger = logging.getLogger(__name__)
 
 _SEX_LABELS = {"female": "Female", "male": "Male", "unknown": "Unknown"}
+
+# Steps stored in conversation_state.
+STEP_PICK_MOTHER = "pick_mother"
+STEP_CALVING_DETAILS = "calving_details"
+STEP_CALF_DETAILS = "calf_details"
+STEP_DONE = "done"
 
 
 class RecordBirthFlow(BaseFlow):
@@ -26,6 +33,9 @@ class RecordBirthFlow(BaseFlow):
        of to RegisterAnimalFlow) — the calf's own details: name,
        breed, gender, weight. A calf is just a new animal, linked to a dam.
 
+    Each step is also recorded in conversation_state
+    (pick_mother → calving_details → calf_details → done) so the farmer agent
+    knows where the farmer is.
     """
 
     flow_id = "record_birth"
@@ -33,7 +43,6 @@ class RecordBirthFlow(BaseFlow):
     SMALL_HERD_THRESHOLD = 10
 
     def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
-        from app.core.config import settings
         from app.crud import get_livestock_for_user
         from app.flows.animal_list import MAX_ANIMALS
 
@@ -46,16 +55,30 @@ class RecordBirthFlow(BaseFlow):
             )
         )
         if dam_count == 0:
-            response = send_whatsapp_message(
-                phone=phone,
-                text=(
-                    "You don't have any female cattle registered yet, so there's no mother cow to "
-                    "record a birth against. 🐄\n\n"
-                    "Please register the mother cow first (menu → Register Animal, and set her gender "
-                    "to female), then try Record Birth again."
-                ),
-            )
-            return response.status_code == 200
+            # Nothing to record a birth against, so no birth is in progress.
+            return self._send_no_mother_cows_message(phone=phone)
+
+        sent = self._send_mother_cow_picker(phone=phone, user=user, session=session, dam_count=dam_count)
+        if sent:
+            self.start_tracking(session=session, user=user, step=STEP_PICK_MOTHER)
+        return sent
+
+    def _send_no_mother_cows_message(self, *, phone: str) -> bool:
+        response = send_whatsapp_message(
+            phone=phone,
+            text=(
+                "You don't have any female cattle registered yet, so there's no mother cow to "
+                "record a birth against. 🐄\n\n"
+                "Please register the mother cow first (menu → Register Animal, and set her gender "
+                "to female), then try Record Birth again."
+            ),
+        )
+        return response.status_code == 200
+
+    def _send_mother_cow_picker(
+        self, *, phone: str, user: WhatsAppUser, session: Session, dam_count: int
+    ) -> bool:
+        from app.core.config import settings
 
         if dam_count >= self.SMALL_HERD_THRESHOLD:
             if not settings.FLOW_ID_IDENTIFY_ANIMAL:
@@ -95,13 +118,18 @@ class RecordBirthFlow(BaseFlow):
     def handle(self, data: dict, user: WhatsAppUser, session: Session) -> str:
         """
         Three Flows share this flow_id (identify_animal, record_birth, and
-        register_animal reused for calf details) — dispatch on payload shape.
+        register_animal reused for calf details).
+
+        The birth-details form always sends "survived". The other two are told apart
+        by where the farmer is, not by their fields: WhatsApp leaves out optional fields
+        the farmer didn't fill in, so the calf form may arrive with any field missing.
+        Once the birth details are saved (step calf_details), only the calf form is left.
         """
         if "survived" in data:
             return self._handle_calving_submission(data=data, user=user, session=session)
-        # Only the register_animal form sends "breed".
-        if "breed" in data:
-            return self._handle_calf_registration_submission(data=data, user=user, session=session)
+        state = self.active_state(session=session, user=user)
+        if state is not None and state.step == STEP_CALF_DETAILS:
+            return self._handle_calf_registration_submission(data=data, state=state, user=user, session=session)
         return self._handle_identify_flow_submission(data=data, user=user, session=session)
 
     def _handle_identify_flow_submission(self, *, data: dict, user: WhatsAppUser, session: Session) -> str:
@@ -169,11 +197,6 @@ class RecordBirthFlow(BaseFlow):
         if dam is None or dam.gender != "female":
             return False
 
-        user.active_birth_dam_id = dam.id
-        user.active_birth_pending = None
-        session.add(user)
-        session.commit()
-
         if not settings.FLOW_ID_RECORD_BIRTH:
             logger.warning("[RecordBirthFlow] FLOW_ID_RECORD_BIRTH not configured — cannot send calving form.")
             return False
@@ -187,11 +210,21 @@ class RecordBirthFlow(BaseFlow):
             cta="Continue",
             screen="RECORD_BIRTH",
         )
-        return response.status_code == 200
+        if response.status_code != 200:
+            return False
+
+        self.record_step(
+            session=session,
+            user=user,
+            step=STEP_CALVING_DETAILS,
+            data={"mother_id": str(dam.id), "mother_name": dam_name},
+        )
+        return True
 
     def _handle_calving_submission(self, *, data: dict, user: WhatsAppUser, session: Session) -> str:
-        """Step 1 submitted — stash the answers and hand off to the calf's own registration form."""
-        if user.active_birth_dam_id is None:
+        """Step 1 submitted — save the answers in the farmer's state and send the calf's registration form."""
+        state = self.active_state(session=session, user=user)
+        if state is None or not state.data.get("mother_id"):
             return "Sorry, something went wrong. Please send 'menu' and try again."
 
         from app.core.config import settings
@@ -206,14 +239,17 @@ class RecordBirthFlow(BaseFlow):
             dob = today
 
         survived = data.get("survived") == "yes"
-        user.active_birth_pending = {
-            "survived": survived,
-            "colostrum": data.get("colostrum"),
-            "mastitis": data.get("mastitis"),
-            "date_of_birth": dob.isoformat(),
-        }
-        session.add(user)
-        session.commit()
+        self.record_step(
+            session=session,
+            user=user,
+            step=STEP_CALF_DETAILS,
+            data={
+                "survived": survived,
+                "colostrum": data.get("colostrum"),
+                "mastitis": data.get("mastitis"),
+                "date_of_birth": dob.isoformat(),
+            },
+        )
 
         if not settings.FLOW_ID_REGISTER_ANIMAL:
             logger.warning(
@@ -241,28 +277,26 @@ class RecordBirthFlow(BaseFlow):
             "Sorry, something went wrong sending the calf details form. Please send 'menu' and try again."
         )
 
-    def _handle_calf_registration_submission(self, *, data: dict, user: WhatsAppUser, session: Session) -> str:
+    def _handle_calf_registration_submission(
+        self, *, data: dict, state: ConversationState, user: WhatsAppUser, session: Session
+    ) -> str:
         """Step 2 (reused register_animal form) submitted — create the calf and link it to the dam."""
-        if user.active_birth_dam_id is None or user.active_birth_pending is None or not user.linked_user_id:
+        if not user.linked_user_id or not state.data.get("mother_id"):
             return "Sorry, something went wrong. Please send 'menu' and try again."
 
         from app.crud import get_livestock_by_id_for_user
 
         dam = get_livestock_by_id_for_user(
-            session=session, user_id=user.linked_user_id, livestock_id=user.active_birth_dam_id
+            session=session, user_id=user.linked_user_id, livestock_id=uuid.UUID(state.data["mother_id"])
         )
         if dam is None:
-            user.active_birth_dam_id = None
-            user.active_birth_pending = None
-            session.add(user)
-            session.commit()
+            self.record_step(session=session, user=user, step=STEP_CALF_DETAILS, close_as="failed")
             return "Sorry, something went wrong finding that cow. Please send 'menu' and try again."
 
-        pending = user.active_birth_pending
-        survived = bool(pending.get("survived"))
-        colostrum = pending.get("colostrum")
-        mastitis = pending.get("mastitis")
-        dob = date_cls.fromisoformat(pending["date_of_birth"])
+        survived = bool(state.data.get("survived"))
+        colostrum = state.data.get("colostrum")
+        mastitis = state.data.get("mastitis")
+        dob = date_cls.fromisoformat(state.data["date_of_birth"])
 
         calf_name = (data.get("name") or "").strip() or None
         calf_gender = data.get("gender") or "unknown"
@@ -296,15 +330,36 @@ class RecordBirthFlow(BaseFlow):
         from app.models.livestock_parentage import LivestockParentage
 
         session.add(LivestockParentage(child_id=calf.id, mother_id=dam.id))
-
-        user.active_birth_dam_id = None
-        user.active_birth_pending = None
-        session.add(user)
         session.commit()
+
+        self.record_step(
+            session=session,
+            user=user,
+            step=STEP_DONE,
+            data={"calf_id": str(calf.id)},
+            close_as="completed",
+        )
 
         return self._build_confirmation(
             dam=dam, calf=calf, survived=survived, calf_gender=calf_gender,
             colostrum=colostrum, mastitis=mastitis,
+        )
+
+    def describe(self, state: ConversationState) -> str:
+        mother_name = state.data.get("mother_name", "the mother cow")
+        if state.step == STEP_CALVING_DETAILS:
+            return (
+                f"Recording a birth for {mother_name}: V-Vet sent the birth details form "
+                "(did the calf survive, colostrum, mastitis, date) and the farmer hasn't submitted it yet."
+            )
+        if state.step == STEP_CALF_DETAILS:
+            return (
+                f"Recording a birth for {mother_name}: the birth details are saved; waiting for "
+                "the farmer to submit the calf's registration form."
+            )
+        return (
+            "Recording a birth: V-Vet sent the farmer a way to choose the mother cow, "
+            "and they haven't chosen yet."
         )
 
     @staticmethod

@@ -1,11 +1,13 @@
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from sqlmodel import Session
 
+from app.core.config import settings
 from app.flows.animal_list import send_interactive_animal_list
 from app.flows.base import BaseFlow
+from app.models.conversation_state import ConversationState
 from app.models.whatsapp import WhatsAppUser
 from app.services.whatsapp.client import (
     send_flow_message,
@@ -27,17 +29,17 @@ _CAUSE_OPTIONS = [
 ]
 _CAUSE_LABELS = dict(_CAUSE_OPTIONS)
 
+# Steps stored in conversation_state.
+STEP_PICK_ANIMAL = "pick_animal"
+STEP_PICK_CAUSE = "pick_cause"
+STEP_PICK_DATE = "pick_date"
+STEP_DONE = "done"
+
 
 class RecordDeathFlow(BaseFlow):
     """
     Records an animal's death: select the animal, its cause of death, then
-    the date it happened. All three steps are deterministic WhatsApp
-    buttons/lists — no LLM involvement once the animal is identified.
-
-    Mirrors ReportSicknessFlow's herd-size branching and pin pattern.
-    active_death_animal_id / active_death_cause on WhatsAppUser carry state
-    between steps — a generic flow-state mechanism would be overkill for
-    two values with no reminders or follow-ups attached to this flow.
+    the date it happened.
     """
 
     flow_id = "record_death"
@@ -45,7 +47,12 @@ class RecordDeathFlow(BaseFlow):
     SMALL_HERD_THRESHOLD = 10
 
     def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
-        from app.core.config import settings
+        sent = self._send_first_step(phone=phone, user=user, session=session)
+        if sent:
+            self.start_tracking(session=session, user=user, step=STEP_PICK_ANIMAL)
+        return sent
+
+    def _send_first_step(self, *, phone: str, user: WhatsAppUser, session: Session) -> bool:
         from app.crud import get_livestock_for_user
         from app.flows.animal_list import MAX_ANIMALS
 
@@ -96,8 +103,7 @@ class RecordDeathFlow(BaseFlow):
     def handle(self, data: dict, user: WhatsAppUser, session: Session) -> str:
         """
         Both the identify_animal and pick_date Flows share this flow_id, so
-        their submissions both land here — dispatch on payload shape rather
-        than adding a second flow_token to FLOW_REGISTRY for the same flow.
+        their submissions both land here
         """
         if "selected_date" in data:
             return self._handle_date_flow_submission(data=data, user=user, session=session)
@@ -155,10 +161,9 @@ class RecordDeathFlow(BaseFlow):
         self, *, livestock_id: uuid.UUID, phone: str, user: WhatsAppUser, session: Session
     ) -> bool:
         """
-        Pins the animal and sends the cause-of-death options. Shared by the
-        list-tap path (handle_animal_selection) and the large-herd free-text
-        lookup (the record_death agent tool), so both end up in the same
-        next step..
+        Stores the chosen animal in the farmer's state and sends the cause-of-death
+        options. Shared by the list tap (handle_animal_selection) and the
+        identify-animal form, so both end up in the same next step.
         """
         from app.crud import get_livestock_by_id_for_user
 
@@ -172,12 +177,14 @@ class RecordDeathFlow(BaseFlow):
         if animal is None:
             return False
 
-        user.active_death_animal_id = animal.id
-        user.active_death_cause = None
-        session.add(user)
-        session.commit()
-
         animal_name = animal.name or animal.tag_number or "the animal"
+        # A newly chosen animal clears any cause picked for a previous one.
+        self.record_step(
+            session=session,
+            user=user,
+            step=STEP_PICK_CAUSE,
+            data={"animal_id": str(animal.id), "animal_name": animal_name, "cause": None},
+        )
         rows = [{"id": f"{_CAUSE_PREFIX}{key}", "title": label} for key, label in _CAUSE_OPTIONS]
         response = send_list_message(
             phone=phone,
@@ -190,22 +197,18 @@ class RecordDeathFlow(BaseFlow):
     def handle_cause_selection(
         self, *, row_id: str, phone: str, user: WhatsAppUser, session: Session
     ) -> bool:
-        if user.active_death_animal_id is None or not row_id.startswith(_CAUSE_PREFIX):
-            # No animal pinned, or a stale tap from an earlier/abandoned flow — ignore.
+        state = self.active_state(session=session, user=user)
+        if state is None or not state.data.get("animal_id") or not row_id.startswith(_CAUSE_PREFIX):
+            # No animal chosen yet, or a stale tap from an earlier/abandoned attempt — ignore.
             return False
         cause = row_id.removeprefix(_CAUSE_PREFIX)
         if cause not in _CAUSE_LABELS:
             return False
 
-        user.active_death_cause = cause
-        session.add(user)
-        session.commit()
-
+        self.record_step(session=session, user=user, step=STEP_PICK_DATE, data={"cause": cause})
         return self._ask_date(phone=phone)
 
     def _ask_date(self, *, phone: str) -> bool:
-        from app.core.config import settings
-
         if not settings.FLOW_ID_PICK_DATE:
             logger.warning(
                 "[RecordDeathFlow] FLOW_ID_PICK_DATE not configured — falling back to Today/Yesterday buttons."
@@ -232,9 +235,8 @@ class RecordDeathFlow(BaseFlow):
     ) -> str | None:
         """Fallback path — only reached when FLOW_ID_PICK_DATE isn't configured
         and _ask_date() sent the Today/Yesterday buttons instead."""
-        if user.active_death_animal_id is None or user.active_death_cause is None:
-            return None
-        if not row_id.startswith(_DATE_PREFIX):
+        state = self._state_waiting_for_date(session=session, user=user)
+        if state is None or not row_id.startswith(_DATE_PREFIX):
             return None
 
         choice = row_id.removeprefix(_DATE_PREFIX)
@@ -246,10 +248,11 @@ class RecordDeathFlow(BaseFlow):
         else:
             return None
 
-        return self._finalize_death(death_date=death_date, user=user, session=session)
+        return self._finalize_death(death_date=death_date, state=state, user=user, session=session)
 
     def _handle_date_flow_submission(self, *, data: dict, user: WhatsAppUser, session: Session) -> str:
-        if user.active_death_animal_id is None or user.active_death_cause is None:
+        state = self._state_waiting_for_date(session=session, user=user)
+        if state is None:
             return "Sorry, something went wrong. Please send 'menu' and try again."
 
         raw_date = (data.get("selected_date") or "").strip()
@@ -262,38 +265,68 @@ class RecordDeathFlow(BaseFlow):
         if death_date > today:
             return "That date is in the future — please send 'menu' and try again with today or an earlier date."
 
-        return self._finalize_death(death_date=death_date, user=user, session=session)
+        return self._finalize_death(death_date=death_date, state=state, user=user, session=session)
 
-    def _finalize_death(self, *, death_date, user: WhatsAppUser, session: Session) -> str:
+    def _state_waiting_for_date(self, *, session: Session, user: WhatsAppUser) -> ConversationState | None:
+        """The farmer's death record, if both the animal and the cause are chosen."""
+        state = self.active_state(session=session, user=user)
+        if state is None or not state.data.get("animal_id") or not state.data.get("cause"):
+            return None
+        return state
+
+    def _finalize_death(
+        self, *, death_date: date, state: ConversationState, user: WhatsAppUser, session: Session
+    ) -> str:
         from app.crud import get_livestock_by_id_for_user
 
         animal = (
             get_livestock_by_id_for_user(
-                session=session, user_id=user.linked_user_id, livestock_id=user.active_death_animal_id
+                session=session,
+                user_id=user.linked_user_id,
+                livestock_id=uuid.UUID(state.data["animal_id"]),
             )
-            if user.linked_user_id and user.active_death_animal_id
+            if user.linked_user_id
             else None
         )
         if animal is None:
-            user.active_death_animal_id = None
-            user.active_death_cause = None
-            session.add(user)
-            session.commit()
+            self.record_step(session=session, user=user, step=STEP_PICK_DATE, close_as="failed")
             return "Sorry, something went wrong finding that animal. Please send 'menu' and try again."
 
         animal.lifecycle_status = "deceased"
         animal.health_status = "deceased"
         animal.date_of_death = death_date
-        animal.cause_of_death = user.active_death_cause
+        animal.cause_of_death = state.data["cause"]
         session.add(animal)
-
-        user.active_death_animal_id = None
-        user.active_death_cause = None
-        session.add(user)
         session.commit()
+
+        self.record_step(
+            session=session,
+            user=user,
+            step=STEP_DONE,
+            data={"date_of_death": death_date.isoformat()},
+            close_as="completed",
+        )
 
         animal_name = animal.name or animal.tag_number or "The animal"
         return (
             f"Recorded. {animal_name} has been marked as deceased in your herd records. "
             "We send our heartfelt thoughts. 💙"
+        )
+
+    def describe(self, state: ConversationState) -> str:
+        animal_name = state.data.get("animal_name", "the animal")
+        if state.step == STEP_PICK_CAUSE:
+            return (
+                f"Recording a death for {animal_name}: waiting for the farmer to choose "
+                "the cause of death from the list V-Vet sent."
+            )
+        if state.step == STEP_PICK_DATE:
+            cause = _CAUSE_LABELS.get(state.data.get("cause", ""), "unknown")
+            return (
+                f"Recording a death for {animal_name} (cause: {cause}): waiting for the farmer "
+                "to pick the date it died."
+            )
+        return (
+            "Recording a death: V-Vet sent the farmer a way to choose which animal died, "
+            "and they haven't chosen yet."
         )
