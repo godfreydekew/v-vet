@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timezone
+from typing import Any
 
 from pydantic import ValidationError
 from sqlmodel import Session
@@ -188,15 +189,8 @@ class RegisterAnimalFlow(BaseFlow):
             close_state(session=session, state=state, status="failed")
             return SAVE_FAILED_MESSAGE
 
-        # The form only sends a WhatsApp reference to the photo: download it, store it,
-        # and link it to the animal. A photo problem must not fail the registration.
-        photo_url = _upload_photo(form.animal_photo, phone=user.phone)
-        if photo_url:
-            try:
-                _attach_photo(session=session, animal=animal, photo_url=photo_url)
-            except Exception:
-                logger.exception("[RegisterAnimalFlow] Attaching the photo failed for %s", animal.id)
-                session.rollback()
+        if form.animal_photo:
+            _save_photo(session=session, animal=animal, photo=form.animal_photo)
 
         submitted = form.model_dump(mode="json", exclude={"animal_photo"})
         submitted["livestock_id"] = str(animal.id)
@@ -205,36 +199,35 @@ class RegisterAnimalFlow(BaseFlow):
         return _confirmation_message(animal)
 
 
-def _upload_photo(photo: object, *, phone: str) -> str | None:
-    """Download the form's photo from WhatsApp and store it. Returns its URL, or None."""
-    if not photo:
-        return None
-    try:
-        from app.services.storage import upload_livestock_image_bytes
-        from app.services.whatsapp_flow_media import download_whatsapp_flow_media
+def _save_photo(*, session: Session, animal: Livestock, photo: Any) -> None:
+    """Store the form's photo in the animal's folder and make it the animal's main photo.
 
-        downloaded = download_whatsapp_flow_media(photo)
-        if downloaded is None:
-            return None
-        image_bytes, content_type, filename = downloaded
-        return upload_livestock_image_bytes(image_bytes, filename=filename, content_type=content_type)
-    except Exception:
-        # A missing photo shouldn't stop the animal being registered.
-        logger.exception("[RegisterAnimalFlow] Photo upload failed for %s", phone)
-        return None
-
-
-def _attach_photo(*, session: Session, animal: Livestock, photo_url: str) -> None:
+    The form only sends a WhatsApp reference to the photo, so it is downloaded first.
+    A photo problem is logged and skipped: it must not fail the registration.
+    """
     from app.crud import create_livestock_image
     from app.models.livestock_image import LivestockImageCreate
-    from app.services.storage import move_pending_image_to_livestock
+    from app.services.storage import upload_livestock_image_bytes
+    from app.services.whatsapp_flow_media import download_whatsapp_flow_media
 
-    final_url = move_pending_image_to_livestock(pending_url=photo_url, livestock_id=animal.id) or photo_url
-    create_livestock_image(
-        session=session,
-        livestock_id=animal.id,
-        image_in=LivestockImageCreate(image_url=final_url, is_primary=True),
-    )
+    try:
+        downloaded = download_whatsapp_flow_media(photo)
+        if downloaded is None:
+            return
+        image_bytes, content_type, filename = downloaded
+        image_url = upload_livestock_image_bytes(
+            image_bytes, filename=filename, content_type=content_type, livestock_id=str(animal.id)
+        )
+        if image_url is None:
+            return
+        create_livestock_image(
+            session=session,
+            livestock_id=animal.id,
+            image_in=LivestockImageCreate(image_url=image_url, is_primary=True),
+        )
+    except Exception:
+        logger.exception("[RegisterAnimalFlow] Saving the photo failed for %s", animal.id)
+        session.rollback()
 
 
 def _confirmation_message(animal: Livestock) -> str:

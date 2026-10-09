@@ -75,13 +75,6 @@ class TriageContextFlow:
 
         return self._send_question(phone=phone, question=BASIC_CONTEXT_QUESTIONS[0])
 
-    def resend_current_question(self, *, phone: str, question_id: str) -> bool:
-        """Re-send a question's UI unchanged — used by the sickness-followup cron job."""
-        question = get_question(question_id)
-        if question is None:
-            return False
-        return self._send_question(phone=phone, question=question)
-
     def handle_answer(
         self, *, row_id: str, phone: str, user: WhatsAppUser, session: Session
     ) -> tuple[bool, TriageSession | None]:
