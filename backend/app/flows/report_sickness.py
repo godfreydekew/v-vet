@@ -7,7 +7,6 @@ from app.flows.animal_list import send_interactive_animal_list
 from app.flows.base import BaseFlow
 from app.models.conversation_state import ConversationState
 from app.models.whatsapp import WhatsAppUser
-from app.services.whatsapp.client import send_whatsapp_message
 
 logger = logging.getLogger(__name__)
 
@@ -22,39 +21,12 @@ class ReportSicknessFlow(BaseFlow):
 
     flow_id = "report_sickness"
 
-    SMALL_HERD_THRESHOLD = 10
-
     def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
-        sent = self._send_first_step(phone=phone, user=user, session=session)
+        # The list shows 9 animals at a time, with a "Show more animals" row for the rest.
+        sent = self.send_animal_list(phone=phone, user=user, session=session)
         if sent:
             self.start_tracking(session=session, user=user, step=STEP_PICK_ANIMAL)
         return sent
-
-    def _send_first_step(self, *, phone: str, user: WhatsAppUser, session: Session) -> bool:
-        from app.crud import get_livestock_for_user
-        from app.flows.animal_list import MAX_ANIMALS
-
-        if not user.linked_user_id:
-            return False
-
-        animal_count = len(
-            get_livestock_for_user(session=session, user_id=user.linked_user_id, limit=MAX_ANIMALS)
-        )
-        if animal_count == 0:
-            return False
-
-        if animal_count >= self.SMALL_HERD_THRESHOLD:
-            response = send_whatsapp_message(
-                phone=phone,
-                text=(
-                    "I am so sorry your animal is not feeling well. 💙\n\n"
-                    "You have quite a few animals registered — which one is it? "
-                    "Please reply with its name or tag number."
-                ),
-            )
-            return response.status_code == 200
-
-        return self.send_animal_list(phone=phone, user=user, session=session)
 
     def send_animal_list(self, *, phone: str, user: WhatsAppUser, session: Session) -> bool:
         return send_interactive_animal_list(phone=phone, user=user, session=session, intent="sickness")

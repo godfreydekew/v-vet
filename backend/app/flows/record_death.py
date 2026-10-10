@@ -13,7 +13,6 @@ from app.services.whatsapp.client import (
     send_flow_message,
     send_list_message,
     send_reply_buttons,
-    send_whatsapp_message,
 )
 
 logger = logging.getLogger(__name__)
@@ -44,53 +43,13 @@ class RecordDeathFlow(BaseFlow):
 
     flow_id = "record_death"
 
-    SMALL_HERD_THRESHOLD = 10
-
     def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
-        sent = self._send_first_step(phone=phone, user=user, session=session)
+        logger.info(f"[RecordDeathFlow] Starting record death for {user.phone}")
+        # The list shows 9 animals at a time, with a "Show more animals" row for the rest.
+        sent = self.send_animal_list(phone=phone, user=user, session=session)
         if sent:
             self.start_tracking(session=session, user=user, step=STEP_PICK_ANIMAL)
         return sent
-
-    def _send_first_step(self, *, phone: str, user: WhatsAppUser, session: Session) -> bool:
-        from app.crud import get_livestock_for_user
-        from app.flows.animal_list import MAX_ANIMALS
-
-        if not user.linked_user_id:
-            return False
-
-        animal_count = len(
-            get_livestock_for_user(session=session, user_id=user.linked_user_id, limit=MAX_ANIMALS)
-        )
-        if animal_count == 0:
-            return False
-
-        if animal_count >= self.SMALL_HERD_THRESHOLD:
-            if not settings.FLOW_ID_IDENTIFY_ANIMAL:
-                logger.warning(
-                    "[RecordDeathFlow] FLOW_ID_IDENTIFY_ANIMAL not configured — falling back to text prompt."
-                )
-                response = send_whatsapp_message(
-                    phone=phone,
-                    text=(
-                        "We are so sorry for your loss. 💙\n\n"
-                        "You have quite a few animals registered — which one passed away? "
-                        "Please reply with its name or tag number."
-                    ),
-                )
-                return response.status_code == 200
-
-            response = send_flow_message(
-                phone=phone,
-                flow_id=settings.FLOW_ID_IDENTIFY_ANIMAL,
-                flow_token=self.flow_id,
-                body="We are so sorry for your loss. 💙\n\nLet's find out which animal it was.",
-                cta="Continue",
-                screen="IDENTIFY_ANIMAL",
-            )
-            return response.status_code == 200
-
-        return self.send_animal_list(phone=phone, user=user, session=session)
 
     def send_animal_list(self, *, phone: str, user: WhatsAppUser, session: Session) -> bool:
         return send_interactive_animal_list(phone=phone, user=user, session=session, intent="death")
@@ -101,51 +60,8 @@ class RecordDeathFlow(BaseFlow):
         )
 
     def handle(self, data: dict, user: WhatsAppUser, session: Session) -> str:
-        """
-        Both the identify_animal and pick_date Flows share this flow_id, so
-        their submissions both land here
-        """
-        if "selected_date" in data:
-            return self._handle_date_flow_submission(data=data, user=user, session=session)
-        return self._handle_identify_flow_submission(data=data, user=user, session=session)
-
-    def _handle_identify_flow_submission(self, *, data: dict, user: WhatsAppUser, session: Session) -> str:
-        """
-        Processes the identify_animal Flow submission: {name_or_tag, show_list}
-        """
-        if not user.linked_user_id:
-            return "Sorry, something went wrong. Please send 'menu' and try again."
-
-        show_list = bool(data.get("show_list"))
-        name_or_tag = (data.get("name_or_tag") or "").strip()
-
-        if show_list or not name_or_tag:
-            sent = self.send_animal_list(phone=user.phone, user=user, session=session)
-            return "" if sent else (
-                "Sorry, something went wrong sending your animal list. Please send 'menu' and try again."
-            )
-
-        from app.services.animal_lookup import LookupStatus, resolve_animal
-
-        lookup = resolve_animal(session=session, user_id=user.linked_user_id, query=name_or_tag)
-
-        if lookup.status == LookupStatus.MULTIPLE_MATCHES:
-            names = ", ".join(a.name or a.tag_number or "unnamed" for a in lookup.candidates)
-            return (
-                f"I found a few animals matching '{name_or_tag}': {names}. "
-                "Please reply with the exact name or tag number."
-            )
-
-        if lookup.animal is None:
-            sent = self.send_animal_list(phone=user.phone, user=user, session=session)
-            if sent:
-                return f"I couldn't find an animal matching '{name_or_tag}' — here's your full list instead."
-            return f"Sorry, I couldn't find an animal matching '{name_or_tag}'. Please try again."
-
-        sent = self.pin_and_ask_cause(
-            livestock_id=lookup.animal.id, phone=user.phone, user=user, session=session
-        )
-        return "" if sent else "Sorry, something went wrong. Please send 'menu' and try again."
+        """Processes the pick_date form submission: {selected_date}."""
+        return self._handle_date_flow_submission(data=data, user=user, session=session)
 
     def handle_animal_selection(
         self, *, animal_id: str, phone: str, user: WhatsAppUser, session: Session
@@ -162,8 +78,7 @@ class RecordDeathFlow(BaseFlow):
     ) -> bool:
         """
         Stores the chosen animal in the farmer's state and sends the cause-of-death
-        options. Shared by the list tap (handle_animal_selection) and the
-        identify-animal form, so both end up in the same next step.
+        options.
         """
         from app.crud import get_livestock_by_id_for_user
 

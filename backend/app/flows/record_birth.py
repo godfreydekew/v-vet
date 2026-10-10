@@ -40,8 +40,6 @@ class RecordBirthFlow(BaseFlow):
 
     flow_id = "record_birth"
 
-    SMALL_HERD_THRESHOLD = 10
-
     def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
         from app.crud import get_livestock_for_user
         from app.flows.animal_list import MAX_ANIMALS
@@ -58,7 +56,8 @@ class RecordBirthFlow(BaseFlow):
             # Nothing to record a birth against, so no birth is in progress.
             return self._send_no_mother_cows_message(phone=phone)
 
-        sent = self._send_mother_cow_picker(phone=phone, user=user, session=session, dam_count=dam_count)
+        # The list shows 9 cows at a time, with a "Show more animals" row for the rest.
+        sent = self.send_dam_list(phone=phone, user=user, session=session)
         if sent:
             self.start_tracking(session=session, user=user, step=STEP_PICK_MOTHER)
         return sent
@@ -75,38 +74,6 @@ class RecordBirthFlow(BaseFlow):
         )
         return response.status_code == 200
 
-    def _send_mother_cow_picker(
-        self, *, phone: str, user: WhatsAppUser, session: Session, dam_count: int
-    ) -> bool:
-        from app.core.config import settings
-
-        if dam_count >= self.SMALL_HERD_THRESHOLD:
-            if not settings.FLOW_ID_IDENTIFY_ANIMAL:
-                logger.warning(
-                    "[RecordBirthFlow] FLOW_ID_IDENTIFY_ANIMAL not configured — falling back to text prompt."
-                )
-                response = send_whatsapp_message(
-                    phone=phone,
-                    text=(
-                        "Congratulations on the new birth! 🐄🎉\n\n"
-                        "You have quite a few cows registered — which mother cow gave birth? "
-                        "Please reply with her name or tag number."
-                    ),
-                )
-                return response.status_code == 200
-
-            response = send_flow_message(
-                phone=phone,
-                flow_id=settings.FLOW_ID_IDENTIFY_ANIMAL,
-                flow_token=self.flow_id,
-                body="Congratulations on the new birth! 🐄🎉\n\nLet's find out which cow it was.",
-                cta="Continue",
-                screen="IDENTIFY_ANIMAL",
-            )
-            return response.status_code == 200
-
-        return self.send_dam_list(phone=phone, user=user, session=session)
-
     def send_dam_list(self, *, phone: str, user: WhatsAppUser, session: Session) -> bool:
         return send_interactive_animal_list(phone=phone, user=user, session=session, intent="birth")
 
@@ -117,57 +84,19 @@ class RecordBirthFlow(BaseFlow):
 
     def handle(self, data: dict, user: WhatsAppUser, session: Session) -> str:
         """
-        Three Flows share this flow_id (identify_animal, record_birth, and
-        register_animal reused for calf details).
+        Two Flows share this flow_id (record_birth, and register_animal reused
+        for calf details).
 
-        The birth-details form always sends "survived". The other two are told apart
-        by where the farmer is, not by their fields: WhatsApp leaves out optional fields
+        The birth-details form always sends "survived". The calf form is recognised
+        by where the farmer is, not by its fields: WhatsApp leaves out optional fields
         the farmer didn't fill in, so the calf form may arrive with any field missing.
-        Once the birth details are saved (step calf_details), only the calf form is left.
         """
         if "survived" in data:
             return self._handle_calving_submission(data=data, user=user, session=session)
         state = self.active_state(session=session, user=user)
         if state is not None and state.step == STEP_CALF_DETAILS:
             return self._handle_calf_registration_submission(data=data, state=state, user=user, session=session)
-        return self._handle_identify_flow_submission(data=data, user=user, session=session)
-
-    def _handle_identify_flow_submission(self, *, data: dict, user: WhatsAppUser, session: Session) -> str:
-        if not user.linked_user_id:
-            return "Sorry, something went wrong. Please send 'menu' and try again."
-
-        show_list = bool(data.get("show_list"))
-        name_or_tag = (data.get("name_or_tag") or "").strip()
-
-        if show_list or not name_or_tag:
-            sent = self.send_dam_list(phone=user.phone, user=user, session=session)
-            return "" if sent else (
-                "Sorry, something went wrong sending your cow list. Please send 'menu' and try again."
-            )
-
-        from app.services.animal_lookup import LookupStatus, resolve_animal
-
-        lookup = resolve_animal(
-            session=session, user_id=user.linked_user_id, query=name_or_tag, gender="female"
-        )
-
-        if lookup.status == LookupStatus.MULTIPLE_MATCHES:
-            names = ", ".join(a.name or a.tag_number or "unnamed" for a in lookup.candidates)
-            return (
-                f"I found a few cows matching '{name_or_tag}': {names}. "
-                "Please reply with the exact name or tag number."
-            )
-
-        if lookup.animal is None:
-            sent = self.send_dam_list(phone=user.phone, user=user, session=session)
-            if sent:
-                return f"I couldn't find a registered cow matching '{name_or_tag}' — here's your full list instead."
-            return f"Sorry, I couldn't find a registered cow matching '{name_or_tag}'. Please try again."
-
-        sent = self.pin_and_ask_calving_details(
-            livestock_id=lookup.animal.id, phone=user.phone, user=user, session=session
-        )
-        return "" if sent else "Sorry, something went wrong. Please send 'menu' and try again."
+        return "Sorry, something went wrong. Please send 'menu' and try again."
 
     def handle_dam_selection(
         self, *, animal_id: str, phone: str, user: WhatsAppUser, session: Session

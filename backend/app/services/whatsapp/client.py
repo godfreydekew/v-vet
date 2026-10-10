@@ -147,6 +147,7 @@ def send_flow_message(
     """
     if not settings.WHATSAPP_PHONE_NUMBER_ID or not settings.WHATSAPP_ACCESS_TOKEN:
         raise RuntimeError("WhatsApp configuration is missing in settings.")
+    logger.info(f"[send_flow_message] Sending flow message to {body}")
 
     url_endpoint = f"https://graph.facebook.com/v25.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
     payload = {
@@ -173,7 +174,12 @@ def send_flow_message(
         "Authorization": f"Bearer {settings.WHATSAPP_ACCESS_TOKEN}",
         "Content-Type": "application/json",
     }
-    return requests.post(url_endpoint, json=payload, headers=headers, timeout=15)
+    response = requests.post(url_endpoint, json=payload, headers=headers, timeout=15)
+    if response.status_code != 200:
+        logger.warning(
+            "[WhatsApp] Flow message %s failed %s: %s", flow_id, response.status_code, response.text
+        )
+    return response
 
 
 def set_whatsapp_commands(commands: list[dict]) -> requests.Response:
