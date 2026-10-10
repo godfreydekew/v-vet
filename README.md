@@ -1,4 +1,4 @@
-# AI-assisted livestock health support for smallholder farmers.
+# Livestock Health Intelligence & Decision Support System
 
 > Report symptoms through WhatsApp or web, get triage guidance quickly, and connect farmers to vets with full case context.
 
@@ -15,23 +15,25 @@
 
 ## Why V-Vet
 
-Access to veterinary care is limited for many rural farmers. Delayed diagnosis and treatment can lead to avoidable livestock loss, lower household income, and food insecurity.
+Millions of smallholder farmers across Sub-Saharan Africa rely on livestock for their livelihoods. Every day they make livestock decisions with limited access to timely information and animal health support. These limitations often result in preventable livestock loss, lower household income, and food insecurity.
 
-V-Vet helps close that gap by combining:
-- Low-friction reporting channels farmers already use
-- Structured digital health records for each animal
-- Faster triage and vet response workflows
+V-Vet helps by providing:
+- Accessibility to animal health support through whatsapp in local languages.
+- A digital health record for each animal.
+- Faster triage and vet response workflows.
+- Vet verified information to help improve farmer decisions.
 
-## What V-Vet Does
-
+## How V-Vet connects farmers to vets
+![V-Vet Workflow](frontend/public/vvet-workflow.png)
 V-Vet enables a farmer to submit animal symptoms as voice, photo, or text, then routes the case through an AI-assisted triage flow and into a vet review pipeline when needed.
 
 Core flow:
 1. Farmer reports symptoms via WhatsApp or web.
 2. AI processes multimodal input and prepares a structured triage output.
 3. Historical livestock records are added for context.
-4. Vet receives a prioritized case with recommendations and history.
-5. Farmer receives next-step guidance and follow-up plan.
+4. The decision support system determines if the case is an emergency, routine, or requires vet intervention.
+5. Vet receives a prioritized case with recommendations and history.
+6. Farmer receives next-step guidance and follow-up plan.
 
 ## Features
 
@@ -71,17 +73,11 @@ Core flow:
 ```text
 backend/   FastAPI app, models, migrations, tests
 frontend/  React app, pages, components, hooks
-scripts/   Root-level test and utility scripts
 ```
-
-## Documentation
-
-- Product scope and prototype behavior: [PROTOTTYPE.md](PROTOTTYPE.md)
-- Backend development details: [backend/README.md](backend/README.md)
 
 ## Status
 
-V-Vet is actively evolving. The current implementation supports core farmer, vet, and admin workflows with AI-assisted triage foundations in place.
+V-Vet is actively evolving. The current implementation supports core farmer, vet, and admin workflows with AI-assisted triage foundations in place. The focus is to create a seamless and intuitive user experience for farmers while providing vets with the information they need to make informed decisions.
 
 ## Contributing
 
