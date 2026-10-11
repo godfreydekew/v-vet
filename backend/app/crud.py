@@ -168,17 +168,30 @@ def update_farm(*, session: Session, db_farm: Farm, farm_in: FarmUpdate) -> Farm
 # ---------------------------------------------------------------------------
 
 
-def _count_all_livestock_for_user(*, session: Session, user_id: uuid.UUID) -> int:
-    """Count ALL livestock ever registered for a user (across all farms, all statuses)."""
+def _next_tag_sequence(*, session: Session, user_id: uuid.UUID, year_code: str) -> int:
     farm_ids = session.exec(
         select(Farm.id).where(Farm.farmer_id == user_id)
     ).all()
     if not farm_ids:
-        return 0
-    rows = session.exec(
-        select(Livestock).where(col(Livestock.farm_id).in_(farm_ids))
+        return 1
+    tags = session.exec(
+        select(Livestock.tag_number).where(col(Livestock.farm_id).in_(farm_ids))
     ).all()
-    return len(rows)
+
+    highest_sequence = 0
+    for tag in tags:
+        if not tag:
+            continue
+        # DISTRICT_CODE-UUID_PREFIX-YY-SEQUENCE.
+        parts = tag.split("-")
+        if len(parts) != 4:
+            continue
+        tag_year_code = parts[2]
+        tag_sequence = parts[3]
+        if tag_year_code != year_code or not tag_sequence.isdigit():
+            continue
+        highest_sequence = max(highest_sequence, int(tag_sequence))
+    return highest_sequence + 1
 
 
 def generate_livestock_tag(
@@ -186,7 +199,8 @@ def generate_livestock_tag(
 ) -> str:
     """Generate a unique tag: DISTRICT_CODE-UUID_PREFIX-YY-SEQUENCE.
 
-    Example: GWE-a1b-26-0001
+    YY is the year the animal was born. SEQUENCE counts the farmer's animals born
+    in that year, so each birth year starts again at 0001.
     """
 
     from app.data.districts import get_district_code
@@ -194,7 +208,8 @@ def generate_livestock_tag(
     district_code = get_district_code(district) or "UNK"
     farmer_prefix = str(user_id).replace("-", "")[:3].upper()
     year_of_birth = str(year)[-2:]
-    sequence = str(_count_all_livestock_for_user(session=session, user_id=user_id) + 1).zfill(4)
+    sequence_number = _next_tag_sequence(session=session, user_id=user_id, year_code=year_of_birth)
+    sequence = str(sequence_number).zfill(4)
     return f"{district_code}-{farmer_prefix}-{year_of_birth}-{sequence}"
 
 
