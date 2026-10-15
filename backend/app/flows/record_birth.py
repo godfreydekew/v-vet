@@ -1,7 +1,6 @@
 import logging
 import uuid
 from datetime import date as date_cls
-from datetime import datetime, timezone
 
 from sqlmodel import Session
 
@@ -26,8 +25,8 @@ STEP_DONE = "done"
 class RecordBirthFlow(BaseFlow):
     """
     Records a calving event in two steps:
-    1. record_birth Flow — survival, colostrum intake, dam mastitis signs,
-       date of birth. Dam-focused, time-sensitive facts.
+    1. record_birth Flow — survival, colostrum intake, dam mastitis signs.
+       Dam-focused, time-sensitive facts.
     2. register_animal Flow, reused as-is (same published Flow ID, launched
        with this flow's own flow_token so the submission routes here instead
        of to RegisterAnimalFlow) — the calf's own details: name,
@@ -158,18 +157,6 @@ class RecordBirthFlow(BaseFlow):
 
         from app.core.config import settings
 
-        today = datetime.now(timezone.utc).date()
-        raw_date = (data.get("date_of_birth") or "").strip()
-
-        # TO-DO handle cases when date is not provided and when date is invalid 
-        # try:
-        #     dob = datetime.strptime(raw_date, "%Y-%m-%d").date()
-        # except ValueError:
-        #     logger.warning(f"[RecordBirthFlow] Invalid date format: {raw_date} - defaulting to today")
-        #     dob = today
-        # if dob > today:
-        #     dob = today
-
         survived = data.get("survived") == "yes"
         self.record_step(
             session=session,
@@ -179,7 +166,6 @@ class RecordBirthFlow(BaseFlow):
                 "survived": survived,
                 "colostrum": data.get("colostrum"),
                 "mastitis": data.get("mastitis"),
-                "date_of_birth": raw_date,
             },
         )
 
@@ -228,7 +214,7 @@ class RecordBirthFlow(BaseFlow):
         survived = bool(state.data.get("survived"))
         colostrum = state.data.get("colostrum")
         mastitis = state.data.get("mastitis")
-        dob = date_cls.fromisoformat(state.data["date_of_birth"])
+        dob = self._parse_date_of_birth(data.get("date_of_birth"), phone=user.phone)
 
         calf_name = (data.get("name") or "").strip() or None
         calf_gender = data.get("gender") or "unknown"
@@ -282,7 +268,7 @@ class RecordBirthFlow(BaseFlow):
         if state.step == STEP_CALVING_DETAILS:
             return (
                 f"Recording a birth for {mother_name}: V-Vet sent the birth details form "
-                "(did the calf survive, colostrum, mastitis, date) and the farmer hasn't submitted it yet."
+                "(did the calf survive, colostrum, mastitis) and the farmer hasn't submitted it yet."
             )
         if state.step == STEP_CALF_DETAILS:
             return (
@@ -293,6 +279,21 @@ class RecordBirthFlow(BaseFlow):
             "Recording a birth: V-Vet sent the farmer a way to choose the mother cow, "
             "and they haven't chosen yet."
         )
+
+    @staticmethod
+    def _parse_date_of_birth(raw_date: str | None, *, phone: str) -> date_cls | None:
+        """Parse the calf form's date (YYYY-MM-DD). Missing or invalid dates are logged and left empty."""
+        raw_date = (raw_date or "").strip()
+        if not raw_date:
+            logger.error("[RecordBirthFlow] No calf date of birth submitted for %s", phone)
+            return None
+        try:
+            return date_cls.fromisoformat(raw_date)
+        except ValueError:
+            logger.error(
+                "[RecordBirthFlow] Invalid calf date of birth %r submitted for %s", raw_date, phone
+            )
+            return None
 
     @staticmethod
     def _build_confirmation(
