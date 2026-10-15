@@ -160,12 +160,15 @@ class RecordBirthFlow(BaseFlow):
 
         today = datetime.now(timezone.utc).date()
         raw_date = (data.get("date_of_birth") or "").strip()
-        try:
-            dob = datetime.strptime(raw_date, "%Y-%m-%d").date()
-        except ValueError:
-            dob = today
-        if dob > today:
-            dob = today
+
+        # TO-DO handle cases when date is not provided and when date is invalid 
+        # try:
+        #     dob = datetime.strptime(raw_date, "%Y-%m-%d").date()
+        # except ValueError:
+        #     logger.warning(f"[RecordBirthFlow] Invalid date format: {raw_date} - defaulting to today")
+        #     dob = today
+        # if dob > today:
+        #     dob = today
 
         survived = data.get("survived") == "yes"
         self.record_step(
@@ -176,7 +179,7 @@ class RecordBirthFlow(BaseFlow):
                 "survived": survived,
                 "colostrum": data.get("colostrum"),
                 "mastitis": data.get("mastitis"),
-                "date_of_birth": dob.isoformat(),
+                "date_of_birth": raw_date,
             },
         )
 
