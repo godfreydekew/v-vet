@@ -1,0 +1,307 @@
+{
+    "Signs": [
+        {
+            "id": "unable_to_stand",
+            "name": "Unable to stand",
+            "category": "danger",
+            "farmer_text": "The animal cannot rise or cannot remain standing.",
+            "local_terms": [],
+            "universal_red_flag": true,
+            "red_flag_type": "emergency",
+            "vet_reviewed": false
+        },
+        {
+            "id": "difficult_breathing",
+            "name": "Struggling to breathe",
+            "category": "danger",
+            "farmer_text": "The animal is struggling to breathe, breathing with its mouth open, or its breathing is noisy.",
+            "local_terms": [],
+            "universal_red_flag": true,
+            "red_flag_type": "emergency",
+            "vet_reviewed": false
+        },
+        {
+            "id": "nasal_froth",
+            "name": "Froth from the nose",
+            "category": "danger",
+            "farmer_text": "White or clear foam or bubbles are coming from the nose.",
+            "local_terms": [],
+            "universal_red_flag": true,
+            "red_flag_type": "emergency",
+            "vet_reviewed": false
+        },
+        {
+            "id": "heavy_bleeding",
+            "name": "Heavy bleeding",
+            "category": "danger",
+            "farmer_text": "The animal is bleeding heavily or the bleeding will not stop.",
+            "local_terms": [],
+            "universal_red_flag": true,
+            "red_flag_type": "emergency",
+            "vet_reviewed": false
+        },
+        {
+            "id": "seizures_or_unconscious",
+            "name": "Fits or unconscious",
+            "category": "danger",
+            "farmer_text": "The animal is having fits or seizures, or is unconscious or difficult to wake.",
+            "local_terms": [],
+            "universal_red_flag": true,
+            "red_flag_type": "emergency"
+        },
+        {
+            "id": "abnormal_movement_behaviour",
+            "name": "Abnormal movement or behaviour",
+            "category": "danger",
+            "farmer_text": "The animal circles, falls, presses its head against things, staggers, or cannot walk normally.",
+            "local_terms": [],
+            "universal_red_flag": true,
+            "red_flag_type": "emergency"
+        },
+        {
+            "id": "severe_bloat",
+            "name": "Severe swelling of the belly",
+            "category": "danger",
+            "farmer_text": "The belly looks severely swollen, especially on the left side.",
+            "local_terms": [],
+            "universal_red_flag": true,
+            "red_flag_type": "emergency"
+        },
+        {
+            "id": "calving_difficulty",
+            "name": "Difficulty giving birth",
+            "category": "danger",
+            "farmer_text": "The cow is struggling to give birth.",
+            "local_terms": [],
+            "universal_red_flag": true,
+            "red_flag_type": "emergency"
+        },
+        {
+            "id": "sudden_death",
+            "name": "Sudden death",
+            "category": "danger",
+            "farmer_text": "An animal died suddenly.",
+            "local_terms": [],
+            "universal_red_flag": true,
+            "red_flag_type": "herd"
+        },
+        {
+            "id": "multiple_animals_affected",
+            "name": "Several animals sick",
+            "category": "danger",
+            "farmer_text": "Several animals are becoming sick at the same time.",
+            "local_terms": [],
+            "universal_red_flag": true,
+            "red_flag_type": "herd"
+        },
+        {
+            "id": "reduced_appetite",
+            "name": "Reduced appetite",
+            "category": "general",
+            "farmer_text": "The animal is eating less, has stopped eating, or is no longer grazing.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "reduced_cud_chewing",
+            "name": "Reduced cud chewing",
+            "category": "general",
+            "farmer_text": "The animal is chewing cud less than usual or has stopped chewing cud.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "reduced_drinking",
+            "name": "Drinking less",
+            "category": "general",
+            "farmer_text": "The animal is drinking less than usual or not drinking.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "weakness",
+            "name": "Weakness",
+            "category": "general",
+            "farmer_text": "The animal looks dull, is weak, lies down more, or struggles to move.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "isolated_from_herd",
+            "name": "Quiet or away from the herd",
+            "category": "general",
+            "farmer_text": "The animal is quieter than usual, withdrawn, or staying away from the herd.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "lameness",
+            "name": "Lameness",
+            "category": "general",
+            "farmer_text": "The animal is limping, stiff, or reluctant to move.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "fever",
+            "name": "Fever / feels hot",
+            "category": "general",
+            "farmer_text": "The animal feels unusually hot (touch the base of the ears), or a thermometer shows a high temperature.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "rapid_breathing",
+            "name": "Rapid breathing",
+            "category": "breathing",
+            "farmer_text": "The animal breathes quickly while resting, as if it has just been running.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "cough",
+            "name": "Coughing",
+            "category": "breathing",
+            "farmer_text": "The animal is coughing.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "nasal_discharge",
+            "name": "Nasal discharge",
+            "category": "breathing",
+            "farmer_text": "Fluid or mucus is coming from the nose.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "lymph_node_swelling",
+            "name": "Lumps below the ear or in front of the shoulder",
+            "category": "swelling",
+            "farmer_text": "A hard lump can be seen or felt below the ear or in front of the shoulder.",
+            "local_terms": [
+                "mbandabvu"
+            ],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "swelling",
+            "name": "Other swelling",
+            "category": "swelling",
+            "farmer_text": "A new lump or swelling can be seen or felt under the jaw, on the neck, legs, or belly.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "watery_eyes",
+            "name": "Watery eyes",
+            "category": "eyes_mouth",
+            "farmer_text": "Tears run from the eyes more than usual.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "cloudy_eye",
+            "name": "Cloudy eye",
+            "category": "eyes_mouth",
+            "farmer_text": "The eye looks white, grey, milky, or covered by a film.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "pale_eyelids",
+            "name": "Pale inside of the eyelids",
+            "category": "eyes_mouth",
+            "farmer_text": "The inside of the eyelids looks very pale or white instead of pink.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "yellow_eyes_or_gums",
+            "name": "Yellow eyes or gums",
+            "category": "eyes_mouth",
+            "farmer_text": "The whites of the eyes or the gums look yellow.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "drooling_or_mouth_froth",
+            "name": "Drooling or froth from the mouth",
+            "category": "eyes_mouth",
+            "farmer_text": "Saliva or white foam is coming from the mouth.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "mouth_sores",
+            "name": "Mouth sores",
+            "category": "eyes_mouth",
+            "farmer_text": "There are sores in the mouth, or the animal is drooling a lot.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "red_or_dark_urine",
+            "name": "Red or dark urine",
+            "category": "dung_urine",
+            "farmer_text": "The urine is red, brown, or the colour of strong tea.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "diarrhoea",
+            "name": "Loose dung / diarrhoea",
+            "category": "dung_urine",
+            "farmer_text": "The dung is much softer or more watery than normal.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "blood_in_dung",
+            "name": "Blood in dung",
+            "category": "dung_urine",
+            "farmer_text": "There is blood in the dung.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "ticks_seen",
+            "name": "Ticks",
+            "category": "skin",
+            "farmer_text": "Ticks can be seen on the animal, especially around the ears, tail, belly, or legs.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        },
+        {
+            "id": "skin_problem",
+            "name": "Skin problem",
+            "category": "skin",
+            "farmer_text": "There are lumps, wounds, or other changes on the skin.",
+            "local_terms": [],
+            "universal_red_flag": false,
+            "red_flag_type": null
+        }
+    ]
+}
