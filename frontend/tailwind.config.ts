@@ -15,6 +15,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ["Inter", "sans-serif"],
+        display: ["Figtree", "Inter", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -64,6 +65,22 @@ export default {
           foreground: "hsl(var(--danger-foreground))",
         },
         "surface-raised": "hsl(var(--surface-raised))",
+        // Public landing page palette
+        landing: {
+          ink: "#242220",
+          muted: "#5C5A56",
+          line: "#E7E4DF",
+          paper: "#F7F5F2",
+          forest: "#112111",
+          pine: "#1B6549",
+          button: "#1F7A5A",
+          accent: "#2E936F",
+          leaf: "#8FD19E",
+          mint: "#DEEDE0",
+          sky: "#E4ECF2",
+          sand: "#F2EBE1",
+          rose: "#F2E6EC",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -115,6 +132,10 @@ export default {
           "0%": { transform: "translateX(0)" },
           "100%": { transform: "translateX(100%)" },
         },
+        marquee: {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(-50%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -127,6 +148,7 @@ export default {
         "slide-out-right": "slide-out-right 0.3s ease-out",
         enter: "fade-in 0.3s ease-out, scale-in 0.2s ease-out",
         exit: "fade-out 0.3s ease-out, scale-out 0.2s ease-out",
+        marquee: "marquee 48s linear infinite",
       },
     },
   },
