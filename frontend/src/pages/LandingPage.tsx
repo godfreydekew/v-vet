@@ -1,392 +1,774 @@
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { motion, useReducedMotion, type MotionProps } from "framer-motion";
 import {
   ArrowRight,
-  Heart,
-  Shield,
-  Activity,
-  Users,
-  BarChart3,
-  Leaf,
-  MessageSquare,
+  ArrowUpRight,
+  Check,
+  Languages,
+  LogIn,
+  Mail,
+  MapPinned,
+  MessageCircle,
+  Mic,
   Smartphone,
-  ExternalLink,
+  Stethoscope,
+  History,
+  ShieldCheck,
+  CalendarClock,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
-import heroImage from "@/assets/landing-hero.jpg";
+import farmerImage from "@/assets/landing-hero.jpg";
 import whatsappScreenshot from "@/assets/whatsapp-screenshot.jpg";
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 16, filter: "blur(4px)" },
-  visible: { opacity: 1, y: 0, filter: "blur(0px)" },
-};
-
-const stagger = {
-  visible: { transition: { staggerChildren: 0.08 } },
-};
+import TriageDemo from "@/components/landing/TriageDemo";
+import {
+  ExampleChip,
+  RegistrationForm,
+  TierPills,
+  VetCaseCard,
+  VetQueue,
+  WhatsAppWelcome,
+} from "@/components/landing/CaseVisuals";
 
 const WHATSAPP_LINK = "https://wa.me/447519132951?text=Hello";
+const PARTNER_EMAIL = "info@vvet.org";
+const PARTNER_MAILTO = `mailto:${PARTNER_EMAIL}?subject=${encodeURIComponent("Partnering with V-Vet")}`;
 
-const features = [
+const NAV_LINKS = [
+  { label: "How it works", href: "#farmers" },
+  { label: "Triage", href: "#triage" },
+  { label: "For vets", href: "#vets" },
+  { label: "Awards", href: "#awards" },
+];
+
+const TRUST_MARQUEE = [
+  { icon: Languages, label: "Shona, Ndebele and English" },
+  { icon: Mic, label: "Voice notes, photos or text" },
+  { icon: Smartphone, label: "No app to download" },
+  { icon: Stethoscope, label: "Vet-reviewed escalation" },
+  { icon: History, label: "Full animal history" },
+  { icon: ShieldCheck, label: "Every alert explains why" },
+];
+
+const FARMER_CAN_SEND = [
+  "Voice notes, photos or text",
+  "In Shona, Ndebele or English",
+  "Their phone number is their login",
+  "An estimated age when the birth date is unknown",
+];
+
+const VET_GETS = [
+  "Cases sorted by urgency",
+  "Symptoms, photos and voice notes in one place",
+  "The animal's record: births, treatments and past cases",
+  "A way to send the diagnosis, treatment plan and follow-up date back to the farmer",
+];
+
+type Award = {
+  name: string;
+  result: string;
+  detail?: string;
+  link?: string;
+  tileClass: string;
+};
+
+const AWARDS: Award[] = [
   {
-    icon: Heart,
-    title: "Health Tracking",
-    desc: "Log symptoms, vitals, and observations for every animal in your herd.",
+    name: "NVIDIA AI Day Competition",
+    result: "Winner, awarded an NVIDIA DGX Spark AI supercomputer.",
+    detail: "Sponsored by NVIDIA, Henley Business School, SCG and Softcat.",
+    tileClass: "bg-landing-mint",
   },
   {
-    icon: Shield,
-    title: "Vaccination Records",
-    desc: "Never miss a vaccination, track schedules and get overdue alerts.",
+    name: "Henley Business School Student Business Idea Competition",
+    result: "First place, with £2,000 for V-Vet.",
+    link: "https://live.henley.ac.uk/news/13206940",
+    tileClass: "bg-landing-sky",
   },
   {
-    icon: Activity,
-    title: "Treatment History",
-    desc: "Complete treatment logs with dosages, outcomes, and vet notes.",
-  },
-  {
-    icon: Users,
-    title: "Vet Consultations",
-    desc: "Submit cases to verified vets and receive diagnoses remotely.",
-  },
-  {
-    icon: BarChart3,
-    title: "Herd Analytics",
-    desc: "See your herd health at a glance with real time status summaries.",
-  },
-  {
-    icon: Leaf,
-    title: "Farm Management",
-    desc: "Manage multiple farms, track livestock counts, and organise records.",
+    name: "Just Imagine If 2026, University of Reading",
+    result: "Winner, with £5,000 to run V-Vet's first pilot programme.",
+    link: "https://www.reading.ac.uk/just-imagine-if/2026-winners",
+    tileClass: "bg-landing-sand",
   },
 ];
 
-export default function LandingPage() {
-  const navigate = useNavigate();
+const CLOSING_POINTS = [
+  { icon: Stethoscope, label: "Vets stay in the loop" },
+  { icon: Languages, label: "Built for local languages" },
+  { icon: MessageCircle, label: "Works inside WhatsApp" },
+  { icon: MapPinned, label: "Starting in Zimbabwe" },
+];
+
+const pillPrimaryOnDark =
+  "inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-[15px] font-semibold text-landing-forest transition-colors hover:bg-landing-mint";
+const pillSecondaryOnDark =
+  "inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-semibold text-white ring-1 ring-inset ring-white/35 transition-colors hover:bg-white/10";
+const pillPrimary =
+  "inline-flex items-center justify-center gap-2 rounded-full bg-landing-button px-6 py-3.5 text-[15px] font-semibold text-white transition-colors hover:bg-landing-pine";
+const pillSecondary =
+  "inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-semibold text-landing-ink ring-1 ring-inset ring-landing-line transition-colors hover:bg-landing-paper";
+
+const sectionHeading =
+  "font-display text-[2.125rem] font-semibold leading-[1.1] tracking-[-0.02em] text-landing-ink sm:text-[2.75rem] md:text-5xl";
+
+function Accent({ children }: { children: React.ReactNode }) {
+  return <span className="text-landing-accent">{children}</span>;
+}
+
+function CheckList({ items }: { items: string[] }) {
+  return (
+    <ul className="space-y-3">
+      {items.map((item) => (
+        <li key={item} className="flex items-start gap-3 text-[15px] leading-relaxed text-landing-ink">
+          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-landing-button text-white">
+            <Check size={12} strokeWidth={3} aria-hidden="true" />
+          </span>
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function SiteHeader() {
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    function handleScroll() {
+      setIsScrolled(window.scrollY > 24);
+    }
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Nav */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2.5">
-            <img
-              src="/logo.png"
-              alt="V-Vet logo"
-              className="w-8 h-8 rounded-lg object-cover"
-            />
-            <span className="text-lg font-bold text-foreground tracking-tight">
-              V-Vet
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              size="sm"
-              onClick={() => navigate("/login")}
-              className="rounded-full px-5"
+    <header
+      className={
+        isScrolled
+          ? "fixed inset-x-0 top-0 z-50 border-b border-landing-line bg-white/90 backdrop-blur-md transition-colors"
+          : "fixed inset-x-0 top-0 z-50 border-b border-transparent bg-transparent transition-colors"
+      }
+    >
+      <div className="mx-auto flex h-[72px] max-w-[1160px] items-center justify-between px-4 sm:px-6">
+        <a href="#top" className="flex items-center" aria-label="V-Vet home">
+          <span
+            className={
+              isScrolled
+                ? "font-display text-xl font-bold tracking-tight text-landing-ink"
+                : "font-display text-xl font-bold tracking-tight text-white"
+            }
+          >
+            V-Vet
+          </span>
+        </a>
+
+        <nav aria-label="Main" className="hidden items-center gap-8 md:flex">
+          {NAV_LINKS.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className={
+                isScrolled
+                  ? "text-[15px] font-medium text-landing-muted transition-colors hover:text-landing-ink"
+                  : "text-[15px] font-medium text-white/80 transition-colors hover:text-white"
+              }
             >
-              Get Started
-            </Button>
-          </div>
+              {link.label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-2 sm:gap-4">
+          <Link
+            to="/login"
+            className={
+              isScrolled
+                ? "hidden text-[15px] font-medium text-landing-ink sm:inline"
+                : "hidden text-[15px] font-medium text-white sm:inline"
+            }
+          >
+            Sign in
+          </Link>
+          <a
+            href={PARTNER_MAILTO}
+            className={
+              isScrolled
+                ? "rounded-full bg-landing-button px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-landing-pine"
+                : "rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-landing-forest transition-colors hover:bg-landing-mint"
+            }
+          >
+            Partner with us
+          </a>
         </div>
-      </header>
+      </div>
+    </header>
+  );
+}
 
-      {/* Hero */}
-      <section className="max-w-7xl mx-auto px-6 py-20 md:py-28">
-        <motion.div
-          className="grid md:grid-cols-2 gap-12 md:gap-16 items-center"
-          initial="hidden"
-          animate="visible"
-          variants={stagger}
+type HeroCard = {
+  label: string;
+  href: string;
+  tileClass: string;
+  visual: React.ReactNode;
+};
+
+const HERO_CARDS: HeroCard[] = [
+  {
+    label: "For farmers",
+    href: "#farmers",
+    tileClass: "bg-landing-mint",
+    visual: (
+      <div className="relative h-full">
+        <img src={farmerImage} alt="" className="h-full w-full object-cover object-[50%_20%]" />
+        <span className="absolute bottom-2 left-2">
+          <ExampleChip label="Illustrative photo" />
+        </span>
+      </div>
+    ),
+  },
+  {
+    label: "On WhatsApp",
+    href: "#start",
+    tileClass: "bg-landing-sky",
+    visual: (
+      <div className="flex h-full items-end justify-center px-4 pt-4">
+        <div className="h-full w-full max-w-[200px] overflow-hidden rounded-t-[18px] shadow-[0_10px_30px_-12px_rgba(17,33,17,0.45)]">
+          <WhatsAppWelcome />
+        </div>
+      </div>
+    ),
+  },
+  {
+    label: "AI triage",
+    href: "#triage",
+    tileClass: "bg-landing-sand",
+    visual: (
+      <div className="flex h-full items-center justify-center px-4">
+        <div className="w-full max-w-[190px]">
+          <TierPills activeIndex={2} size="sm" />
+        </div>
+      </div>
+    ),
+  },
+  {
+    label: "For vets",
+    href: "#vets",
+    tileClass: "bg-landing-rose",
+    visual: (
+      <div className="flex h-full items-center justify-center px-4">
+        <div className="w-full max-w-[220px]">
+          <VetCaseCard compact />
+        </div>
+      </div>
+    ),
+  },
+];
+
+function Hero() {
+  const prefersReducedMotion = useReducedMotion();
+  const entrance = (delay: number): MotionProps =>
+    prefersReducedMotion
+      ? {}
+      : {
+          initial: { opacity: 0, y: 18 },
+          animate: { opacity: 1, y: 0 },
+          transition: { duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] as const },
+        };
+
+  return (
+    <section id="top" className="relative bg-[linear-gradient(166deg,#1B6549_0%,#112111_100%)] text-white">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 bottom-0 select-none overflow-hidden"
+      >
+        <p className="translate-y-[18%] text-center font-display text-[30vw] font-bold leading-none tracking-[-0.04em] text-white/[0.045]">
+          V-VET
+        </p>
+      </div>
+
+      <div className="relative mx-auto flow-root max-w-[1160px] px-4 pb-0 pt-32 text-center sm:px-6 md:pt-[132px]">
+        <motion.h1
+          {...entrance(0)}
+          className="mx-auto max-w-[24ch] font-display text-[2.6rem] font-semibold leading-[1.04] tracking-[-0.03em] sm:text-6xl md:text-[4.25rem]"
+          style={{ textWrap: "balance" } as React.CSSProperties}
         >
-          <div className="space-y-8">
-            <motion.div
-              variants={fadeUp}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-subtle text-primary text-xs font-medium border border-primary/10">
-                <Leaf size={13} />
-                Livestock health intelligence
-              </span>
-            </motion.div>
+          Animal health, <br className="hidden sm:block" />
+          <span className="text-landing-leaf">one WhatsApp message</span> away.
+        </motion.h1>
 
-            <motion.h1
-              variants={fadeUp}
-              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-              className="text-4xl sm:text-5xl md:text-[3.5rem] font-extrabold leading-[1.08] tracking-tight text-foreground"
-              style={{ textWrap: "balance" } as React.CSSProperties}
-            >
-              Your herd,{" "}
-              <span className="text-primary italic font-serif">expertly</span>{" "}
-              managed.
-            </motion.h1>
+        <motion.p
+          {...entrance(0.08)}
+          className="mx-auto mt-5 max-w-[58ch] text-[17px] leading-relaxed text-white/85 md:text-lg"
+          style={{ textWrap: "pretty" } as React.CSSProperties}
+        >
+          V-Vet helps smallholder farmers in Zimbabwe report a sick animal by voice note, photo or
+          text, get clear next steps, and reach a vet when it matters.
+        </motion.p>
 
-            <motion.p
-              variants={fadeUp}
-              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-              className="text-base md:text-lg text-muted-foreground max-w-md leading-relaxed"
-              style={{ textWrap: "pretty" } as React.CSSProperties}
-            >
-              V-Vet helps African farmers track, monitor, and protect every
-              animal in their herd with health logging, vet consultations, and
-              vaccination management.
-            </motion.p>
-
-            <motion.div
-              variants={fadeUp}
-              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-              className="flex items-center gap-3"
-            >
-              <Button
-                size="lg"
-                onClick={() => navigate("/login")}
-                className="rounded-full px-7 gap-2 group"
-              >
-                Start for free
-                <ArrowRight
-                  size={16}
-                  className="transition-transform group-hover:translate-x-0.5"
-                />
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => navigate("/login")}
-                className="rounded-full px-7"
-              >
-                Sign in
-              </Button>
-            </motion.div>
-          </div>
-
-          {/* Hero image */}
-          <motion.div
-            variants={fadeUp}
-            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-            className="relative"
-          >
-            <div className="rounded-2xl overflow-hidden shadow-2xl shadow-black/10 dark:shadow-black/30">
-              <img
-                src={heroImage}
-                alt="Healthy cattle grazing on lush green pasture"
-                className="w-full h-[380px] md:h-[460px] object-cover"
-              />
-            </div>
-          </motion.div>
+        <motion.div
+          {...entrance(0.16)}
+          className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
+        >
+          <a href={PARTNER_MAILTO} className={pillPrimaryOnDark}>
+            Partner with us
+            <ArrowRight size={16} aria-hidden="true" />
+          </a>
+          <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className={pillSecondaryOnDark}>
+            Start on WhatsApp
+          </a>
         </motion.div>
-      </section>
 
-      {/* WhatsApp Integration Section */}
-      <section className="max-w-7xl mx-auto px-6 py-20 md:py-24 border-t border-border">
+        <motion.p {...entrance(0.22)} className="mt-5 text-sm text-white/75">
+          <a href="#awards" className="underline decoration-white/30 underline-offset-4 hover:decoration-white">
+            Winner of NVIDIA AI Day, Henley Business School and Just Imagine If 2026
+          </a>
+        </motion.p>
+
         <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={stagger}
-          className="space-y-12"
+          {...entrance(0.3)}
+          className="relative z-10 mx-auto -mb-[112px] mt-10 max-w-[960px] rounded-[26px] bg-white p-2.5 shadow-[0_30px_60px_-30px_rgba(17,33,17,0.45)]"
         >
-          {/* Section Heading */}
-          <motion.div
-            variants={fadeUp}
-            transition={{ duration: 0.6 }}
-            className="text-center max-w-2xl mx-auto space-y-3"
-          >
-            <h2
-              className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight"
-              style={{ textWrap: "balance" } as React.CSSProperties}
-            >
-              Start Directly on WhatsApp
-            </h2>
-            <p
-              className="text-muted-foreground text-base leading-relaxed"
-              style={{ textWrap: "pretty" } as React.CSSProperties}
-            >
-              WhatsApp is V-Vet’s primary user interface for farmers. To use the web platform, users must first set up their account on WhatsApp.
-            </p>
-          </motion.div>
-
-          {/* Centered Composition: QR Code + Phone Picture close together */}
-          <motion.div
-            variants={fadeUp}
-            transition={{ duration: 0.7 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-8 md:gap-12 max-w-3xl mx-auto"
-          >
-            {/* Left Side: QR Code, Action Button, Pre Pilot Notice */}
-            <div className="space-y-5 flex flex-col items-center text-center shrink-0">
-              {/* QR Code Box */}
-              <div className="space-y-2 flex flex-col items-center">
-                <div className="p-3.5 rounded-2xl border border-border/80 bg-background shadow-sm inline-block">
-                  <QRCodeSVG
-                    value={WHATSAPP_LINK}
-                    size={145}
-                    level="H"
-                    bgColor="transparent"
-                    fgColor="currentColor"
-                    className="text-foreground"
-                  />
-                </div>
-                <span className="text-xs text-muted-foreground font-medium">
-                  Scan to chat on WhatsApp
-                </span>
-              </div>
-
-              {/* WhatsApp Link Button matching Get Started button style */}
-              <a
-                href={WHATSAPP_LINK}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-medium text-sm transition-all shadow-sm group"
-              >
-                <span>Chat on WhatsApp</span>
-                <ArrowRight
-                  size={15}
-                  className="transition-transform group-hover:translate-x-0.5"
-                />
-              </a>
-
-              {/* Pre Pilot Stage Notice */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs border border-amber-500/20 font-medium">
-                <Smartphone size={14} className="text-amber-500" />
-                <span>V-Vet is currently in pre pilot stage</span>
-              </div>
-            </div>
-
-            {/* Right Side: Clean Smartphone Mockup */}
-            <div className="flex justify-center shrink-0">
-              <div className="relative max-w-[260px] w-full">
-                <div className="relative rounded-[2.4rem] bg-zinc-950 p-3 ring-1 ring-zinc-800 shadow-xl shadow-black/30">
-                  {/* Camera Speaker Notch */}
-                  <div className="absolute top-5 left-1/2 -translate-x-1/2 w-24 h-3.5 bg-zinc-900 rounded-full z-20 flex items-center justify-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-zinc-950" />
-                    <div className="w-8 h-1 bg-zinc-800 rounded-full" />
+          <ul className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+            {HERO_CARDS.map((card) => (
+              <li key={card.label}>
+                <a href={card.href} className="group block overflow-hidden rounded-[20px]">
+                  <div className={`h-[124px] overflow-hidden sm:h-[136px] ${card.tileClass}`}>
+                    {card.visual}
                   </div>
-
-                  {/* Screen Content */}
-                  <div className="relative rounded-[1.9rem] overflow-hidden bg-black aspect-[9/18] border border-zinc-800">
-                    <img
-                      src={whatsappScreenshot}
-                      alt="V-Vet WhatsApp chat demonstration"
-                      className="w-full h-full object-cover"
+                  <div className="flex items-center justify-between bg-[#FAFAFA] px-4 py-4 text-left">
+                    <span className="text-[15px] font-semibold text-landing-ink sm:text-base">{card.label}</span>
+                    <ArrowRight
+                      size={18}
+                      className="text-landing-ink transition-transform duration-300 group-hover:translate-x-1"
+                      aria-hidden="true"
                     />
                   </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      </section>
-
-      {/* Features */}
-      <section className="max-w-7xl mx-auto px-6 py-20 md:py-24 border-t border-border">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={stagger}
-          className="space-y-14"
-        >
-          <motion.div
-            variants={fadeUp}
-            transition={{ duration: 0.6 }}
-            className="text-center max-w-lg mx-auto space-y-3"
-          >
-            <h2
-              className="text-2xl md:text-3xl font-bold text-foreground"
-              style={{ textWrap: "balance" } as React.CSSProperties}
-            >
-              Complete Farm & Herd Intelligence
-            </h2>
-            <p
-              className="text-muted-foreground"
-              style={{ textWrap: "pretty" } as React.CSSProperties}
-            >
-              From daily health checks to emergency vet consultations, all in
-              one place.
-            </p>
-          </motion.div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {features.map((f, i) => (
-              <motion.div
-                key={f.title}
-                variants={fadeUp}
-                transition={{
-                  duration: 0.6,
-                  delay: i * 0.07,
-                  ease: [0.16, 1, 0.3, 1],
-                }}
-                className="bg-card rounded-xl border border-border p-6 space-y-3 hover:shadow-md hover:shadow-black/5 transition-shadow duration-300 group"
-              >
-                <div className="w-10 h-10 rounded-lg bg-primary-subtle flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
-                  <f.icon size={20} />
-                </div>
-                <h3 className="font-semibold text-foreground">{f.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {f.desc}
-                </p>
-              </motion.div>
+                </a>
+              </li>
             ))}
-          </div>
+          </ul>
         </motion.div>
-      </section>
+      </div>
+    </section>
+  );
+}
 
-      {/* CTA */}
-      <section className="max-w-7xl mx-auto px-6 py-20 md:py-24">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.3 }}
-          variants={stagger}
-          className="bg-primary rounded-2xl p-10 md:p-16 text-center space-y-6"
-        >
-          <motion.h2
-            variants={fadeUp}
-            transition={{ duration: 0.6 }}
-            className="text-2xl md:text-3xl font-bold text-primary-foreground"
-            style={{ textWrap: "balance" } as React.CSSProperties}
+function TrustMarquee() {
+  const doubled = [...TRUST_MARQUEE, ...TRUST_MARQUEE];
+  return (
+    <div className="group overflow-hidden border-b border-landing-line py-7">
+      <ul className="flex w-max animate-marquee gap-14 group-hover:[animation-play-state:paused]">
+        {doubled.map((item, index) => (
+          <li
+            key={`${item.label}-${index}`}
+            aria-hidden={index >= TRUST_MARQUEE.length}
+            className="flex items-center gap-2.5 whitespace-nowrap text-xs font-semibold uppercase tracking-[0.14em] text-landing-ink"
           >
-            Start protecting your herd today
-          </motion.h2>
-          <motion.p
-            variants={fadeUp}
-            transition={{ duration: 0.6 }}
-            className="text-primary-foreground/80 max-w-md mx-auto"
-          >
-            Join farmers across Africa using V-Vet to keep their livestock
-            healthy and productive.
-          </motion.p>
-          <motion.div variants={fadeUp} transition={{ duration: 0.6 }}>
-            <Button
-              size="lg"
-              variant="secondary"
-              onClick={() => navigate("/login")}
-              className="rounded-full px-8 bg-white text-primary hover:bg-white/90 gap-2 group"
-            >
-              Get started free
-              <ArrowRight
-                size={16}
-                className="transition-transform group-hover:translate-x-0.5"
-              />
-            </Button>
-          </motion.div>
-        </motion.div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-border py-8 px-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between text-sm text-muted-foreground">
-          <p>© 2026 V-Vet. All rights reserved.</p>
-          <div className="flex items-center gap-2">
-            <img
-              src="/logo.png"
-              alt="V-Vet logo"
-              className="w-6 h-6 rounded object-cover"
-            />
-          </div>
-        </div>
-      </footer>
+            <item.icon size={18} strokeWidth={1.75} aria-hidden="true" />
+            {item.label}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
+function FarmersSection() {
+  return (
+    <section id="farmers" className="scroll-mt-24 px-4 py-24 sm:px-6 md:py-32">
+      <div className="mx-auto grid max-w-[1100px] items-start gap-14 md:grid-cols-[5fr_7fr] md:gap-16">
+        <div className="md:order-last md:pt-6">
+          <h2 className={sectionHeading} style={{ textWrap: "balance" } as React.CSSProperties}>
+            Farmers report a sick animal <Accent>in their own words</Accent>
+          </h2>
+          <p className="mt-5 max-w-[60ch] text-[17px] leading-relaxed text-landing-muted">
+            V-Vet works inside WhatsApp, so reporting a problem takes a voice note, not a form or a
+            new app.
+          </p>
 
+          <div className="mt-10 grid gap-3 sm:grid-cols-[1.1fr_1fr]">
+            <figure className="relative overflow-hidden rounded-[24px] bg-landing-sand">
+              <img
+                src={farmerImage}
+                alt="Illustrative photo of a smallholder farmer with her cow"
+                className="h-full min-h-[300px] w-full object-cover object-[50%_25%]"
+              />
+              <figcaption className="absolute bottom-3 left-3">
+                <ExampleChip label="Illustrative photo" />
+              </figcaption>
+            </figure>
+            <div className="relative flex flex-col justify-end rounded-[24px] bg-landing-sky p-4 pt-12">
+              <span className="absolute right-3 top-3">
+                <ExampleChip />
+              </span>
+              <RegistrationForm />
+            </div>
+          </div>
+
+          <h3 className="mt-14 font-display text-[1.75rem] font-semibold leading-tight tracking-[-0.01em] text-landing-ink">
+            Registering an animal takes one message
+          </h3>
+          <p className="mt-3 max-w-[56ch] text-[15px] leading-relaxed text-landing-muted">
+            Interactive WhatsApp forms collect an animal's details in one step, so farmers aren't
+            asked question after question. Each animal gets a tag that links it to its district.
+          </p>
+          <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className={`${pillPrimary} mt-7`}>
+            Start on WhatsApp
+          </a>
+        </div>
+
+        <div>
+          <div className="relative flex h-[372px] items-end justify-center overflow-hidden rounded-[28px] bg-landing-mint pt-10">
+            <div className="w-[230px] rounded-t-[36px] bg-[#111] p-2 pb-0 shadow-[0_30px_50px_-24px_rgba(17,33,17,0.6)]">
+              <img
+                src={whatsappScreenshot}
+                alt="The V-Vet welcome message in WhatsApp, inviting the farmer to set up their farm"
+                className="h-[322px] w-full rounded-t-[28px] object-cover object-top"
+              />
+            </div>
+          </div>
+          <div className="mt-8">
+            <h3 className="font-display text-xl font-semibold text-landing-ink">What a farmer can send</h3>
+            <div className="mt-4">
+              <CheckList items={FARMER_CAN_SEND} />
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  );
+}
+
+function TriageSection() {
+  return (
+    <section id="triage" className="scroll-mt-24 px-4 pb-24 sm:px-6 md:pb-32">
+      <div className="mx-auto max-w-[1100px]">
+        <div className="mx-auto max-w-[720px] text-center">
+          <h2 className={sectionHeading} style={{ textWrap: "balance" } as React.CSSProperties}>
+            Decisions, <Accent>not just records</Accent>
+          </h2>
+          <p className="mx-auto mt-5 max-w-[60ch] text-[17px] leading-relaxed text-landing-muted">
+            Every report goes through the same triage. V-Vet weighs how confident it is against
+            what's at stake, then picks the safest next step: advice to monitor, a few more
+            questions, or a vet.
+          </p>
+        </div>
+        <div className="mt-14">
+          <TriageDemo />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function VetsSection() {
+  return (
+    <section id="vets" className="scroll-mt-24 px-4 pb-24 sm:px-6 md:pb-32">
+      <div className="mx-auto grid max-w-[1100px] items-center gap-14 md:grid-cols-[6fr_5fr] md:gap-16">
+        <div>
+          <h2 className={sectionHeading} style={{ textWrap: "balance" } as React.CSSProperties}>
+            Vets get every case <Accent>with its history</Accent>
+          </h2>
+          <p className="mt-5 max-w-[56ch] text-[17px] leading-relaxed text-landing-muted">
+            V-Vet doesn't replace vets. It helps each vet reach more farmers, faster, and arrive
+            already knowing the animal.
+          </p>
+          <div className="mt-8">
+            <CheckList items={VET_GETS} />
+          </div>
+        </div>
+        <div className="relative rounded-[28px] bg-landing-rose p-6 sm:p-10">
+          <span className="absolute right-4 top-4">
+            <ExampleChip />
+          </span>
+          <div className="pt-6">
+            <VetQueue />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function GroundworkSection() {
+  return (
+    <section className="px-4 pb-24 sm:px-6 md:pb-32">
+      <div className="mx-auto grid max-w-[1100px] gap-4 md:grid-cols-2">
+        <article className="flex flex-col overflow-hidden rounded-[24px] bg-landing-paper sm:flex-row">
+          <div className="flex items-center justify-center bg-landing-mint p-6 sm:w-[42%]">
+            <ul className="w-full max-w-[180px] space-y-2 text-sm">
+              {["Dipping", "Deworming", "Vaccination"].map((task, index) => (
+                <li
+                  key={task}
+                  className="flex items-center justify-between rounded-xl bg-white px-3 py-2 text-landing-ink ring-1 ring-black/5"
+                >
+                  {task}
+                  <span className="text-xs text-landing-muted">{["Fri", "2 wks", "Mar"][index]}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="flex-1 p-6 sm:p-7">
+            <h3 className="font-display text-[1.375rem] font-semibold leading-snug text-landing-ink">
+              Prevention, <Accent>not only reaction</Accent>
+            </h3>
+            <p className="mt-2 text-[15px] leading-relaxed text-landing-muted">
+              Reminders for vaccination, dipping, deworming, weaning and bull soundness, sent before
+              they're due.
+            </p>
+            <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-landing-pine ring-1 ring-landing-line">
+              <CalendarClock size={12} aria-hidden="true" /> Coming next
+            </span>
+          </div>
+        </article>
+
+        <article className="flex flex-col overflow-hidden rounded-[24px] bg-landing-paper sm:flex-row">
+          <div className="flex items-center justify-center bg-landing-sand p-6 sm:w-[42%]">
+            <ul className="grid w-full max-w-[180px] grid-cols-2 gap-2 text-center">
+              {[
+                ["BIN", "Bindura"],
+                ["BIA", "Binga"],
+                ["CHK", "Chikomba"],
+                ["GWE", "Gweru"],
+              ].map(([code, district]) => (
+                <li key={code} className="rounded-xl bg-white px-2 py-2 ring-1 ring-black/5">
+                  <span className="block text-sm font-bold tracking-wide text-landing-ink">{code}</span>
+                  <span className="block text-[11px] text-landing-muted">{district}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="flex-1 p-6 sm:p-7">
+            <h3 className="font-display text-[1.375rem] font-semibold leading-snug text-landing-ink">
+              Organised by <Accent>district and ward</Accent>
+            </h3>
+            <p className="mt-2 text-[15px] leading-relaxed text-landing-muted">
+              Every farm and animal is tied to its district, and field agents onboard farmers in
+              person before each launch.
+            </p>
+          </div>
+        </article>
+      </div>
+    </section>
+  );
+}
+
+function AwardsSection() {
+  return (
+    <section id="awards" className="scroll-mt-24 px-4 pb-24 sm:px-6 md:pb-32">
+      <div className="mx-auto max-w-[1100px]">
+        <div className="mx-auto max-w-[720px] text-center">
+          <h2 className={sectionHeading} style={{ textWrap: "balance" } as React.CSSProperties}>
+            Recognised <Accent>before the pilot</Accent>
+          </h2>
+          <p className="mx-auto mt-5 max-w-[56ch] text-[17px] leading-relaxed text-landing-muted">
+            V-Vet has won three pitch competitions. The most recent award funds our first pilot
+            with farmers.
+          </p>
+        </div>
+
+        <ul className="mt-14 grid gap-4 md:grid-cols-3">
+          {AWARDS.map((award) => (
+            <li key={award.name} className={`flex flex-col rounded-[24px] ${award.tileClass}`}>
+              <div className="flex flex-1 flex-col p-7">
+                <h3 className="font-display text-xl font-semibold leading-snug text-landing-ink">{award.name}</h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-landing-ink">{award.result}</p>
+                {award.detail && (
+                  <p className="mt-1 text-sm leading-relaxed text-landing-muted">{award.detail}</p>
+                )}
+                <span className="flex-1" />
+                {award.link && (
+                  <a
+                    href={award.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-landing-pine hover:text-landing-forest"
+                  >
+                    Read the announcement
+                    <ArrowUpRight size={15} aria-hidden="true" />
+                  </a>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function StartSection() {
+  return (
+    <section id="start" className="scroll-mt-24 px-4 pb-24 sm:px-6 md:pb-32">
+      <div className="mx-auto grid max-w-[1100px] items-center gap-10 rounded-[28px] bg-landing-paper p-6 sm:p-10 md:grid-cols-[7fr_5fr] md:p-14">
+        <div>
+          <h2 className={sectionHeading} style={{ textWrap: "balance" } as React.CSSProperties}>
+            Farmers and vets, <Accent>start here</Accent>
+          </h2>
+          <p className="mt-5 max-w-[52ch] text-[17px] leading-relaxed text-landing-muted">
+            Scan the code or tap the button to say hello on WhatsApp. Your phone number becomes your
+            account. Already registered? Sign in to the web app.
+          </p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className={pillPrimary}>
+              <MessageCircle size={16} aria-hidden="true" />
+              Chat on WhatsApp
+            </a>
+            <Link to="/login" className={pillSecondary}>
+              <LogIn size={16} aria-hidden="true" />
+              Sign in
+            </Link>
+          </div>
+          <p className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-sm text-landing-muted ring-1 ring-landing-line">
+            <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
+            V-Vet is in its pre-pilot stage
+          </p>
+        </div>
+
+        <div className="flex justify-center">
+          <div className="rounded-[24px] bg-landing-mint p-6 text-center">
+            <div className="rounded-[18px] bg-white p-4">
+              <QRCodeSVG
+                value={WHATSAPP_LINK}
+                size={168}
+                level="H"
+                bgColor="#FFFFFF"
+                fgColor="#112111"
+                aria-label="QR code that opens a WhatsApp chat with V-Vet"
+                role="img"
+              />
+            </div>
+            <p className="mt-3 text-sm font-medium text-landing-pine">Scan to chat on WhatsApp</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PartnerSection() {
+  return (
+    <section className="px-4 pb-20 sm:px-6">
+      <div className="relative mx-auto max-w-[1100px] overflow-hidden rounded-[32px] bg-[linear-gradient(166deg,#1B6549_0%,#112111_100%)] px-6 py-16 text-center text-white sm:px-12 md:py-24">
+        <p
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 -bottom-[0.32em] select-none text-center font-display text-[22vw] font-bold leading-none tracking-[-0.04em] text-white/[0.045] md:text-[15rem]"
+        >
+          V-VET
+        </p>
+        <div className="relative">
+          <h2
+            className="mx-auto max-w-[18ch] font-display text-[2.125rem] font-semibold leading-[1.08] tracking-[-0.02em] sm:text-5xl md:text-[3.5rem]"
+            style={{ textWrap: "balance" } as React.CSSProperties}
+          >
+            Help us take <span className="whitespace-nowrap">V-Vet</span>{" "}
+            <span className="text-landing-leaf">to more farmers</span>
+          </h2>
+          <p className="mx-auto mt-6 max-w-[56ch] text-[17px] leading-relaxed text-white/85">
+            Our first pilot in Zimbabwe is funded and being prepared. We'd like to hear from NGOs,
+            programmes, vets and funders who want to help it reach further.
+          </p>
+          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <a href={PARTNER_MAILTO} className={pillPrimaryOnDark}>
+              <Mail size={16} aria-hidden="true" />
+              Email {PARTNER_EMAIL}
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ClosingPoints() {
+  return (
+    <div className="border-y border-landing-line">
+      <ul className="mx-auto grid max-w-[1160px] grid-cols-2 md:grid-cols-4">
+        {CLOSING_POINTS.map((point, index) => (
+          <li
+            key={point.label}
+            className={
+              index < CLOSING_POINTS.length - 1
+                ? "flex items-center gap-3 border-landing-line px-4 py-6 text-sm font-semibold text-landing-ink sm:px-6 md:border-r [&:nth-child(odd)]:border-r"
+                : "flex items-center gap-3 px-4 py-6 text-sm font-semibold text-landing-ink sm:px-6"
+            }
+          >
+            <point.icon size={20} strokeWidth={1.75} aria-hidden="true" />
+            {point.label}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function SiteFooter() {
+  return (
+    <footer className="px-4 py-12 sm:px-6">
+      <div className="mx-auto max-w-[1100px]">
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="font-display text-xl font-bold tracking-tight text-landing-ink">V-Vet</span>
+          </div>
+          <ul className="flex flex-wrap gap-2.5">
+            <li>
+              <a
+                href={PARTNER_MAILTO}
+                className="inline-flex items-center gap-2 rounded-full bg-landing-paper px-4 py-2.5 text-sm font-medium text-landing-ink transition-colors hover:bg-landing-mint"
+              >
+                <Mail size={16} aria-hidden="true" /> {PARTNER_EMAIL}
+              </a>
+            </li>
+            <li>
+              <a
+                href={WHATSAPP_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full bg-landing-paper px-4 py-2.5 text-sm font-medium text-landing-ink transition-colors hover:bg-landing-mint"
+              >
+                <MessageCircle size={16} aria-hidden="true" /> WhatsApp
+              </a>
+            </li>
+            <li>
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-2 rounded-full bg-landing-paper px-4 py-2.5 text-sm font-medium text-landing-ink transition-colors hover:bg-landing-mint"
+              >
+                <LogIn size={16} aria-hidden="true" /> Sign in
+              </Link>
+            </li>
+          </ul>
+        </div>
+        <div className="mt-10 flex flex-col gap-2 border-t border-landing-line pt-6 text-sm text-landing-muted md:flex-row md:justify-between">
+          <p>© 2026 V-Vet. Livestock health intelligence.</p>
+          <p>Farmer photography on this page is illustrative. Product screens show an example case.</p>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+export default function LandingPage() {
+  return (
+    <div className="landing min-h-screen overflow-x-clip">
+      <SiteHeader />
+      <main>
+        <Hero />
+        <div className="h-[136px]" aria-hidden="true" />
+        <TrustMarquee />
+        <FarmersSection />
+        <TriageSection />
+        <VetsSection />
+        <GroundworkSection />
+        <AwardsSection />
+        <StartSection />
+        <PartnerSection />
+      </main>
+      <ClosingPoints />
+      <SiteFooter />
+    </div>
+  );
+}
