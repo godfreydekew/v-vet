@@ -1,17 +1,21 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTheme } from "@/contexts/ThemeContext";
-import { Sun, Moon, Eye, EyeOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import AuthShell, {
+  authHintClass,
+  authInputClass,
+  authLabelClass,
+  authLinkClass,
+  authSubmitClass,
+} from "@/components/landing/AuthShell";
+import { ExampleChip, VetCaseCard } from "@/components/landing/CaseVisuals";
+
+const PARTNER_EMAIL = "info@vvet.org";
 
 export default function Login() {
-  const navigate = useNavigate();
   const { login } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,117 +48,91 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50">
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
-          <button
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2.5"
-          >
-            <img
-              src="/logo.png"
-              alt="V-Vet logo"
-              className="w-8 h-8 rounded-lg object-cover"
-            />
-            <span className="text-lg font-bold text-foreground tracking-tight">
-              V-Vet
-            </span>
-          </button>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/")}
-              className="text-foreground"
-            >
-              Home
-            </Button>
-          </div>
+    <AuthShell
+      title={
+        <>
+          Sign in to <span className="text-landing-accent">V-Vet</span>
+        </>
+      }
+      subtitle="For farmers, vets and admins using the web app."
+      headerLink={{ label: "Create account", to: "/signup" }}
+      panelTitle={
+        <>
+          Every case reaches a vet <span className="text-landing-leaf">with its full history.</span>
+        </>
+      }
+      panelText="Symptoms, photos and the animal's record arrive together, sorted by urgency."
+      panelVisual={
+        <div className="space-y-3">
+          <ExampleChip label="Example case" />
+          <VetCaseCard />
         </div>
-      </header>
-
-      <div className="w-full max-w-sm space-y-8 mx-auto px-4 py-10 md:py-16">
-        <div className="text-center space-y-2">
-          <img
-            src="/logo.png"
-            alt="V-Vet logo"
-            className="w-14 h-14 rounded-2xl object-cover mx-auto"
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="space-y-2">
+          <label htmlFor="email" className={authLabelClass}>
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            className={authInputClass}
           />
-          <h1 className="text-2xl font-bold text-foreground">V-Vet</h1>
-          <p className="text-sm text-muted-foreground">
-            Livestock health intelligence for African farmers
-          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="bg-card rounded-xl border border-border p-6 space-y-4 shadow-sm">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in…" : "Sign In"}
-            </Button>
-            <Link to="/forgot-password" className="block text-center text-xs text-muted-foreground hover:text-foreground transition-colors">
+        <div className="space-y-2">
+          <div className="flex items-baseline justify-between gap-3">
+            <label htmlFor="password" className={authLabelClass}>
+              Password
+            </label>
+            <Link to="/forgot-password" className="text-sm font-medium text-landing-pine hover:underline hover:underline-offset-4">
               Forgot password?
             </Link>
           </div>
-        </form>
+          <div className="relative">
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              className={`${authInputClass} pr-12`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-landing-muted transition-colors hover:bg-landing-paper hover:text-landing-ink"
+            >
+              {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+            </button>
+          </div>
+        </div>
 
-        <p className="text-xs text-muted-foreground text-center">
+        <button type="submit" className={authSubmitClass} disabled={loading}>
+          {loading ? "Signing in…" : "Sign in"}
+        </button>
+      </form>
+
+      <div className="mt-8 space-y-3 border-t border-landing-line pt-6">
+        <p className={authHintClass}>
           Already using V-Vet on WhatsApp?{" "}
-          <Link
-            to="/signup"
-            className="text-foreground underline underline-offset-2 hover:opacity-75 transition-opacity"
-          >
+          <Link to="/signup" className={authLinkClass}>
             Create your web account
           </Link>
         </p>
-
-        <p className="text-xs text-muted-foreground text-center">
-          To join the pilot, contact{" "}
-          <a
-            href="mailto:dekewgodfrey@gmail.com"
-            className="text-foreground underline underline-offset-2 hover:opacity-75 transition-opacity"
-          >
-            dekewgodfrey@gmail.com
+        <p className={authHintClass}>
+          To join the pilot, email{" "}
+          <a href={`mailto:${PARTNER_EMAIL}`} className={authLinkClass}>
+            {PARTNER_EMAIL}
           </a>
         </p>
       </div>
-    </div>
+    </AuthShell>
   );
 }
