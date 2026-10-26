@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const TOKEN_KEY = 'vvet_token';
+export const TOKEN_KEY = import.meta.env.VITE_TOKEN_KEY;
 
 const configuredBackendUrl = import.meta.env.VITE_BACKEND_URL;
 
