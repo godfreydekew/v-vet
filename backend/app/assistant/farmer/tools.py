@@ -15,8 +15,8 @@ STARTABLE_FLOWS = ["register_animal", "my_animals", "record_death", "record_birt
 
 LANGUAGES = ["english", "shona", "ndebele"]
 
-# WhatsApp rejects list message bodies longer than this.
-_MENU_BODY_LIMIT = 1024
+# WhatsApp rejects interactive message bodies longer than this.
+_MESSAGE_BODY_LIMIT = 1024
 
 TOOLS: list[FunctionToolParam] = [
     {
@@ -56,8 +56,17 @@ TOOLS: list[FunctionToolParam] = [
             "type": "object",
             "properties": {
                 "flow": {"type": "string", "enum": STARTABLE_FLOWS},
+                "message": {
+                    "type": ["string", "null"],
+                    "description": (
+                        "Warm lines shown above the form or animal list, in the farmer's "
+                        "language to personalise the conversation. Respond to what they said and tell them what to do next, e.g. choose the "
+                        "animal or fill in the form. Be gentle when an animal is sick or has died. Never say "
+                        "Use null if you have nothing to add: a standard message is shown instead."
+                    ),
+                },
             },
-            "required": ["flow"],
+            "required": ["flow", "message"],
             "additionalProperties": False,
         },
         "strict": True,
@@ -109,7 +118,9 @@ def run_tool(
     if name == "send_menu":
         return _send_menu(session=session, user=user, message=arguments.get("message", ""))
     if name == "start_flow":
-        return _start_flow(session=session, user=user, flow_name=arguments.get("flow", ""))
+        return _start_flow(
+            session=session, user=user, flow_name=arguments.get("flow", ""), message=arguments.get("message")
+        )
     if name == "set_language":
         return _set_language(session=session, user=user, language=arguments.get("language", ""))
     if name == "submit_symptoms":
@@ -119,7 +130,7 @@ def run_tool(
 
 
 def _send_menu(*, session: Session, user: WhatsAppUser, message: str) -> dict[str, Any]:
-    body = message.strip()[:_MENU_BODY_LIMIT]
+    body = message.strip()[:_MESSAGE_BODY_LIMIT]
     sent = send_main_menu(phone=user.phone, body=body) if body else send_main_menu(phone=user.phone)
     if not sent:
         return {"status": "error", "message": "The menu could not be sent."}
@@ -127,7 +138,7 @@ def _send_menu(*, session: Session, user: WhatsAppUser, message: str) -> dict[st
     return {"status": "sent"}
 
 
-def _start_flow(*, session: Session, user: WhatsAppUser, flow_name: str) -> dict[str, Any]:
+def _start_flow(*, session: Session, user: WhatsAppUser, flow_name: str, message: str | None) -> dict[str, Any]:
     from app.flows import FLOW_REGISTRY
 
     flow = FLOW_REGISTRY.get(flow_name) if flow_name in STARTABLE_FLOWS else None
@@ -135,7 +146,8 @@ def _start_flow(*, session: Session, user: WhatsAppUser, flow_name: str) -> dict
         return {"status": "error", "message": f"There is no flow called {flow_name}."}
 
     # The flow sends its own message and records the farmer's state, as a menu tap does.
-    if not flow.start(phone=user.phone, user=user, session=session):
+    body = (message or "").strip()[:_MESSAGE_BODY_LIMIT] or None
+    if not flow.start(phone=user.phone, user=user, session=session, message=body):
         return {"status": "error", "message": f"{flow_name} could not be started."}
     save_message(session=session, user=user, role="assistant", content=f"[Flow started: {flow_name}]")
     return {"status": "started", "flow": flow_name, "ends_turn": True}

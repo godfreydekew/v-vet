@@ -28,8 +28,10 @@ class BaseFlow(ABC):
     flow_id: str
 
     @abstractmethod
-    def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
+    def start(self, phone: str, user: WhatsAppUser, session: Session, message: str | None = None) -> bool:
         """Send the WhatsApp Flow form (or interactive list) to the farmer.
+        message is an opening line written by the farmer agent; without one (e.g. after a
+        menu tap) the flow uses its fixed text.
         Returns True if it was sent successfully, False otherwise.
         The pipeline falls back to the farmer agent when False is returned.
         """

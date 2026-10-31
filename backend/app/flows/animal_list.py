@@ -72,6 +72,7 @@ def send_interactive_animal_list(
     session: Session,
     intent: AnimalListIntent,
     offset: int = 0,
+    message: str | None = None,
 ) -> bool:
     """
     Sends a paginated WhatsApp interactive list of the farmer's registered
@@ -112,7 +113,10 @@ def send_interactive_animal_list(
         )
 
     sections = [{"title": "Your Registered Animals", "rows": rows}]
-    body = _HEADER_TEXT[intent] if offset == 0 else _MORE_HEADER_TEXT[intent]
+    if offset == 0:
+        body = message or _HEADER_TEXT[intent]
+    else:
+        body = _MORE_HEADER_TEXT[intent]
 
     response = send_list_message(
         phone=phone,

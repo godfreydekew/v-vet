@@ -29,10 +29,10 @@ class MyAnimalsFlow(BaseFlow):
 
     flow_id = "my_animals"
 
-    def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
+    def start(self, phone: str, user: WhatsAppUser, session: Session, message: str | None = None) -> bool:
         if not self.has_animals(user=user, session=session):
             return send_main_menu(phone=phone, body=NO_ANIMALS_MESSAGE)
-        return send_interactive_animal_list(phone=phone, user=user, session=session, intent="view")
+        return send_interactive_animal_list(phone=phone, user=user, session=session, intent="view", message=message)
 
     def has_animals(self, *, user: WhatsAppUser, session: Session) -> bool:
         """Whether the farmer has at least one animal still on the farm."""

@@ -43,16 +43,18 @@ class RecordDeathFlow(BaseFlow):
 
     flow_id = "record_death"
 
-    def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
+    def start(self, phone: str, user: WhatsAppUser, session: Session, message: str | None = None) -> bool:
         logger.info(f"[RecordDeathFlow] Starting record death for {user.phone}")
         # The list shows 9 animals at a time, with a "Show more animals" row for the rest.
-        sent = self.send_animal_list(phone=phone, user=user, session=session)
+        sent = self.send_animal_list(phone=phone, user=user, session=session, message=message)
         if sent:
             self.start_tracking(session=session, user=user, step=STEP_PICK_ANIMAL)
         return sent
 
-    def send_animal_list(self, *, phone: str, user: WhatsAppUser, session: Session) -> bool:
-        return send_interactive_animal_list(phone=phone, user=user, session=session, intent="death")
+    def send_animal_list(self, *, phone: str, user: WhatsAppUser, session: Session, message: str | None = None) -> bool:
+        return send_interactive_animal_list(
+            phone=phone, user=user, session=session, intent="death", message=message
+        )
 
     def show_more(self, *, offset: int, phone: str, user: WhatsAppUser, session: Session) -> bool:
         return send_interactive_animal_list(
