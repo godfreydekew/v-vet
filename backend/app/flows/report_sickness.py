@@ -21,15 +21,17 @@ class ReportSicknessFlow(BaseFlow):
 
     flow_id = "report_sickness"
 
-    def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
+    def start(self, phone: str, user: WhatsAppUser, session: Session, message: str | None = None) -> bool:
         # The list shows 9 animals at a time, with a "Show more animals" row for the rest.
-        sent = self.send_animal_list(phone=phone, user=user, session=session)
+        sent = self.send_animal_list(phone=phone, user=user, session=session, message=message)
         if sent:
             self.start_tracking(session=session, user=user, step=STEP_PICK_ANIMAL)
         return sent
 
-    def send_animal_list(self, *, phone: str, user: WhatsAppUser, session: Session) -> bool:
-        return send_interactive_animal_list(phone=phone, user=user, session=session, intent="sickness")
+    def send_animal_list(self, *, phone: str, user: WhatsAppUser, session: Session, message: str | None = None) -> bool:
+        return send_interactive_animal_list(
+            phone=phone, user=user, session=session, intent="sickness", message=message
+        )
 
     def show_more(self, *, offset: int, phone: str, user: WhatsAppUser, session: Session) -> bool:
         """Send the next page of animals, triggered by the 'Show more animals' row."""

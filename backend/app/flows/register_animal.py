@@ -20,6 +20,7 @@ STEP_FORM_SENT = "form_sent"
 STEP_DONE = "done"
 
 SAVE_FAILED_MESSAGE = "Sorry, something went wrong saving your animal. Please try again from the *menu*."
+FORM_MESSAGE = "Fill in your animal's details. All fields are optional."
 FORM_INVALID_MESSAGE = (
     "Sorry, some details in the form weren't right. Please tap *Register Animal* in the *menu* to try again."
 )
@@ -32,7 +33,7 @@ class RegisterAnimalFlow(BaseFlow):
 
     flow_id = "register_animal"
 
-    def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
+    def start(self, phone: str, user: WhatsAppUser, session: Session, message: str | None = None) -> bool:
         if not settings.FLOW_ID_REGISTER_ANIMAL:
             logger.warning("[RegisterAnimalFlow] FLOW_ID_REGISTER_ANIMAL not configured")
             return False
@@ -40,7 +41,7 @@ class RegisterAnimalFlow(BaseFlow):
             phone=phone,
             flow_id=settings.FLOW_ID_REGISTER_ANIMAL,
             flow_token=self.flow_id,
-            body="Fill in your animal's details. All fields are optional.",
+            body=message or FORM_MESSAGE,
             cta="Register Animal",
             screen="REGISTER_ANIMAL",
         )

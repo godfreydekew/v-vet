@@ -39,7 +39,7 @@ class RecordBirthFlow(BaseFlow):
 
     flow_id = "record_birth"
 
-    def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
+    def start(self, phone: str, user: WhatsAppUser, session: Session, message: str | None = None) -> bool:
         from app.crud import get_livestock_for_user
         from app.flows.animal_list import MAX_ANIMALS
 
@@ -56,7 +56,7 @@ class RecordBirthFlow(BaseFlow):
             return self._send_no_mother_cows_message(phone=phone)
 
         # The list shows 9 cows at a time, with a "Show more animals" row for the rest.
-        sent = self.send_dam_list(phone=phone, user=user, session=session)
+        sent = self.send_dam_list(phone=phone, user=user, session=session, message=message)
         if sent:
             self.start_tracking(session=session, user=user, step=STEP_PICK_MOTHER)
         return sent
@@ -73,8 +73,10 @@ class RecordBirthFlow(BaseFlow):
         )
         return response.status_code == 200
 
-    def send_dam_list(self, *, phone: str, user: WhatsAppUser, session: Session) -> bool:
-        return send_interactive_animal_list(phone=phone, user=user, session=session, intent="birth")
+    def send_dam_list(self, *, phone: str, user: WhatsAppUser, session: Session, message: str | None = None) -> bool:
+        return send_interactive_animal_list(
+            phone=phone, user=user, session=session, intent="birth", message=message
+        )
 
     def show_more(self, *, offset: int, phone: str, user: WhatsAppUser, session: Session) -> bool:
         return send_interactive_animal_list(

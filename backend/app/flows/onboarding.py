@@ -19,7 +19,7 @@ FORM_INVALID_MESSAGE = (
 class OnboardingFlow(BaseFlow):
     flow_id = "onboarding"
 
-    def start(self, phone: str, user: WhatsAppUser, session: Session) -> bool:
+    def start(self, phone: str, user: WhatsAppUser, session: Session, message: str | None = None) -> bool:  # noqa: ARG002
         from app.core.config import settings
 
         if not settings.FLOW_ID_ONBOARDING:
