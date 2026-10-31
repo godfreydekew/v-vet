@@ -47,7 +47,7 @@ Success means farmers save animals and income, and vets reach more farmers with 
 - Name: **V-Vet** (also written V-VET). Existing logo at `public/logo.png` (livestock icons with a map of Africa) and favicon at `public/favicon.ico`.
 - Current tagline in the site metadata: "Livestock Health Intelligence".
 - Positioning statement in the README: "Report symptoms through WhatsApp or web, get triage guidance quickly, and connect farmers to vets with full case context."
-- Public site register (chosen by the founder, 2026-10-24): a clean, polished contemporary startup site, "just like what other startups websites look like". It is also seen by recruiters. Reference site: https://home.medvi.org/ (follow its colours and structure, never duplicate it).
+- Public site register (chosen by the founder, 2026-10-24): a clean, polished contemporary startup site, "just like what other startups websites look like". It is also seen by recruiters. Updated 2026-10-31: the founder judged the hero too close to home.medvi.org. It is no longer a reference; V-Vet must not resemble it.
 - Public contact: info@vvet.org. Farmer WhatsApp entry: https://wa.me/447519132951
 
 ## Evidence on Hand

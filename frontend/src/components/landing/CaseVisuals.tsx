@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  ArrowRight,
   Check,
   Image as ImageIcon,
   MapPin,
@@ -54,10 +55,10 @@ export const TRIAGE_TIERS: Tier[] = [
   { name: "High risk", action: "Send to a vet with full context", dotClass: "bg-red-600" },
 ];
 
-export function TierPills({ activeIndex, size = "md" }: { activeIndex: number; size?: "sm" | "md" }) {
-  const sizeClass = size === "sm" ? "px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm" : "px-4 py-2 text-sm";
+export function TierPills({ activeIndex }: { activeIndex: number }) {
+  const sizeClass = "px-4 py-2 text-sm";
   return (
-    <ul className={size === "sm" ? "space-y-1 sm:space-y-2" : "space-y-2"}>
+    <ul className="space-y-2">
       {TRIAGE_TIERS.map((tier, index) => {
         const isActive = index === activeIndex;
         return (
@@ -78,7 +79,7 @@ export function TierPills({ activeIndex, size = "md" }: { activeIndex: number; s
   );
 }
 
-export function VetCaseCard({ compact = false }: { compact?: boolean }) {
+export function VetCaseCard() {
   return (
     <div className="rounded-2xl bg-white p-4 text-left shadow-[0_10px_30px_-14px_rgba(17,33,17,0.3)] ring-1 ring-black/5">
       <div className="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
@@ -92,22 +93,19 @@ export function VetCaseCard({ compact = false }: { compact?: boolean }) {
           </dt>
           <dd className="font-medium text-landing-ink">Chivhu</dd>
         </div>
-        <div className={compact ? "hidden items-center justify-between gap-3 sm:flex" : "flex items-center justify-between gap-3"}>
+        <div className="flex items-center justify-between gap-3">
           <dt className="flex items-center gap-1.5 text-landing-muted">
             <Stethoscope size={12} aria-hidden="true" /> Symptoms
           </dt>
           <dd className="text-right font-medium text-landing-ink">Not eating, weak</dd>
         </div>
-        {!compact && (
-          <div className="flex items-center justify-between gap-3">
-            <dt className="flex items-center gap-1.5 text-landing-muted">
-              <ImageIcon size={12} aria-hidden="true" /> Media
-            </dt>
-            <dd className="font-medium text-landing-ink">1 photo, 1 voice note</dd>
-          </div>
-        )}
+        <div className="flex items-center justify-between gap-3">
+          <dt className="flex items-center gap-1.5 text-landing-muted">
+            <ImageIcon size={12} aria-hidden="true" /> Media
+          </dt>
+          <dd className="font-medium text-landing-ink">1 photo, 1 voice note</dd>
+        </div>
       </dl>
-      {compact && <p className="mt-2 text-[11px] text-landing-muted">Example case</p>}
     </div>
   );
 }
@@ -195,6 +193,59 @@ export function WhatsAppWelcome() {
         <p className="mt-1 text-[10px] leading-snug sm:text-[11px]">I help farmers keep animals healthy.</p>
       </div>
     </div>
+  );
+}
+
+function HeroCaseStep({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0 flex-1 rounded-[14px] bg-landing-paper p-3.5 text-left md:bg-transparent md:p-0">
+      <p className="mb-1.5 text-[13px] font-semibold text-landing-muted md:mb-2.5">{label}</p>
+      <div className="text-sm leading-snug text-landing-ink md:min-h-[112px] md:rounded-[14px] md:bg-landing-paper md:p-3.5">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function HeroCaseArrow() {
+  return (
+    <ArrowRight
+      size={18}
+      className="shrink-0 rotate-90 self-center text-landing-accent md:mt-7 md:rotate-0"
+      aria-hidden="true"
+    />
+  );
+}
+
+// The hero's example case, followed from the farmer's report to the vet.
+export function HeroCasePanel() {
+  return (
+    <figure>
+      <div className="flex flex-col gap-1 rounded-[24px] bg-white p-3 shadow-[0_30px_60px_-30px_rgba(17,33,17,0.45)] md:flex-row md:gap-3.5 md:rounded-[28px] md:p-[22px]">
+        <HeroCaseStep label="Farmer">
+          <div className="hidden h-5 items-center gap-[2px] md:flex" aria-hidden="true">
+            {WAVEFORM_BARS.map((height, index) => (
+              <span key={index} className="w-[3px] rounded-full bg-landing-ink/40" style={{ height }} />
+            ))}
+          </div>
+          <p className="md:mt-2">“My cow Shumba has not eaten since yesterday.”</p>
+        </HeroCaseStep>
+        <HeroCaseArrow />
+        <HeroCaseStep label="V-Vet">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-600" aria-hidden="true" />
+            High risk
+          </span>
+          <p className="mt-2">A vet should see this case today.</p>
+        </HeroCaseStep>
+        <HeroCaseArrow />
+        <HeroCaseStep label="Vet">
+          <p className="hidden font-semibold md:block">Shumba · cow</p>
+          <p className="text-landing-muted md:mt-1">Case received with symptoms, media and history.</p>
+        </HeroCaseStep>
+      </div>
+      <figcaption className="mt-3 text-xs text-white/70">Example case</figcaption>
+    </figure>
   );
 }
 
