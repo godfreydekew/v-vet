@@ -5,6 +5,10 @@ import {
   ArrowRight,
   ArrowUpRight,
   Check,
+  HeartPulse,
+  Play,
+  TrendingDown,
+  Wallet,
   Languages,
   LogIn,
   Mail,
@@ -17,6 +21,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import farmerCheckImage from "@/assets/problem-farmer-check.webp";
+import farmerPhoneImage from "@/assets/help-farmer-phone.webp";
 import farmerImage from "@/assets/landing-hero.jpg";
 import whatsappScreenshot from "@/assets/whatsapp-screenshot.jpg";
 import TriageDemo from "@/components/landing/TriageDemo";
@@ -54,9 +60,17 @@ const FARMER_CAN_SEND = [
   "In Shona, Ndebele or English",
 ];
 
-const HIDDEN_LOSSES = ["Less milk", "Low calving rates", "Unhealthy livestock", "Lower productivity"];
+const LOSSES = [
+  { icon: HeartPulse, label: "Animal deaths" },
+  { icon: TrendingDown, label: "Reduced productivity" },
+  { icon: Wallet, label: "Lost income" },
+];
 
-const VISIBLE_LOSSES = ["Animals that die", "Lost draught power"];
+const HOW_VVET_HELPS = [
+  "Recognise potential livestock health problems",
+  "Access AI-assisted guidance",
+  "Understand when veterinary attention is needed",
+];
 
 const VET_GETS = [
   "Cases sorted by urgency",
@@ -287,15 +301,30 @@ function TrustMarquee() {
   );
 }
 
-function LossList({ title, items, tileClass }: { title: string; items: string[]; tileClass: string }) {
+function ProblemCollage() {
   return (
-    <div className={`rounded-[24px] p-7 text-left ${tileClass}`}>
-      <h3 className="font-display text-[1.375rem] font-semibold leading-snug text-landing-ink">{title}</h3>
-      <ul className="mt-4 space-y-2.5">
-        {items.map((item) => (
-          <li key={item} className="flex items-center gap-3 text-[15px] text-landing-ink">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-landing-ink/50" aria-hidden="true" />
-            {item}
+    <div className="relative pb-8 pt-8">
+      <div className="absolute inset-y-0 left-[30%] right-0 rounded-[28px] bg-landing-rose" aria-hidden="true" />
+      <figure className="relative h-[400px] w-[72%] overflow-hidden rounded-[24px] shadow-[0_30px_50px_-24px_rgba(17,33,17,0.5)] sm:h-[470px]">
+        <img
+          src={farmerCheckImage}
+          alt="A farmer crouching in a kraal, checking the neck of a cow with a concerned expression"
+          className="h-full w-full object-cover object-[50%_30%]"
+        />
+        <figcaption className="absolute bottom-3 left-3">
+          {/* <ExampleChip label="Illustrative photo" /> */}
+        </figcaption>
+      </figure>
+      <ul className="absolute bottom-14 right-3 w-[46%] space-y-2.5 sm:right-5 sm:w-[44%]">
+        {LOSSES.map((loss) => (
+          <li
+            key={loss.label}
+            className="flex items-center gap-2.5 rounded-2xl bg-white p-2.5 text-sm font-semibold leading-snug text-landing-ink shadow-[0_16px_40px_-18px_rgba(17,33,17,0.45)] ring-1 ring-black/5 sm:gap-3 sm:p-3 sm:text-[15px]"
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-landing-rose sm:h-9 sm:w-9">
+              <loss.icon size={17} strokeWidth={1.75} aria-hidden="true" />
+            </span>
+            {loss.label}
           </li>
         ))}
       </ul>
@@ -303,28 +332,96 @@ function LossList({ title, items, tileClass }: { title: string; items: string[];
   );
 }
 
-function ProblemSection() {
+function HelpCollage() {
   return (
-    <section className="px-4 py-24 sm:px-6 md:py-32">
-      <div className="mx-auto max-w-[1100px]">
-        <div className="mx-auto max-w-[720px] text-center">
-          <h2 className={sectionHeading} style={{ textWrap: "balance" } as React.CSSProperties}>
-            Many livestock losses are <Accent>easy to miss</Accent>
-          </h2>
-          <p className="mx-auto mt-5 max-w-[60ch] text-[17px] leading-relaxed text-landing-muted">
-            Smallholder farmers make livestock decisions every day with limited access to
-            information and animal health services. The losses that follow push families further
-            into poverty and hunger.
+    <div className="relative pb-8 pt-8">
+      <div className="absolute inset-y-0 left-[30%] right-0 rounded-[28px] bg-landing-mint" aria-hidden="true" />
+      <span className="absolute right-4 top-4">
+        <ExampleChip label="Example case" />
+      </span>
+      <figure className="relative h-[400px] w-[72%] overflow-hidden rounded-[24px] shadow-[0_30px_50px_-24px_rgba(17,33,17,0.5)] sm:h-[470px]">
+        <img
+          src={farmerPhoneImage}
+          alt="A farmer outdoors recording a message on a smartphone, with cattle grazing behind"
+          className="h-full w-full object-cover object-[45%_25%]"
+        />
+        <figcaption className="absolute bottom-3 left-3">
+          <ExampleChip label="Illustrative photo" />
+        </figcaption>
+      </figure>
+      <div className="absolute bottom-14 right-3 w-[52%] space-y-2.5 sm:right-5 sm:w-[48%]">
+        <div className="rounded-2xl rounded-tr-md bg-[#D9FDD3] p-3 text-[13px] leading-snug text-landing-ink shadow-[0_16px_40px_-18px_rgba(17,33,17,0.45)]">
+          <div className="mb-1.5 flex items-center gap-1.5" aria-hidden="true">
+            <Play size={11} fill="currentColor" className="text-landing-pine" />
+            <span className="h-[3px] flex-1 rounded-full bg-landing-ink/25" />
+            <span className="text-xs text-[#4A5F4A]">0:23</span>
+          </div>
+          “My cow Shumba has not eaten since yesterday.”
+        </div>
+        <div className="rounded-2xl rounded-tl-md bg-white p-3 shadow-[0_16px_40px_-18px_rgba(17,33,17,0.45)] ring-1 ring-black/5">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-600" aria-hidden="true" />
+            High risk
+          </span>
+          <p className="mt-2 text-[13px] font-medium leading-snug text-landing-ink">
+            A vet should see this case today.
           </p>
         </div>
-        <div className="mt-14 grid gap-4 md:grid-cols-2">
-          <LossList title="Invisible losses" items={HIDDEN_LOSSES} tileClass="bg-landing-sand" />
-          <LossList title="Visible losses" items={VISIBLE_LOSSES} tileClass="bg-landing-rose" />
+      </div>
+    </div>
+  );
+}
+
+function ProblemSection() {
+  return (
+    <section className="overflow-hidden px-4 py-24 sm:px-6 md:py-32">
+      <div className="mx-auto max-w-[1100px] space-y-24 md:space-y-32">
+        <div className="relative grid items-center gap-12 md:grid-cols-2 md:gap-16">
+          <div
+            className="pointer-events-none absolute -right-32 -top-24 h-[560px] w-[760px] rounded-full bg-[radial-gradient(closest-side,rgba(242,230,236,0.9),rgba(242,230,236,0))]"
+            aria-hidden="true"
+          />
+          <div className="relative">
+            {/* <p className="text-[15px] font-semibold text-landing-muted">The problem</p> */}
+            <h2 className={`${sectionHeading} mt-4`} style={{ textWrap: "balance" } as React.CSSProperties}>
+              Livestock losses are costing farmers <Accent>their livelihoods.</Accent>
+            </h2>
+            <p className="mt-6 max-w-[52ch] text-[17px] leading-relaxed text-landing-muted">
+              Across sub-Saharan Africa, livestock diseases and limited access to timely veterinary
+              services contribute to animal deaths, reduced productivity, and lost income. For
+              millions of smallholder farmers, these challenges threaten their livelihoods and food
+              security.
+            </p>
+          </div>
+          <div className="relative">
+            <ProblemCollage />
+          </div>
         </div>
-        <p className="mx-auto mt-10 max-w-[60ch] text-center text-[17px] leading-relaxed text-landing-ink">
-          V-Vet helps farmers detect problems early, connects them to vet services when needed, and
-          turns each herd's records into decisions that boost productivity.
-        </p>
+{/* 
+        <div className="relative grid items-center gap-12 md:grid-cols-2 md:gap-16">
+          <div
+            className="pointer-events-none absolute -left-32 -top-24 h-[560px] w-[760px] rounded-full bg-[radial-gradient(closest-side,rgba(222,237,224,0.8),rgba(222,237,224,0))]"
+            aria-hidden="true"
+          />
+          <div className="relative md:order-last">
+            <p className="text-[15px] font-semibold text-landing-pine">How V-Vet helps</p>
+            <h2 className={`${sectionHeading} mt-4`} style={{ textWrap: "balance" } as React.CSSProperties}>
+              Better livestock health starts with <Accent>better access to guidance.</Accent>
+            </h2>
+            <p className="mt-6 max-w-[52ch] text-[17px] leading-relaxed text-landing-muted">
+              V-Vet helps smallholder farmers recognise potential livestock health problems, access
+              AI-assisted guidance, and understand when veterinary attention is needed. Through
+              WhatsApp-based support and animal health records, V-Vet aims to help farmers make more
+              informed decisions about their herds.
+            </p>
+            <div className="mt-7 hidden md:block">
+              <CheckList items={HOW_VVET_HELPS} />
+            </div>
+          </div>
+          <div className="relative">
+            <HelpCollage />
+          </div>
+        </div> */}
       </div>
     </section>
   );
@@ -378,7 +475,7 @@ function FarmersSection() {
                 className="h-full min-h-[300px] w-full object-cover object-[50%_25%]"
               />
               <figcaption className="absolute bottom-3 left-3">
-                <ExampleChip label="Illustrative photo" />
+                {/* <ExampleChip label="Illustrative photo" /> */}
               </figcaption>
             </figure>
             <div className="relative flex flex-col justify-end rounded-[24px] bg-landing-sky p-4 pt-12">
