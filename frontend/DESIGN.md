@@ -201,7 +201,7 @@ components:
 
 This is the visual world for V-Vet's public marketing surface: the landing page at route "/", the sign-in and sign-up screens (`/login`, `/signup`, framed by `src/components/landing/AuthShell.tsx`), and any future public page (about, partners, press, legal). It does **not** apply to the authenticated web app. The farmer, vet and admin dashboards under `src/pages/farmer`, `src/pages/vet` and `src/pages/admin` keep their own shadcn token system (the `:root` and `.dark` HSL variables in `src/index.css`). Work on app screens must not pull in the `landing` palette, Figtree, or the rules below; new public pages must use them, inside a `.landing` wrapper.
 
-The register, chosen by the founder, is a clean contemporary startup site that follows the colour and structure logic of home.medvi.org without duplicating it: a deep green gradient opening, a white ground below, and product shown on soft pastel tiles in generous rounded cards. The page persuades by demonstration. Each section carries a real asset or a code-drawn product fragment (a WhatsApp message, a triage tier list, a vet case card), never a grid of generic feature icons.
+The register, chosen by the founder, is a clean contemporary startup site with a deep green gradient opening, a white ground below, and product shown on soft pastel tiles in generous rounded cards. The page persuades by demonstration. Each section carries a real asset or a code-drawn product fragment (a WhatsApp message, a triage tier list, a vet case card), never a grid of generic feature icons.
 
 Density is relaxed and editorial: centred or two-column sections with 96 to 128px between them, one heading idea per section, and short lead paragraphs. Colour is spent sparingly; green carries the brand, pastels carry the product, and status red and amber appear only inside product fragments where they mean risk.
 
@@ -228,14 +228,14 @@ A green-and-white palette: two deep greens for the brand ground, two working gre
 
 ### Tertiary
 - **Mint** (mint): the default product tile, ::selection background, hover fill of white and paper pills, "low risk" status background.
-- **Sky** (sky), **Sand** (sand), **Rose** (rose): sibling pastel tiles. Rotate mint, sky, sand, rose across a set of tiles (the hero cards use all four in that order); never put two adjacent tiles in the same tint.
+- **Sky** (sky), **Sand** (sand), **Rose** (rose): sibling pastel tiles. Rotate mint, sky, sand, rose across a set of tiles never put two adjacent tiles in the same tint.
 
 ### Neutral
 - **Ink** (ink): all headings and primary text on light grounds; the `.landing` default text colour.
 - **Muted Stone** (muted): lead paragraphs, secondary text, chip text, nav links once the header is solid.
 - **Hairline** (line): borders, dividers, rings on secondary pills and chips.
 - **Paper** (paper): large section panels (triage demo, start, groundwork cards), form-field fills inside fragments, hover fill of secondary pills.
-- **White** (white): the page ground, product fragment cards, the hero card tray.
+- **White** (white): the page ground, product fragment cards, the hero case panel.
 
 ### Status (product fragments only)
 - **Risk High** (risk-high, risk-high-tint, risk-high-text), **Risk Moderate** (risk-moderate, risk-moderate-tint, risk-moderate-text): taken from Tailwind's red and amber scales. They appear only inside example product UI (tier dots, "Vet review needed" banner, urgency chips) and the pre-pilot status dot. Low risk uses accent, mint and pine.
@@ -265,13 +265,13 @@ A green-and-white palette: two deep greens for the brand ground, two working gre
 - **Body** (400, 15px, 1.625): checklists, tile copy, secondary paragraphs. Fragment text runs smaller (12 to 14px) because it quotes UI.
 - **Fragment Micro** (400, 11px, with a 10px step below 640px): only inside illustrative product fragments, where it quotes small UI text (the WhatsApp replica, district code chips, the compact vet card's "Example case" line). Never used for page text.
 - **Label** (600, 12px, 0.14em, uppercase): the trust marquee only.
-- **Watermark** (700, 30vw in the hero; 22vw capped at 15rem from 768px in the closing band; line height 1, -0.04em): the decorative "V-VET" on the gradient grounds (see The Watermark Rule).
+- **Watermark** (700, 22vw capped at 15rem from 768px, closing band only; line height 1, -0.04em): the decorative "V-VET" on the closing band (see The Watermark Rule).
 - **Wordmark** (700, 1.25rem, tight): the "V-Vet" brand mark in header and footer.
 
 ### Named Rules
 **The No Kicker Rule.** Nothing sits above a heading: no eyebrow, no category label, no small uppercase tag. If context is needed, it goes in the headline or the line below it (the hero's award link sits under the buttons, not over the headline).
 
-**The Watermark Rule.** The two gradient grounds carry an oversized "V-VET" in Figtree 700 (30vw in the hero; 22vw capped at 15rem in the band), -0.04em, white at 4.5% opacity, bleeding off the bottom edge, `aria-hidden`. It is the only decorative type.
+**The Watermark Rule.** The closing band carries an oversized "V-VET" in Figtree 700 (22vw capped at 15rem), -0.04em, white at 4.5% opacity, bleeding off the bottom edge, `aria-hidden`. It is the only decorative type.
 
 **The Fragment Micro Rule.** The 10px and 11px steps exist only inside code-drawn product fragments, where they quote real UI at reduced scale. Page copy, captions and chips never go below 12px.
 
@@ -279,21 +279,21 @@ A green-and-white palette: two deep greens for the brand ground, two working gre
 
 Content sits in a 1100px column (1160px for the header and the closing-points strip), with 16px side gutters rising to 24px from 640px. Sections stack with bottom padding only (96px, 128px from 768px), except the first content section, which also has top padding. Breakpoints are Tailwind's defaults; the layout changes at sm (640px) and md (768px).
 
-Sections take one of three shapes: centred heading and lead (max 720px) over a full-width panel (triage, awards); two asymmetric columns (5fr/7fr or 6fr/5fr, 56 to 64px gap) with text on one side and a tile on the other (farmers, vets, start); or a two-up row of paper cards (groundwork). Tile grids use 16px gaps; tiles inside the hero tray use 10px.
+Sections take one of three shapes: centred heading and lead (max 720px) over a full-width panel (triage, awards); two asymmetric columns (5fr/7fr or 6fr/5fr, 56 to 64px gap) with text on one side and a tile on the other (farmers, vets, start); or a two-up row of paper cards (groundwork). Tile grids use 16px gaps.
 
-The hero is full-bleed, text centred, with a white tray of four tinted cards that overlaps its bottom edge by 112px; a 136px spacer below it reserves room. The header is fixed, 72px tall, transparent over the hero, and turns white at 90% with a backdrop blur and a hairline border after 24px of scroll. Below 768px the nav links hide and columns stack; tiles become a 2-up grid.
+The hero is full-bleed, text centred, with the white case panel fully inside the gradient (72px below it from 768px, 32px on phones). The header is fixed, 72px tall, transparent over the hero, and turns white at 90% with a backdrop blur and a hairline border after 24px of scroll. Below 768px the nav links hide and columns stack; tiles become a 2-up grid.
 
 Motion is quiet: the hero's elements fade up 18px in sequence (0.8s, `cubic-bezier(0.16, 1, 0.3, 1)`, 0.08s stagger), the trust marquee scrolls in 48s linear loops and pauses on hover, and the triage demo cross-fades its panel. Everything that moves stops under `prefers-reduced-motion`. The entrance fade-up is hero-only: every other section renders visible, with no scroll-triggered reveals.
 
 ## Elevation & Depth
 
-Mostly flat with tonal layering: white page, paper and pastel panels, white fragment cards on top. Shadows are used only on white objects that sit on a tinted ground (product fragments, the active triage tab, the hero card tray, the phone frame), and they are always soft, diffuse, negative-spread and tinted with Forest Night, never neutral black and never hard-offset. Fragment cards also carry a 1px ring at 5% black to hold their edge on pale tiles.
+Mostly flat with tonal layering: white page, paper and pastel panels, white fragment cards on top. Shadows are used only on white objects that sit on a tinted ground (product fragments, the active triage tab, the hero case panel, the phone frame), and they are always soft, diffuse, negative-spread and tinted with Forest Night, never neutral black and never hard-offset. Fragment cards also carry a 1px ring at 5% black to hold their edge on pale tiles.
 
 ### Shadow Vocabulary
 - **Chip lift** (`box-shadow: 0 6px 18px -10px rgba(17,33,17,0.35)`): the active tier pill, chat bubbles.
 - **Fragment lift** (`box-shadow: 0 10px 30px -14px rgba(17,33,17,0.3)`): case cards, the registration form, the WhatsApp replica in the hero card.
 - **Panel lift** (`box-shadow: 0 16px 40px -18px rgba(17,33,17,0.35)`): the vet case queue.
-- **Tray lift** (`box-shadow: 0 30px 60px -30px rgba(17,33,17,0.45)`): the hero card tray overlapping the gradient.
+- **Panel float** (`box-shadow: 0 30px 60px -30px rgba(17,33,17,0.45)`): the hero case panel on the gradient.
 - **Device lift** (`box-shadow: 0 30px 50px -24px rgba(17,33,17,0.6)`): the phone frame around the WhatsApp screenshot.
 
 ### Named Rules
@@ -301,7 +301,7 @@ Mostly flat with tonal layering: white page, paper and pastel panels, white frag
 
 ## Shapes
 
-Everything is rounded, and the radius grows with the size of the container: 8px for banners inside fragments, 12px for small list rows, 16px for fragment cards and tabs, 20px for hero cards, 24px for content tiles and award cards, 26px for the hero tray, 28px for section panels, 32px for the closing band. Buttons, chips, status pills, tier pills and avatar dots are full pills. Chat bubbles use 16px with one tight corner (6px) on the speaker's side. There are no square corners and no visible borders on tiles; edges come from tint changes, hairline rings and soft shadows.
+Everything is rounded, and the radius grows with the size of the container: 8px for banners inside fragments, 12px for small list rows, 16px for fragment cards and tabs, 24px for content tiles and award cards, 24 to 28px for the hero case panel, 28px for section panels, 32px for the closing band. Buttons, chips, status pills, tier pills and avatar dots are full pills. Chat bubbles use 16px with one tight corner (6px) on the speaker's side. There are no square corners and no visible borders on tiles; edges come from tint changes, hairline rings and soft shadows.
 
 ## Components
 
@@ -323,7 +323,7 @@ Confident full pills in one size, with a leading or trailing 16px icon where it 
 
 ### Cards / Containers
 - **Corner Style:** by size, per Shapes (24px tiles, 28px panels).
-- **Background:** pastel tile (mint, sky, sand, rose) for product and awards; Paper for section panels; white for fragments and the hero tray.
+- **Background:** pastel tile (mint, sky, sand, rose) for product and awards; Paper for section panels; white for fragments and the hero case panel.
 - **Shadow Strategy:** tiles and panels flat; white fragments lifted (see Elevation & Depth).
 - **Border:** none on tiles; 5% black ring on fragments.
 - **Internal Padding:** 24px on mobile, 28 to 40px on tiles, up to 56px on the start panel.
@@ -331,8 +331,8 @@ Confident full pills in one size, with a leading or trailing 16px icon where it 
 ### Navigation
 Fixed 72px header with the wordmark at left, four 15px medium anchor links centred (white at 80% over the hero, Muted Stone once solid, hover to full white or Ink), and Sign in plus a compact "Partner with us" pill at right. The pill inverts with the ground: white over the gradient, Action Green once solid. Below 768px only the wordmark and the pill (plus Sign in from 640px) remain.
 
-### Hero Card Tray (signature)
-A white 26px tray holding four links, each a 20px card: a 124 to 136px pastel visual area (photo, WhatsApp replica, tier pills, vet case card) over a #FAFAFA label bar with a 15 to 16px semibold label and an arrow that nudges 4px right on hover. It overlaps the gradient's bottom edge. The farmer photo card carries the "Illustrative photo" chip at its corner, like every other appearance of that image.
+### Hero Case Panel (signature)
+One white panel following a single example case through three steps: Farmer (waveform and quote), V-Vet (High risk chip and next step), Vet (the case received), joined by Headline Green arrows. Steps sit in a row with labels above Paper cards from 768px. On phones they stack with arrows pointing down, the labels move inside the cards, and the waveform and animal name drop out to keep the hero short. It is captioned "Example case" below, in white at 70%, and contains no photo.
 
 ### Triage Stepper (signature)
 A Paper panel with a vertical tab list (numbered pill, semibold title, muted description; the active tab is a white lifted card with a 3px Headline Green progress bar along its bottom) beside a Mint panel showing the step's fragment, labelled "Example case". It auto-advances every 4.5s until the visitor picks a tab, and never auto-advances under reduced motion.
@@ -362,7 +362,7 @@ A full-width strip of six capability statements in the uppercase Label style wit
 ### Don't:
 - **Don't** put a kicker, eyebrow or small label above any heading.
 - **Don't** use the landing palette, Figtree or the gradient on farmer, vet or admin app screens.
-- **Don't** copy home.medvi.org's layouts, copy, imagery or exact colours; follow its logic only.
+- **Don't** resemble home.medvi.org: no ghost wordmark in the hero, and no overlapping tray of category cards.
 - **Don't** build feature-card grids of generic icons with titles and blurbs.
 - **Don't** use the gradient for more than the opening hero and the closing call-to-action band.
 - **Don't** set body copy in Headline Green; it is a headline-size colour.

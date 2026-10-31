@@ -23,11 +23,9 @@ import whatsappScreenshot from "@/assets/whatsapp-screenshot.jpg";
 import TriageDemo from "@/components/landing/TriageDemo";
 import {
   ExampleChip,
+  HeroCasePanel,
   RegistrationForm,
-  TierPills,
-  VetCaseCard,
   VetQueue,
-  WhatsAppWelcome,
 } from "@/components/landing/CaseVisuals";
 
 const WHATSAPP_LINK = "https://wa.me/447519132951?text=Hello";
@@ -207,65 +205,6 @@ function SiteHeader() {
   );
 }
 
-type HeroCard = {
-  label: string;
-  href: string;
-  tileClass: string;
-  visual: React.ReactNode;
-};
-
-const HERO_CARDS: HeroCard[] = [
-  {
-    label: "For farmers",
-    href: "#farmers",
-    tileClass: "bg-landing-mint",
-    visual: (
-      <div className="relative h-full">
-        <img src={farmerImage} alt="" className="h-full w-full object-cover object-[50%_20%]" />
-        <span className="absolute bottom-2 left-2">
-          <ExampleChip label="Illustrative photo" />
-        </span>
-      </div>
-    ),
-  },
-  {
-    label: "On WhatsApp",
-    href: "#start",
-    tileClass: "bg-landing-sky",
-    visual: (
-      <div className="flex h-full items-end justify-center px-4 pt-4">
-        <div className="h-full w-full max-w-[200px] overflow-hidden rounded-t-[18px] shadow-[0_10px_30px_-12px_rgba(17,33,17,0.45)]">
-          <WhatsAppWelcome />
-        </div>
-      </div>
-    ),
-  },
-  {
-    label: "AI triage",
-    href: "#triage",
-    tileClass: "bg-landing-sand",
-    visual: (
-      <div className="flex h-full items-center justify-center px-4">
-        <div className="w-full max-w-[190px]">
-          <TierPills activeIndex={2} size="sm" />
-        </div>
-      </div>
-    ),
-  },
-  {
-    label: "For vets",
-    href: "#vets",
-    tileClass: "bg-landing-rose",
-    visual: (
-      <div className="flex h-full items-center justify-center px-4">
-        <div className="w-full max-w-[220px]">
-          <VetCaseCard compact />
-        </div>
-      </div>
-    ),
-  },
-];
-
 function Hero() {
   const prefersReducedMotion = useReducedMotion();
   const entrance = (delay: number): MotionProps =>
@@ -279,16 +218,7 @@ function Hero() {
 
   return (
     <section id="top" className="relative bg-[linear-gradient(166deg,#1B6549_0%,#112111_100%)] text-white">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 bottom-0 select-none overflow-hidden"
-      >
-        <p className="translate-y-[18%] text-center font-display text-[30vw] font-bold leading-none tracking-[-0.04em] text-white/[0.045]">
-          V-VET
-        </p>
-      </div>
-
-      <div className="relative mx-auto flow-root max-w-[1160px] px-4 pb-0 pt-32 text-center sm:px-6 md:pt-[132px]">
+      <div className="relative mx-auto flow-root max-w-[1160px] px-4 pb-8 pt-28 text-center sm:px-6 md:pb-[72px] md:pt-[132px]">
         <motion.h1
           {...entrance(0)}
           className="mx-auto max-w-[24ch] font-display text-[2.6rem] font-semibold leading-[1.04] tracking-[-0.03em] sm:text-6xl md:text-[4.25rem]"
@@ -326,29 +256,8 @@ function Hero() {
           </a>
         </motion.p>
 
-        <motion.div
-          {...entrance(0.3)}
-          className="relative z-10 mx-auto -mb-[112px] mt-10 max-w-[960px] rounded-[26px] bg-white p-2.5 shadow-[0_30px_60px_-30px_rgba(17,33,17,0.45)]"
-        >
-          <ul className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
-            {HERO_CARDS.map((card) => (
-              <li key={card.label}>
-                <a href={card.href} className="group block overflow-hidden rounded-[20px]">
-                  <div className={`h-[124px] overflow-hidden sm:h-[136px] ${card.tileClass}`}>
-                    {card.visual}
-                  </div>
-                  <div className="flex items-center justify-between bg-[#FAFAFA] px-4 py-4 text-left">
-                    <span className="text-[15px] font-semibold text-landing-ink sm:text-base">{card.label}</span>
-                    <ArrowRight
-                      size={18}
-                      className="text-landing-ink transition-transform duration-300 group-hover:translate-x-1"
-                      aria-hidden="true"
-                    />
-                  </div>
-                </a>
-              </li>
-            ))}
-          </ul>
+        <motion.div {...entrance(0.3)} className="mx-auto mt-7 max-w-[1000px] md:mt-12">
+          <HeroCasePanel />
         </motion.div>
       </div>
     </section>
@@ -757,7 +666,6 @@ export default function LandingPage() {
       <SiteHeader />
       <main>
         <Hero />
-        <div className="h-[136px]" aria-hidden="true" />
         <TrustMarquee />
         <FarmersSection />
         <TriageSection />
