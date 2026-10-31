@@ -15,7 +15,6 @@ import {
   Stethoscope,
   History,
   ShieldCheck,
-  CalendarClock,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import farmerImage from "@/assets/landing-hero.jpg";
@@ -49,11 +48,15 @@ const TRUST_MARQUEE = [
 ];
 
 const FARMER_CAN_SEND = [
-  "Voice notes, photos or text",
+  "Text messages",
+  "Voice notes",
+  "Photos of the animal",
   "In Shona, Ndebele or English",
-  "Their phone number is their login",
-  "An estimated age when the birth date is unknown",
 ];
+
+const HIDDEN_LOSSES = ["Less milk", "Low calving rates", "Unhealthy livestock", "Lower productivity"];
+
+const VISIBLE_LOSSES = ["Animals that die", "Lost draught power"];
 
 const VET_GETS = [
   "Cases sorted by urgency",
@@ -233,8 +236,8 @@ function Hero() {
           className="mx-auto mt-5 max-w-[58ch] text-[17px] leading-relaxed text-white/85 md:text-lg"
           style={{ textWrap: "pretty" } as React.CSSProperties}
         >
-          V-Vet helps smallholder farmers in Zimbabwe report a sick animal by voice note, photo or
-          text, get clear next steps, and reach a vet when it matters.
+          Report a sick livestock, reach a vet when it matters, and manage a more productive herd
+          through whatsapp using your local language.
         </motion.p>
 
         <motion.div
@@ -284,51 +287,64 @@ function TrustMarquee() {
   );
 }
 
+function LossList({ title, items, tileClass }: { title: string; items: string[]; tileClass: string }) {
+  return (
+    <div className={`rounded-[24px] p-7 text-left ${tileClass}`}>
+      <h3 className="font-display text-[1.375rem] font-semibold leading-snug text-landing-ink">{title}</h3>
+      <ul className="mt-4 space-y-2.5">
+        {items.map((item) => (
+          <li key={item} className="flex items-center gap-3 text-[15px] text-landing-ink">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-landing-ink/50" aria-hidden="true" />
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ProblemSection() {
+  return (
+    <section className="px-4 py-24 sm:px-6 md:py-32">
+      <div className="mx-auto max-w-[1100px]">
+        <div className="mx-auto max-w-[720px] text-center">
+          <h2 className={sectionHeading} style={{ textWrap: "balance" } as React.CSSProperties}>
+            Many livestock losses are <Accent>easy to miss</Accent>
+          </h2>
+          <p className="mx-auto mt-5 max-w-[60ch] text-[17px] leading-relaxed text-landing-muted">
+            Smallholder farmers make livestock decisions every day with limited access to
+            information and animal health services. The losses that follow push families further
+            into poverty and hunger.
+          </p>
+        </div>
+        <div className="mt-14 grid gap-4 md:grid-cols-2">
+          <LossList title="Invisible losses" items={HIDDEN_LOSSES} tileClass="bg-landing-sand" />
+          <LossList title="Visible losses" items={VISIBLE_LOSSES} tileClass="bg-landing-rose" />
+        </div>
+        <p className="mx-auto mt-10 max-w-[60ch] text-center text-[17px] leading-relaxed text-landing-ink">
+          V-Vet helps farmers detect problems early, connects them to vet services when needed, and
+          turns each herd's records into decisions that boost productivity.
+        </p>
+      </div>
+    </section>
+  );
+}
+
 function FarmersSection() {
   return (
-    <section id="farmers" className="scroll-mt-24 px-4 py-24 sm:px-6 md:py-32">
-      <div className="mx-auto grid max-w-[1100px] items-start gap-14 md:grid-cols-[5fr_7fr] md:gap-16">
-        <div className="md:order-last md:pt-6">
+    <section id="farmers" className="scroll-mt-24 px-4 pb-24 sm:px-6 md:pb-32">
+      <div className="mx-auto grid max-w-[1100px] items-start gap-x-16 gap-y-10 md:grid-cols-[5fr_7fr]">
+        <div className="md:col-start-2 md:row-start-1">
           <h2 className={sectionHeading} style={{ textWrap: "balance" } as React.CSSProperties}>
-            Farmers report a sick animal <Accent>in their own words</Accent>
+            Farmers use V-Vet <Accent>in their own words</Accent>
           </h2>
           <p className="mt-5 max-w-[60ch] text-[17px] leading-relaxed text-landing-muted">
-            V-Vet works inside WhatsApp, so reporting a problem takes a voice note, not a form or a
-            new app.
+            V-Vet works inside WhatsApp. Farmers can reach it by text, voice note or photo, in
+            Shona, Ndebele or English, with no new app to learn.
           </p>
-
-          <div className="mt-10 grid gap-3 sm:grid-cols-[1.1fr_1fr]">
-            <figure className="relative overflow-hidden rounded-[24px] bg-landing-sand">
-              <img
-                src={farmerImage}
-                alt="Illustrative photo of a smallholder farmer with her cow"
-                className="h-full min-h-[300px] w-full object-cover object-[50%_25%]"
-              />
-              <figcaption className="absolute bottom-3 left-3">
-                <ExampleChip label="Illustrative photo" />
-              </figcaption>
-            </figure>
-            <div className="relative flex flex-col justify-end rounded-[24px] bg-landing-sky p-4 pt-12">
-              <span className="absolute right-3 top-3">
-                <ExampleChip />
-              </span>
-              <RegistrationForm />
-            </div>
-          </div>
-
-          <h3 className="mt-14 font-display text-[1.75rem] font-semibold leading-tight tracking-[-0.01em] text-landing-ink">
-            Registering an animal takes one message
-          </h3>
-          <p className="mt-3 max-w-[56ch] text-[15px] leading-relaxed text-landing-muted">
-            Interactive WhatsApp forms collect an animal's details in one step, so farmers aren't
-            asked question after question. Each animal gets a tag that links it to its district.
-          </p>
-          <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className={`${pillPrimary} mt-7`}>
-            Start on WhatsApp
-          </a>
         </div>
 
-        <div>
+        <div className="md:col-start-1 md:row-span-2 md:row-start-1">
           <div className="relative flex h-[372px] items-end justify-center overflow-hidden rounded-[28px] bg-landing-mint pt-10">
             <div className="w-[230px] rounded-t-[36px] bg-[#111] p-2 pb-0 shadow-[0_30px_50px_-24px_rgba(17,33,17,0.6)]">
               <img
@@ -346,6 +362,36 @@ function FarmersSection() {
           </div>
         </div>
 
+        <div className="md:col-start-2 md:row-start-2">
+          <h3 className="font-display text-[1.75rem] font-semibold leading-tight tracking-[-0.01em] text-landing-ink">
+            Registering an animal takes one message
+          </h3>
+          <p className="mt-3 max-w-[56ch] text-[15px] leading-relaxed text-landing-muted">
+            Interactive WhatsApp forms collect an animal's details in one step, so farmers aren't
+            asked question after question. Each animal gets its own tag and record.
+          </p>
+          <div className="mt-8 grid gap-3 sm:grid-cols-[1.1fr_1fr]">
+            <figure className="relative overflow-hidden rounded-[24px] bg-landing-sand">
+              <img
+                src={farmerImage}
+                alt="Illustrative photo of a smallholder farmer with a cow"
+                className="h-full min-h-[300px] w-full object-cover object-[50%_25%]"
+              />
+              <figcaption className="absolute bottom-3 left-3">
+                <ExampleChip label="Illustrative photo" />
+              </figcaption>
+            </figure>
+            <div className="relative flex flex-col justify-end rounded-[24px] bg-landing-sky p-4 pt-12">
+              <span className="absolute right-3 top-3">
+                <ExampleChip />
+              </span>
+              <RegistrationForm />
+            </div>
+          </div>
+          <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className={`${pillPrimary} mt-7`}>
+            Start on WhatsApp
+          </a>
+        </div>
       </div>
     </section>
   );
@@ -360,7 +406,7 @@ function TriageSection() {
             Decisions, <Accent>not just records</Accent>
           </h2>
           <p className="mx-auto mt-5 max-w-[60ch] text-[17px] leading-relaxed text-landing-muted">
-            Every report goes through the same triage. V-Vet weighs how confident it is against
+            Every report goes through the same triage. V&#8209;Vet weighs how confident it is against
             what's at stake, then picks the safest next step: advice to monitor, a few more
             questions, or a vet.
           </p>
@@ -425,38 +471,32 @@ function GroundworkSection() {
               Prevention, <Accent>not only reaction</Accent>
             </h3>
             <p className="mt-2 text-[15px] leading-relaxed text-landing-muted">
-              Reminders for vaccination, dipping, deworming, weaning and bull soundness, sent before
-              they're due.
+              Cattle management starts before an animal gets sick. Farmers get reminders for
+              vaccination, dipping, deworming, weaning and bull soundness before they're due.
             </p>
-            <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-landing-pine ring-1 ring-landing-line">
-              <CalendarClock size={12} aria-hidden="true" /> Coming next
-            </span>
           </div>
         </article>
 
         <article className="flex flex-col overflow-hidden rounded-[24px] bg-landing-paper sm:flex-row">
           <div className="flex items-center justify-center bg-landing-sand p-6 sm:w-[42%]">
-            <ul className="grid w-full max-w-[180px] grid-cols-2 gap-2 text-center">
-              {[
-                ["BIN", "Bindura"],
-                ["BIA", "Binga"],
-                ["CHK", "Chikomba"],
-                ["GWE", "Gweru"],
-              ].map(([code, district]) => (
-                <li key={code} className="rounded-xl bg-white px-2 py-2 ring-1 ring-black/5">
-                  <span className="block text-sm font-bold tracking-wide text-landing-ink">{code}</span>
-                  <span className="block text-[11px] text-landing-muted">{district}</span>
+            <ul className="w-full max-w-[180px] space-y-2 text-sm">
+              {["Breeding", "Calving", "Herd insights"].map((topic) => (
+                <li
+                  key={topic}
+                  className="rounded-xl bg-white px-3 py-2 text-landing-ink ring-1 ring-black/5"
+                >
+                  {topic}
                 </li>
               ))}
             </ul>
           </div>
           <div className="flex-1 p-6 sm:p-7">
             <h3 className="font-display text-[1.375rem] font-semibold leading-snug text-landing-ink">
-              Organised by <Accent>district and ward</Accent>
+              Productive herds, <Accent>informed farmers</Accent>
             </h3>
             <p className="mt-2 text-[15px] leading-relaxed text-landing-muted">
-              Every farm and animal is tied to its district, and field agents onboard farmers in
-              person before each launch.
+              Breeding management, calving preparation and practical livestock knowledge, informed
+              by each herd's own records, help farmers make decisions that boost productivity.
             </p>
           </div>
         </article>
@@ -471,7 +511,7 @@ function AwardsSection() {
       <div className="mx-auto max-w-[1100px]">
         <div className="mx-auto max-w-[720px] text-center">
           <h2 className={sectionHeading} style={{ textWrap: "balance" } as React.CSSProperties}>
-            Recognised <Accent>before the pilot</Accent>
+            Awards
           </h2>
           <p className="mx-auto mt-5 max-w-[56ch] text-[17px] leading-relaxed text-landing-muted">
             V-Vet has won three pitch competitions. The most recent award funds our first pilot
@@ -667,6 +707,7 @@ export default function LandingPage() {
       <main>
         <Hero />
         <TrustMarquee />
+        <ProblemSection />
         <FarmersSection />
         <TriageSection />
         <VetsSection />

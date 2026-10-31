@@ -319,7 +319,7 @@ Confident full pills in one size, with a leading or trailing 16px icon where it 
 - **Example chip:** white at 85%, Muted Stone 12px medium text, 5% black ring, pill, pinned to a top corner of any tile showing product UI. Text is "Example", "Example case" or "Illustrative photo".
 - **Link chips (footer):** Paper fill, Ink 14px medium text, leading icon, hover to Mint.
 - **Status chips:** pill, 12px semibold; High (risk-high tint and text), Moderate (risk-moderate tint and text), Low (Mint and Pine).
-- **Notice chips:** white pill with a Hairline ring and a small coloured dot or icon, for stage notes ("V-Vet is in its pre-pilot stage") and roadmap labels ("Coming next", Pine text).
+- **Notice chips:** white pill with a Hairline ring and a small coloured dot or icon, for stage notes ("V-Vet is in its pre-pilot stage").
 
 ### Cards / Containers
 - **Corner Style:** by size, per Shapes (24px tiles, 28px panels).
