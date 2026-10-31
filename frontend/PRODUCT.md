@@ -38,7 +38,8 @@ Success means farmers save animals and income, and vets reach more farmers with 
 
 - Stack: React + Vite + TypeScript, Tailwind, shadcn/Radix UI. The backend is FastAPI + PostgreSQL. AI services: OpenAI, Gemma, ElevenLabs. Messaging: WhatsApp Business API with interactive messages.
 - Built: user registration, animal registration and viewing, birth recording, sickness reporting, triage, and the vet request and review workflow.
-- Planned (from notes and the spec): logging vaccination, dipping and deworming; bull soundness and weaning; weekly summaries; reminders; disease outbreak alerts to nearby farmers; district benchmarking (only once the data is statistically sufficient).
+- Landing page, by founder decision on 2026-10-31: presents reminders, breeding management, calving preparation and herd insights as available now, with no "Coming next" label.
+- Planned (from notes and the spec): logging vaccination, dipping and deworming; bull soundness and weaning; weekly summaries; disease outbreak alerts to nearby farmers; district benchmarking (only once the data is statistically sufficient).
 - Spec principles that apply to every surface: decision-first, minimum input, transparent intelligence (every alert says why it fired and how confident the system is), prevention over reaction.
 - Current focus: polishing the public landing page.
 
