@@ -119,7 +119,7 @@ class Settings(BaseSettings):
     EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48
 
     # Job applications from the public careers page are sent here.
-    CAREERS_INBOX_EMAIL: EmailStr = "projectsfreelance1@gmail.com"
+    CAREERS_INBOX_EMAIL: EmailStr = "info@vvet.org"
 
     @computed_field  # type: ignore[prop-decorator]
     @property

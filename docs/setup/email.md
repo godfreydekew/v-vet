@@ -1,42 +1,48 @@
 # Setting up email for the backend
 
-The backend sends email for job applications (the coding task to the applicant, and the application to us), password resets and broadcast emails. Until it has SMTP settings, email is switched off and the careers form shows an error.
+The backend sends email for job applications, password resets and broadcast emails. We send through our Zoho mailbox, `info@vvet.org`. Until the backend has SMTP settings, email is switched off and the careers form shows an error.
 
-## Is it free?
+## What happens when someone applies
 
-Yes. For now we send through the Gmail account `projectsfreelance1@gmail.com`, which costs nothing. A normal Gmail account can send about 500 emails a day, and each application uses 2, so that's plenty.
+1. **The applicant gets an email** from `info@vvet.org` with the coding task, how to submit it (a GitHub link, within 7 days) and what happens next. Replying to it reaches `info@vvet.org`.
+2. **We get the application** at `info@vvet.org`: their details, links, their LLM answer and the CV as an attachment. Replying to it writes straight to the applicant.
 
-When the `vvet.org` mailbox is ready, we should switch so emails come from `@vvet.org` (see "Later" at the bottom).
+If the applicant's email fails to send, the application still arrives, marked "Failed to send. Please send the task manually."
 
-## Step 1: Create a Gmail app password
+## Before you start: check the Zoho plan
 
-Gmail won't accept the normal account password from an app. It needs a separate "app password".
+The backend needs SMTP access. Zoho's paid plans (such as Mail Lite) include it. New accounts on the **Forever Free** plan may not get SMTP access, so check the plan in the Zoho Mail admin console first. If SMTP isn't included, upgrade the `info@vvet.org` mailbox before going further.
 
-1. Sign in to `projectsfreelance1@gmail.com` in a browser.
-2. Turn on 2-Step Verification: go to https://myaccount.google.com/security, then **2-Step Verification**, and follow the steps. App passwords only exist once this is on.
-3. Go to https://myaccount.google.com/apppasswords.
-4. Name it `V-Vet backend` and click **Create**.
-5. Google shows a 16-letter password. Copy it straight away, because it's only shown once. Remove the spaces when you paste it.
+## Step 1: Create an app password
 
-If the app passwords page says it isn't available, 2-Step Verification isn't fully on yet.
+If two-factor authentication is on for `info@vvet.org` (it should be), the backend needs an app password instead of the normal password.
 
-You can delete this app password at any time from the same page, and the backend will stop being able to send.
+1. Sign in at https://accounts.zoho.com as `info@vvet.org`.
+2. Go to **Security**, then **App Passwords**, then **Generate New Password**.
+3. Name it `V-Vet backend` and click **Generate**.
+4. Copy the password straight away, because it's only shown once.
+
+You can revoke it from the same page at any time, and the backend will stop being able to send.
 
 ## Step 2: The settings
 
 | Setting | Value |
 |---|---|
-| `SMTP_HOST` | `smtp.gmail.com` |
+| `SMTP_HOST` | `smtppro.zoho.com` (see note below) |
 | `SMTP_PORT` | `587` |
 | `SMTP_TLS` | `True` |
 | `SMTP_SSL` | `False` |
-| `SMTP_USER` | `projectsfreelance1@gmail.com` |
-| `SMTP_PASSWORD` | the 16-letter app password, no spaces |
-| `EMAILS_FROM_EMAIL` | `projectsfreelance1@gmail.com` (must be the same Gmail account) |
+| `SMTP_USER` | `info@vvet.org` |
+| `SMTP_PASSWORD` | the app password from step 1 |
+| `EMAILS_FROM_EMAIL` | `info@vvet.org` (must be the mailbox you sign in with, or one of its aliases) |
 | `EMAILS_FROM_NAME` | `V-Vet` |
-| `CAREERS_INBOX_EMAIL` | `projectsfreelance1@gmail.com` (where applications arrive) |
+| `CAREERS_INBOX_EMAIL` | `info@vvet.org` (where applications arrive; this is also the default) |
 | `FRONTEND_HOST` | `https://vvet.org` in production, `http://localhost:8080` locally |
 | `BACKEND_CORS_ORIGINS` | `https://vvet.org,https://www.vvet.org` (lets the website call the backend) |
+
+**Which SMTP host:** `smtppro.zoho.com` is for paid organisation accounts on your own domain, and `smtp.zoho.com` is for free accounts. Zoho also has regional servers: if you sign in to Zoho Mail at `mail.zoho.eu`, use `smtppro.zoho.eu` instead (`.in` and `.com.au` work the same way).
+
+If port 587 doesn't work, try `SMTP_PORT=465`, `SMTP_SSL=True`, `SMTP_TLS=False`.
 
 `FRONTEND_HOST` is also used for password reset links and the privacy link in application emails, so it must be the live site in production.
 
@@ -45,15 +51,15 @@ You can delete this app password at any time from the same page, and the backend
 Add the lines to `backend/.env`, for example:
 
 ```
-SMTP_HOST=smtp.gmail.com
+SMTP_HOST=smtppro.zoho.com
 SMTP_PORT=587
 SMTP_TLS=True
 SMTP_SSL=False
-SMTP_USER=projectsfreelance1@gmail.com
+SMTP_USER=info@vvet.org
 SMTP_PASSWORD=yourapppasswordhere
-EMAILS_FROM_EMAIL=projectsfreelance1@gmail.com
+EMAILS_FROM_EMAIL=info@vvet.org
 EMAILS_FROM_NAME=V-Vet
-CAREERS_INBOX_EMAIL=projectsfreelance1@gmail.com
+CAREERS_INBOX_EMAIL=info@vvet.org
 ```
 
 Never commit `backend/.env` or paste the app password into chat, issues or pull requests.
@@ -67,21 +73,16 @@ The backend runs on Azure App Service, deployed by `.github/workflows/deploy.yml
 3. Click **Add** for each setting in the table above.
 4. Click **Apply**, then **Confirm**. The app restarts with the new settings.
 
-## Step 5: Test it
+## Step 5: Keep our emails out of spam
+
+In the Zoho Mail admin console, go to **Domains**, choose `vvet.org`, and make sure **SPF** and **DKIM** both show as verified. If they don't, Zoho shows the DNS records to add at the domain registrar. Without them, applicants are more likely to find the coding task in spam.
+
+## Step 6: Test it
 
 1. **Test email:** open the backend's API docs (`/docs`), sign in as the superuser, and call `POST /api/v1/utils/test-email/` with your own email address. You should get a test email within a minute. Check spam.
-2. **Test an application:** on the live site, apply to the Software Engineer role yourself with a small PDF. Check that:
-   - you get the coding task email,
-   - `CAREERS_INBOX_EMAIL` gets the application with the CV attached,
+2. **Test an application:** on the live site, apply to the Software Engineer role yourself with a small PDF, using a personal email address. Check that:
+   - you get the coding task email from `info@vvet.org`,
+   - `info@vvet.org` gets the application with the CV attached,
    - replying to the application email goes to the applicant's address.
 
-If nothing arrives, check the App Service logs for `[Careers] Failed to send email`. The usual causes are a wrong app password, spaces left in it, or 2-Step Verification being switched off.
-
-## Later: sending from @vvet.org
-
-Gmail will always show the sender as the Gmail address. To send from `careers@vvet.org` or `info@vvet.org`, use either:
-
-- **Google Workspace** on the `vvet.org` domain (paid per user), then repeat the steps above with the new account, or
-- **A transactional email service** such as Brevo or Resend. Both have free plans that cover our volume. Check their pricing pages, since limits change. You verify the `vvet.org` domain by adding a few DNS records, then they give you SMTP settings to put in the table above.
-
-Either way, set up SPF and DKIM records for `vvet.org` so our emails don't land in spam.
+If nothing arrives, check the App Service logs for `[Careers] Failed to send email`. The usual causes are a wrong app password, the wrong regional SMTP host, or a plan without SMTP access.
