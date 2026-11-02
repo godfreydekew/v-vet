@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Check, Languages, LogIn, Mail, MapPinned, Stethoscope } from "lucide-react";
+import { ArrowRight, Check, Languages, LogIn, Mail, MapPinned, Menu, Stethoscope, X } from "lucide-react";
 import WhatsAppIcon from "@/components/landing/WhatsAppIcon";
 
 // Shared chrome and styles for every public page (see frontend/DESIGN.md).
@@ -96,7 +96,8 @@ export function GreenGround({
 
 export function SiteHeader() {
   const [isScrolled, setIsScrolled] = useState(false);
-  const { pathname } = useLocation();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { pathname, hash } = useLocation();
 
   useEffect(() => {
     function handleScroll() {
@@ -107,19 +108,44 @@ export function SiteHeader() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Close the phone menu whenever the page or section changes.
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [pathname, hash]);
+
+  // While the phone menu is open: Escape closes it and the page behind stops scrolling.
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setIsMenuOpen(false);
+    }
+    window.addEventListener("keydown", handleKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isMenuOpen]);
+
+  // The header goes solid white once scrolled, or while the phone menu is open.
+  const isSolid = isScrolled || isMenuOpen;
+
   return (
     <header
       className={
-        isScrolled
-          ? "fixed inset-x-0 top-0 z-50 border-b border-landing-line bg-white/90 backdrop-blur-md transition-colors"
-          : "fixed inset-x-0 top-0 z-50 border-b border-transparent bg-transparent transition-colors"
+        isMenuOpen
+          ? "fixed inset-x-0 top-0 z-50 border-b border-landing-line bg-white"
+          : isScrolled
+            ? "fixed inset-x-0 top-0 z-50 border-b border-landing-line bg-white/90 backdrop-blur-md transition-colors"
+            : "fixed inset-x-0 top-0 z-50 border-b border-transparent bg-transparent transition-colors"
       }
     >
       <div className="mx-auto flex h-[72px] max-w-[1160px] items-center justify-between px-4 sm:px-6">
         <Link to="/" className="flex items-center" aria-label="V-Vet home">
           <span
             className={
-              isScrolled
+              isSolid
                 ? "font-display text-xl font-bold tracking-tight text-landing-ink"
                 : "font-display text-xl font-bold tracking-tight text-white"
             }
@@ -131,7 +157,7 @@ export function SiteHeader() {
         <nav aria-label="Main" className="hidden items-center gap-8 md:flex">
           {NAV_LINKS.map((link) => {
             const isCurrent = link.to !== "/#farmers" && pathname.startsWith(link.to);
-            const tone = isScrolled
+            const tone = isSolid
               ? isCurrent
                 ? "text-landing-ink"
                 : "text-landing-muted hover:text-landing-ink"
@@ -155,9 +181,9 @@ export function SiteHeader() {
           <Link
             to="/login"
             className={
-              isScrolled
-                ? "hidden text-[15px] font-medium text-landing-ink sm:inline"
-                : "hidden text-[15px] font-medium text-white sm:inline"
+              isSolid
+                ? "hidden text-[15px] font-medium text-landing-ink md:inline"
+                : "hidden text-[15px] font-medium text-white md:inline"
             }
           >
             Sign in
@@ -165,15 +191,88 @@ export function SiteHeader() {
           <a
             href={PARTNER_MAILTO}
             className={
-              isScrolled
-                ? "rounded-full bg-landing-pine px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-landing-forest"
-                : "rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-landing-forest transition-colors hover:bg-landing-mint"
+              isSolid
+                ? "hidden rounded-full bg-landing-pine px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-landing-forest sm:inline-flex"
+                : "hidden rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-landing-forest transition-colors hover:bg-landing-mint sm:inline-flex"
             }
           >
             Partner with us
           </a>
+          <button
+            type="button"
+            onClick={() => setIsMenuOpen((open) => !open)}
+            aria-expanded={isMenuOpen}
+            aria-controls="mobile-menu"
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+            className={
+              isSolid
+                ? "-mr-2 flex h-11 w-11 items-center justify-center rounded-full text-landing-ink hover:bg-landing-paper md:hidden"
+                : "-mr-2 flex h-11 w-11 items-center justify-center rounded-full text-white hover:bg-white/10 md:hidden"
+            }
+          >
+            {isMenuOpen ? <X size={24} aria-hidden="true" /> : <Menu size={24} aria-hidden="true" />}
+          </button>
         </div>
       </div>
+
+      {isMenuOpen && (
+        <div
+          aria-hidden="true"
+          onClick={() => setIsMenuOpen(false)}
+          className="fixed inset-x-0 bottom-0 top-[72px] -z-10 bg-landing-forest/40 md:hidden"
+        />
+      )}
+      {isMenuOpen && (
+        <nav
+          id="mobile-menu"
+          aria-label="Main"
+          className="max-h-[calc(100dvh-72px)] overflow-y-auto border-t border-landing-line bg-white px-4 pb-6 pt-2 shadow-[0_24px_40px_-24px_rgba(17,33,17,0.35)] sm:px-6 md:hidden"
+        >
+          <ul className="divide-y divide-landing-line">
+            {NAV_LINKS.map((link) => {
+              const isCurrent = link.to !== "/#farmers" && pathname.startsWith(link.to);
+              return (
+                <li key={link.to}>
+                  <Link
+                    to={link.to}
+                    aria-current={isCurrent ? "page" : undefined}
+                    className={`flex items-center justify-between py-4 font-display text-xl font-semibold ${
+                      isCurrent ? "text-landing-pine" : "text-landing-ink"
+                    }`}
+                  >
+                    {link.label}
+                    <ArrowRight size={18} className="text-landing-muted" aria-hidden="true" />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-4 grid gap-3">
+            <a
+              href={WHATSAPP_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-landing-pine px-6 py-3.5 text-[15px] font-semibold text-white"
+            >
+              <WhatsAppIcon size={16} />
+              Start on WhatsApp
+            </a>
+            <a
+              href={PARTNER_MAILTO}
+              className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-semibold text-landing-ink ring-1 ring-inset ring-landing-line"
+            >
+              Partner with us
+            </a>
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center gap-2 py-2 text-[15px] font-medium text-landing-muted"
+            >
+              <LogIn size={16} aria-hidden="true" />
+              Sign in
+            </Link>
+          </div>
+        </nav>
+      )}
     </header>
   );
 }
@@ -288,6 +387,7 @@ function SiteFooter() {
               <Link to="/about" className="hover:text-landing-ink">About</Link>
               <Link to="/journey" className="hover:text-landing-ink">Journey</Link>
               <Link to="/careers" className="hover:text-landing-ink">Careers</Link>
+              <Link to="/privacy" className="hover:text-landing-ink">Privacy</Link>
             </nav>
           </div>
           <ul className="flex flex-wrap gap-2.5">

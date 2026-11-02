@@ -38,6 +38,7 @@ def submit_application(
     cv: Annotated[UploadFile, File()],
     linkedin_url: Annotated[str, Form(max_length=300)] = "",
     lives_in_zimbabwe: Annotated[bool, Form()] = False,
+    accepted_privacy_notice: Annotated[bool, Form()] = False,
     # Honeypot: hidden on the form, so only bots fill it in.
     website: Annotated[str, Form()] = "",
 ) -> Message:
@@ -49,6 +50,11 @@ def submit_application(
     role_title = OPEN_ROLES.get(role)
     if role_title is None:
         raise HTTPException(status_code=404, detail="This role is not open.")
+    if not accepted_privacy_notice:
+        raise HTTPException(
+            status_code=422,
+            detail="Please confirm you've read the privacy notice.",
+        )
     if not lives_in_zimbabwe:
         raise HTTPException(
             status_code=422,
@@ -92,6 +98,7 @@ def submit_application(
                 "linkedin_url": linkedin_url or "Not given",
                 "llm_project_answer": llm_project_answer,
                 "task_sent": task_sent,
+                "privacy_url": f"{settings.FRONTEND_HOST}/privacy",
             },
         ),
         reply_to=email,

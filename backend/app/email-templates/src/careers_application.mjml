@@ -22,6 +22,7 @@
           <tr><td style="color:#5C5A56;vertical-align:top;">Location</td><td>{{ location|e }}</td></tr>
           <tr><td style="color:#5C5A56;vertical-align:top;">Languages</td><td>{{ languages|e }}</td></tr>
           <tr><td style="color:#5C5A56;vertical-align:top;">LinkedIn</td><td>{{ linkedin_url|e }}</td></tr>
+          <tr><td style="color:#5C5A56;vertical-align:top;">Privacy notice</td><td>Accepted when applying (<a href="{{ privacy_url }}" style="color:#1B6549;">{{ privacy_url }}</a>)</td></tr>
           <tr><td style="color:#5C5A56;vertical-align:top;">Coding task email</td><td>{% if task_sent %}Sent{% else %}<strong style="color:#B91C1C;">Failed to send. Please send the task manually.</strong>{% endif %}</td></tr>
         </mj-table>
 

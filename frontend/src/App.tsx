@@ -16,6 +16,7 @@ import About from "@/pages/public/About";
 import Journey from "@/pages/public/Journey";
 import Careers from "@/pages/public/Careers";
 import CareerRole from "@/pages/public/CareerRole";
+import Privacy from "@/pages/public/Privacy";
 import { Loader2 } from "lucide-react";
 import { Analytics } from "@vercel/analytics/react";
 
@@ -48,7 +49,7 @@ import AdminEmail from "@/pages/admin/Email";
 const queryClient = new QueryClient();
 
 // Public marketing pages, open to everyone whether or not they're signed in.
-const PUBLIC_PATHS = ["/about", "/journey", "/careers", "/careers/:roleId"];
+const PUBLIC_PATHS = ["/about", "/journey", "/careers", "/careers/:roleId", "/privacy"];
 
 function PublicRoutes() {
   return (
@@ -57,6 +58,7 @@ function PublicRoutes() {
       <Route path="/journey" element={<Journey />} />
       <Route path="/careers" element={<Careers />} />
       <Route path="/careers/:roleId" element={<CareerRole />} />
+      <Route path="/privacy" element={<Privacy />} />
     </Routes>
   );
 }

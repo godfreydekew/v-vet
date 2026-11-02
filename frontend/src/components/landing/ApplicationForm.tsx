@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { CheckCircle2, Loader2, Upload } from "lucide-react";
 import { authHintClass, authInputClass, authLabelClass, authSubmitClass } from "@/components/landing/AuthShell";
 import { careersService } from "@/lib/services/careers.service";
@@ -24,6 +25,7 @@ export default function ApplicationForm({ roleId }: { roleId: string }) {
   const [answer, setAnswer] = useState("");
   const [cv, setCv] = useState<File | null>(null);
   const [livesInZimbabwe, setLivesInZimbabwe] = useState(false);
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [website, setWebsite] = useState("");
 
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +64,10 @@ export default function ApplicationForm({ roleId }: { roleId: string }) {
       setError("This role is only open to people living in Zimbabwe.");
       return;
     }
+    if (!acceptedPrivacy) {
+      setError("Please confirm you've read the privacy notice.");
+      return;
+    }
 
     setError(null);
     setIsSubmitting(true);
@@ -77,6 +83,7 @@ export default function ApplicationForm({ roleId }: { roleId: string }) {
         llm_project_answer: answer.trim(),
         linkedin_url: linkedinUrl.trim(),
         lives_in_zimbabwe: livesInZimbabwe,
+        accepted_privacy_notice: acceptedPrivacy,
         cv,
         website,
       });
@@ -181,6 +188,18 @@ export default function ApplicationForm({ roleId }: { roleId: string }) {
         <input type="checkbox" required checked={livesInZimbabwe} onChange={(e) => setLivesInZimbabwe(e.target.checked)}
           className="mt-1 h-4 w-4 shrink-0 accent-landing-pine" />
         I live in Zimbabwe.
+      </label>
+
+      <label className="flex items-start gap-3 text-[15px] leading-relaxed text-landing-ink">
+        <input type="checkbox" required checked={acceptedPrivacy} onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+          className="mt-1 h-4 w-4 shrink-0 accent-landing-pine" />
+        <span>
+          I've read the{" "}
+          <Link to="/privacy" target="_blank" className="font-medium text-landing-pine underline decoration-landing-line underline-offset-4 hover:decoration-landing-pine">
+            privacy notice
+          </Link>{" "}
+          and agree to V-Vet using my application to assess me for this role.
+        </span>
       </label>
 
       {error && (

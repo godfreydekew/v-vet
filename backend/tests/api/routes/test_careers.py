@@ -19,6 +19,7 @@ def _form(**overrides: str) -> dict[str, str]:
         "portfolio_links": "https://github.com/example",
         "llm_project_answer": "I built a WhatsApp bot on top of an LLM. " * 3,
         "lives_in_zimbabwe": "true",
+        "accepted_privacy_notice": "true",
     }
     form.update(overrides)
     return form
@@ -87,6 +88,7 @@ def test_failed_team_email_returns_error(client: TestClient) -> None:
     [
         (_form(role="chief-cow-officer"), _cv(), 404),
         (_form(lives_in_zimbabwe="false"), _cv(), 422),
+        (_form(accepted_privacy_notice="false"), _cv(), 422),
         (_form(), _cv(name="cv.exe"), 422),
         (_form(), _cv(data=b""), 422),
         (_form(), _cv(data=b"x" * (5 * 1024 * 1024 + 1)), 422),

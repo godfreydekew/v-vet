@@ -15,6 +15,7 @@ export interface JobApplicationPayload {
   llm_project_answer: string;
   linkedin_url: string;
   lives_in_zimbabwe: boolean;
+  accepted_privacy_notice: boolean;
   cv: File;
   /** Honeypot: hidden from people, so it is only filled in by bots. */
   website: string;
