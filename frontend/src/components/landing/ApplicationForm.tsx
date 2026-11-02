@@ -91,7 +91,7 @@ export default function ApplicationForm({ roleId }: { roleId: string }) {
   if (submittedEmail) {
     return (
       <div className="rounded-[24px] bg-white p-8 text-center ring-1 ring-black/5" role="status">
-        <CheckCircle2 size={40} className="mx-auto text-landing-button" aria-hidden="true" />
+        <CheckCircle2 size={40} className="mx-auto text-landing-pine" aria-hidden="true" />
         <h3 className="mt-4 font-display text-[1.375rem] font-semibold text-landing-ink">Application sent</h3>
         <p className="mx-auto mt-2 max-w-[48ch] text-[15px] leading-relaxed text-landing-muted">
           Thank you. We've emailed your coding task to <strong className="text-landing-ink">{submittedEmail}</strong>,
@@ -130,8 +130,8 @@ export default function ApplicationForm({ roleId }: { roleId: string }) {
             return (
               <label
                 key={language}
-                className={`inline-flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ring-1 ring-inset transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-landing-accent ${
-                  checked ? "bg-landing-mint text-landing-pine ring-landing-accent" : "bg-white text-landing-ink ring-landing-line hover:bg-landing-paper"
+                className={`inline-flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ring-1 ring-inset transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-landing-pine ${
+                  checked ? "bg-landing-mint text-landing-pine ring-landing-pine" : "bg-white text-landing-ink ring-landing-line hover:bg-landing-paper"
                 }`}
               >
                 <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleLanguage(language)} />
@@ -141,14 +141,14 @@ export default function ApplicationForm({ roleId }: { roleId: string }) {
           })}
           <input aria-label="Other languages" placeholder="Other" maxLength={60}
             value={otherLanguage} onChange={(e) => setOtherLanguage(e.target.value)}
-            className="h-10 w-36 rounded-full bg-white px-4 text-sm text-landing-ink ring-1 ring-inset ring-landing-line placeholder:text-landing-muted focus:outline-none focus:ring-2 focus:ring-landing-accent" />
+            className="h-10 w-36 rounded-full bg-white px-4 text-sm text-landing-ink ring-1 ring-inset ring-landing-line placeholder:text-landing-muted focus:outline-none focus:ring-2 focus:ring-landing-pine" />
         </div>
       </fieldset>
 
       <Field label="CV" htmlFor="cv" hint="PDF or Word document, 5 MB at most.">
         <label
           htmlFor="cv"
-          className="flex h-12 cursor-pointer items-center gap-3 rounded-xl bg-white px-4 text-[15px] ring-1 ring-inset ring-landing-line transition-shadow hover:ring-[#D4D0C9] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-landing-accent"
+          className="flex h-12 cursor-pointer items-center gap-3 rounded-xl bg-white px-4 text-[15px] ring-1 ring-inset ring-landing-line transition-shadow hover:ring-[#D4D0C9] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-landing-pine"
         >
           <Upload size={16} className="shrink-0 text-landing-muted" aria-hidden="true" />
           <span className={cv ? "truncate text-landing-ink" : "text-landing-muted"}>{cv ? cv.name : "Choose a file"}</span>
@@ -179,7 +179,7 @@ export default function ApplicationForm({ roleId }: { roleId: string }) {
 
       <label className="flex items-start gap-3 text-[15px] leading-relaxed text-landing-ink">
         <input type="checkbox" required checked={livesInZimbabwe} onChange={(e) => setLivesInZimbabwe(e.target.checked)}
-          className="mt-1 h-4 w-4 shrink-0 accent-landing-button" />
+          className="mt-1 h-4 w-4 shrink-0 accent-landing-pine" />
         I live in Zimbabwe.
       </label>
 

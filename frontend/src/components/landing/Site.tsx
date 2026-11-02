@@ -28,7 +28,7 @@ export const pillPrimaryOnDark =
 export const pillSecondaryOnDark =
   "inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-semibold text-white ring-1 ring-inset ring-white/35 transition-colors hover:bg-white/10";
 export const pillPrimary =
-  "inline-flex items-center justify-center gap-2 rounded-full bg-landing-button px-6 py-3.5 text-[15px] font-semibold text-white transition-colors hover:bg-landing-pine";
+  "inline-flex items-center justify-center gap-2 rounded-full bg-landing-pine px-6 py-3.5 text-[15px] font-semibold text-white transition-colors hover:bg-landing-forest";
 export const pillSecondary =
   "inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-semibold text-landing-ink ring-1 ring-inset ring-landing-line transition-colors hover:bg-landing-paper";
 
@@ -38,7 +38,7 @@ export const sectionHeading =
 export const balance = { textWrap: "balance" } as React.CSSProperties;
 
 export function Accent({ children }: { children: React.ReactNode }) {
-  return <span className="text-landing-accent">{children}</span>;
+  return <span className="text-landing-pine">{children}</span>;
 }
 
 export function CheckList({ items }: { items: string[] }) {
@@ -46,13 +46,51 @@ export function CheckList({ items }: { items: string[] }) {
     <ul className="space-y-3">
       {items.map((item) => (
         <li key={item} className="flex items-start gap-3 text-[15px] leading-relaxed text-landing-ink">
-          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-landing-button text-white">
+          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-landing-mint text-landing-pine">
             <Check size={12} strokeWidth={3} aria-hidden="true" />
           </span>
           {item}
         </li>
       ))}
     </ul>
+  );
+}
+
+// The deep green ground used by heroes and the closing band: an optional photo, faded into
+// the brand gradient, with a grain over it. Children render above all three layers.
+export function GreenGround({
+  image,
+  imagePosition = "50% 30%",
+  className = "",
+  children,
+}: {
+  image?: string;
+  imagePosition?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`relative isolate overflow-hidden bg-landing-forest text-white ${className}`}>
+      {image && (
+        <img
+          src={image}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 h-full w-full object-cover opacity-70 mix-blend-luminosity"
+          style={{ objectPosition: imagePosition }}
+        />
+      )}
+      <div
+        aria-hidden="true"
+        className={
+          image
+            ? "absolute inset-0 -z-10 bg-[linear-gradient(166deg,rgba(27,101,73,0.70)_0%,rgba(17,33,17,0.86)_75%)]"
+            : "absolute inset-0 -z-10 bg-[linear-gradient(166deg,#1B6549_0%,#112111_100%)]"
+        }
+      />
+      <div aria-hidden="true" className="landing-grain pointer-events-none absolute inset-0 -z-10" />
+      {children}
+    </div>
   );
 }
 
@@ -128,7 +166,7 @@ export function SiteHeader() {
             href={PARTNER_MAILTO}
             className={
               isScrolled
-                ? "rounded-full bg-landing-button px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-landing-pine"
+                ? "rounded-full bg-landing-pine px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-landing-forest"
                 : "rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-landing-forest transition-colors hover:bg-landing-mint"
             }
           >
@@ -140,19 +178,24 @@ export function SiteHeader() {
   );
 }
 
-// The gradient opening of an inner public page: one headline, one lead, optional actions.
+// The green opening of an inner public page: one headline, one lead, optional actions,
+// over an optional faded photo.
 export function PageHero({
   title,
   lead,
+  image,
+  imagePosition,
   children,
 }: {
   title: React.ReactNode;
   lead: string;
+  image?: string;
+  imagePosition?: string;
   children?: React.ReactNode;
 }) {
   return (
-    <section className="bg-[linear-gradient(166deg,#1B6549_0%,#112111_100%)] text-white">
-      <div className="mx-auto max-w-[1160px] px-4 pb-20 pt-32 text-center sm:px-6 md:pb-28 md:pt-40">
+    <GreenGround image={image} imagePosition={imagePosition}>
+      <section className="mx-auto max-w-[1160px] px-4 pb-20 pt-32 text-center sm:px-6 md:pb-28 md:pt-40">
         <h1
           className="mx-auto max-w-[22ch] font-display text-[2.6rem] font-semibold leading-[1.04] tracking-[-0.03em] sm:text-6xl md:text-[4.25rem]"
           style={balance}
@@ -168,8 +211,8 @@ export function PageHero({
         {children && (
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">{children}</div>
         )}
-      </div>
-    </section>
+      </section>
+    </GreenGround>
   );
 }
 
@@ -185,7 +228,7 @@ export function ClosingBand({
 }) {
   return (
     <section className="px-4 pb-20 sm:px-6">
-      <div className="relative mx-auto max-w-[1100px] overflow-hidden rounded-[32px] bg-[linear-gradient(166deg,#1B6549_0%,#112111_100%)] px-6 py-16 text-center text-white sm:px-12 md:py-24">
+      <GreenGround className="mx-auto max-w-[1100px] rounded-[32px] px-6 py-16 text-center sm:px-12 md:py-24">
         <p
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 -bottom-[0.32em] select-none text-center font-display text-[22vw] font-bold leading-none tracking-[-0.04em] text-white/[0.045] md:text-[15rem]"
@@ -202,7 +245,7 @@ export function ClosingBand({
           <p className="mx-auto mt-6 max-w-[56ch] text-[17px] leading-relaxed text-white/85">{lead}</p>
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">{children}</div>
         </div>
-      </div>
+      </GreenGround>
     </section>
   );
 }
@@ -265,9 +308,8 @@ function SiteFooter() {
             </li>
           </ul>
         </div>
-        <div className="mt-10 flex flex-col gap-2 border-t border-landing-line pt-6 text-sm text-landing-muted md:flex-row md:justify-between">
+        <div className="mt-10 border-t border-landing-line pt-6 text-sm text-landing-muted">
           <p>© 2026 V-Vet. Livestock health intelligence.</p>
-          <p>Farmer photography on this site is illustrative. Product screens show an example case.</p>
         </div>
       </div>
     </footer>

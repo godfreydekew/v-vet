@@ -9,8 +9,6 @@ colors:
   white: "#FFFFFF"
   forest: "#112111"
   pine: "#1B6549"
-  button: "#1F7A5A"
-  accent: "#2E936F"
   leaf: "#8FD19E"
   mint: "#DEEDE0"
   sky: "#E4ECF2"
@@ -120,13 +118,13 @@ spacing:
   container-wide: "1160px"
 components:
   button-primary:
-    backgroundColor: "{colors.button}"
+    backgroundColor: "{colors.pine}"
     textColor: "{colors.white}"
     typography: "{typography.body}"
     rounded: "{rounded.pill}"
     padding: "14px 24px"
   button-primary-hover:
-    backgroundColor: "{colors.pine}"
+    backgroundColor: "{colors.forest}"
   button-secondary:
     backgroundColor: "transparent"
     textColor: "{colors.ink}"
@@ -218,13 +216,12 @@ Density is relaxed and editorial: centred or two-column sections with 96 to 128p
 A green-and-white palette: two deep greens for the brand ground, two working greens for actions and accents, warm neutrals for text and surfaces, and four pastel tints that hold product fragments.
 
 ### Primary
-- **Forest Night** (forest): the darkest green, end stop of the brand gradient, text colour on white pill buttons over dark grounds, ::selection text, and QR code foreground.
-- **Pine** (pine): start stop of the brand gradient (`linear-gradient(166deg, pine 0%, forest 100%)`), hover state of primary buttons, link text on tinted tiles, "low risk" status text.
-- **Action Green** (button): the fill of every primary pill on a light ground, checklist bullets, active step numbers, the voice-note play button. White text on it is about 5.3:1.
+The site uses two solid greens and one light green, nothing else. (An earlier "Pine" and "Pine" were merged into Pine on 2026-11-02 because the page had too many greens.)
+- **Forest Night** (forest): the darkest green, end stop of the brand gradient, hover state of primary buttons, text colour on white pill buttons over dark grounds, ::selection text, and QR code foreground.
+- **Pine** (pine): the one working green. Start stop of the brand gradient, the fill of every primary pill on a light ground, the accent phrase in headlines on light grounds, links, step numbers, the focus outline. White text on it is about 7:1, so it is safe at any size.
 
 ### Secondary
-- **Headline Green** (accent): the one accent phrase in headlines on light grounds, the focus outline, the triage progress bar, the "low risk" tier dot. About 3.8:1 on white, so it is for headline-sized text only (22px semibold and up), never body copy.
-- **Leaf** (leaf): the accent phrase in headlines on the green gradient. It replaces Headline Green on dark grounds.
+- **Leaf** (leaf): the accent phrase in headlines on the green gradient. It replaces Pine on dark grounds.
 
 ### Tertiary
 - **Mint** (mint): the default product tile, ::selection background, hover fill of white and paper pills, "low risk" status background.
@@ -243,7 +240,7 @@ A green-and-white palette: two deep greens for the brand ground, two working gre
 ### Named Rules
 **The Two Grounds Rule.** The brand gradient appears exactly twice on a page: the opening hero and the closing call-to-action band. Every other section sits on white, with paper or pastel panels inside it.
 
-**The One Phrase Rule.** Each headline colours one phrase, and only one: Headline Green on light grounds, Leaf on the gradient. No other text on the page is green except links and status.
+**The One Phrase Rule.** Each headline colours one phrase, and only one: Pine on light grounds, Leaf on the gradient. No other text on the page is green except links and status.
 
 **The Tinted Tile Rule.** Product is shown on pastel tiles. Status red and amber live inside fragments and never become tile, section or button colours.
 
@@ -285,6 +282,23 @@ The hero is full-bleed, text centred, with the white case panel fully inside the
 
 Motion is quiet: the hero's elements fade up 18px in sequence (0.8s, `cubic-bezier(0.16, 1, 0.3, 1)`, 0.08s stagger), the trust marquee scrolls in 48s linear loops and pauses on hover, and the triage demo cross-fades its panel. Everything that moves stops under `prefers-reduced-motion`. The entrance fade-up is hero-only: every other section renders visible, with no scroll-triggered reveals.
 
+## Texture & Photography
+
+- **Paper grain.** The page ground is a warm off-white (#FCFBF8) with a faint SVG noise over it (`.landing::before`, 5% opacity). Tiles and panels are opaque, so the grain only shows on the ground between them.
+- **Grain on green.** The hero, inner page heroes and the closing band carry a stronger grain (`.landing-grain`, overlay blend), through the `GreenGround` component in `src/components/landing/Site.tsx`.
+- **Faded photo heroes.** Heroes may show a farmer photo behind the gradient: the photo at 70% opacity with `mix-blend-luminosity`, under a pine-to-forest gradient at 70 to 86% opacity. Keep it light enough that the photo reads, dark enough that white text stays legible.
+
+## Product Fragments: Fonts and Colours
+
+Product fragments must look like screenshots of the real product, never like marketing copy:
+- **WhatsApp fragments** use the phone's system font (`font-chat`) and WhatsApp's light chat colours (`wa-*`: #EFEAE2 chat ground, #D9FDD3 outgoing bubbles, #008069 buttons, #667781 timestamps, blue read ticks).
+- **Web app fragments** (case queue, triage, case card) use Inter (`font-app`) and the app's own light theme as fixed hex values (`app-*`). The case queue sits in a macOS window frame with real traffic-light colours (#FF5F57, #FEBC2E, #28C840).
+- Fragments are not labelled "Example". Do not add example chips.
+
+## Award Logos
+
+Official award logos live in `src/assets/awards/` (`nvidia`, `henley`, `reading`). They have white backgrounds and must never be recoloured, so they always sit on white: a white strip in the hero, white plates on the award cards. The award position chip uses a gold trophy.
+
 ## Elevation & Depth
 
 Mostly flat with tonal layering: white page, paper and pastel panels, white fragment cards on top. Shadows are used only on white objects that sit on a tinted ground (product fragments, the active triage tab, the hero case panel, the phone frame), and they are always soft, diffuse, negative-spread and tinted with Forest Night, never neutral black and never hard-offset. Fragment cards also carry a 1px ring at 5% black to hold their edge on pale tiles.
@@ -308,11 +322,11 @@ Everything is rounded, and the radius grows with the size of the container: 8px 
 ### Buttons
 Confident full pills in one size, with a leading or trailing 16px icon where it helps.
 - **Shape:** full pill (9999px), 14px by 24px padding, 15px semibold text; the header version is 10px by 16px at 14px.
-- **Primary (light ground):** Action Green fill, white text; hover to Pine.
+- **Primary (light ground):** Pine fill, white text; hover to Pine.
 - **Primary (dark ground):** white fill, Forest Night text; hover to Mint.
 - **Secondary (light ground):** transparent with an inset Hairline ring, Ink text; hover fills Paper.
 - **Ghost (dark ground):** transparent with an inset white ring at 35%, white text; hover fills white at 10%.
-- **Focus:** a 2px Headline Green outline offset 3px on every link and button in `.landing`.
+- **Focus:** a 2px Pine outline offset 3px on every link and button in `.landing`.
 - **Pairing:** one primary and one secondary side by side, stacked on mobile; never two primaries in one group.
 
 ### Chips
@@ -329,19 +343,19 @@ Confident full pills in one size, with a leading or trailing 16px icon where it 
 - **Internal Padding:** 24px on mobile, 28 to 40px on tiles, up to 56px on the start panel.
 
 ### Navigation
-Fixed 72px header with the wordmark at left, four 15px medium anchor links centred (white at 80% over the hero, Muted Stone once solid, hover to full white or Ink), and Sign in plus a compact "Partner with us" pill at right. The pill inverts with the ground: white over the gradient, Action Green once solid. Below 768px only the wordmark and the pill (plus Sign in from 640px) remain.
+Fixed 72px header with the wordmark at left, four 15px medium anchor links centred (white at 80% over the hero, Muted Stone once solid, hover to full white or Ink), and Sign in plus a compact "Partner with us" pill at right. The pill inverts with the ground: white over the gradient, Pine once solid. Below 768px only the wordmark and the pill (plus Sign in from 640px) remain.
 
 ### Hero Case Panel (signature)
-One white panel following a single example case through three steps: Farmer (waveform and quote), V-Vet (High risk chip and next step), Vet (the case received), joined by Headline Green arrows. Steps sit in a row with labels above Paper cards from 768px. On phones they stack with arrows pointing down, the labels move inside the cards, and the waveform and animal name drop out to keep the hero short. It is captioned "Example case" below, in white at 70%, and contains no photo.
+One white panel following a single example case through three steps: Farmer (waveform and quote), V-Vet (High risk chip and next step), Vet (the case received), joined by Pine arrows. Steps sit in a row with labels above Paper cards from 768px. On phones they stack with arrows pointing down, the labels move inside the cards, and the waveform and animal name drop out to keep the hero short. It is captioned "Example case" below, in white at 70%, and contains no photo.
 
 ### Triage Stepper (signature)
-A Paper panel with a vertical tab list (numbered pill, semibold title, muted description; the active tab is a white lifted card with a 3px Headline Green progress bar along its bottom) beside a Mint panel showing the step's fragment, labelled "Example case". It auto-advances every 4.5s until the visitor picks a tab, and never auto-advances under reduced motion.
+A Paper panel with a vertical tab list (numbered pill, semibold title, muted description; the active tab is a white lifted card with a 3px Pine progress bar along its bottom) beside a Mint panel showing the step's fragment, labelled "Example case". It auto-advances every 4.5s until the visitor picks a tab, and never auto-advances under reduced motion.
 
 ### Product Fragments
 Code-drawn, legible replicas of real V-Vet UI (voice note bubble, tier pills, vet case card, case queue, registration form, follow-up thread). White cards, 12 to 14px type, fragment lift shadow. WhatsApp replicas quote WhatsApp's own dark chat colours (#0B141A ground, #202C33 incoming, #144D37 outgoing, #D9FDD3 light outgoing) and use them nowhere else.
 
 ### Auth Shell
-Sign in and sign up share one frame: from 1024px a two-column split (5fr/6fr) with the brand gradient panel on the left (wordmark, a headline with one Leaf phrase, a muted lead, one labelled product fragment, the watermark) and a white form column on the right. Below 1024px the panel is dropped and the white column carries the wordmark. Fields are 48px tall, 12px rounded, white with an inset Hairline ring that turns into a 2px Headline Green ring on focus; labels are 14px medium Ink; the submit is a full-width Action Green pill. The auth panel is a third use of the gradient, allowed because it is a separate screen, not a section of the landing page. The shell forces `color-scheme: light`, because the app theme defaults to dark.
+Sign in and sign up share one frame: from 1024px a two-column split (5fr/6fr) with the brand gradient panel on the left (wordmark, a headline with one Leaf phrase, a muted lead, one labelled product fragment, the watermark) and a white form column on the right. Below 1024px the panel is dropped and the white column carries the wordmark. Fields are 48px tall, 12px rounded, white with an inset Hairline ring that turns into a 2px Pine ring on focus; labels are 14px medium Ink; the submit is a full-width Pine pill. The auth panel is a third use of the gradient, allowed because it is a separate screen, not a section of the landing page. The shell forces `color-scheme: light`, because the app theme defaults to dark.
 
 ### Trust Marquee and Closing Points
 A full-width strip of six capability statements in the uppercase Label style with 18px line icons, looping horizontally between hairlines and pausing on hover; it is a capability strip, not a heading label. The closing-points strip is a static 2-up/4-up row of 14px semibold statements with 20px icons, divided by hairlines.
@@ -350,12 +364,10 @@ A full-width strip of six capability statements in the uppercase Label style wit
 
 ### Do:
 - **Do** wrap every public page in `.landing` and use the `landing-*` colours, Figtree, and these rules; keep app screens on their own shadcn tokens.
-- **Do** colour exactly one phrase per headline: Headline Green on light grounds, Leaf on the gradient.
+- **Do** colour exactly one phrase per headline: Pine on light grounds, Leaf on the gradient.
 - **Do** show the product doing its job on every section: a real asset or a code-drawn fragment on a pastel tile.
-- **Do** label every piece of example product UI with an "Example" or "Example case" chip.
-- **Do** caption the AI-generated farmer photo "Illustrative photo" wherever it appears.
 - **Do** use the "V-Vet" wordmark (Figtree 700) as the brand mark at small sizes; `/logo.png` is only for uses about 64px and larger.
-- **Do** use full-pill buttons, 15px semibold, with Action Green as the light-ground primary and white as the dark-ground primary.
+- **Do** use full-pill buttons, 15px semibold, with Pine as the light-ground primary and white as the dark-ground primary.
 - **Do** tint every shadow with Forest Night (rgba(17,33,17)) and keep it soft with a negative spread.
 - **Do** stop all motion under `prefers-reduced-motion`.
 
@@ -365,7 +377,8 @@ A full-width strip of six capability statements in the uppercase Label style wit
 - **Don't** resemble home.medvi.org: no ghost wordmark in the hero, and no overlapping tray of category cards.
 - **Don't** build feature-card grids of generic icons with titles and blurbs.
 - **Don't** use the gradient for more than the opening hero and the closing call-to-action band.
-- **Don't** set body copy in Headline Green; it is a headline-size colour.
+- **Don't** add new greens. Forest, Pine, Leaf (dark grounds only) and Mint are the whole set.
+- **Don't** write copy that argues with objections or defines V-Vet by what it isn't ("not just records", "doesn't replace vets"). Say plainly what it does.
 - **Don't** use status red or amber outside product fragments and status dots.
 - **Don't** use hard offset shadows, neutral black shadows, or square corners.
 - **Don't** shrink the `/logo.png` illustration below about 64px on public pages.

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Mail } from "lucide-react";
-import { AwardList } from "@/components/landing/Awards";
+import { AWARDS, AwardList, AwardMark } from "@/components/landing/Awards";
+import heroImage from "@/assets/landing-hero.jpg";
 import {
   Accent,
   ClosingBand,
@@ -20,6 +21,8 @@ type Milestone = {
   title: string;
   text: string;
   stage: Stage;
+  // Shows that award's logo under the milestone.
+  awardLogoKey?: string;
 };
 
 // Newest last. Keep dates to what we can back up.
@@ -35,12 +38,14 @@ const MILESTONES: Milestone[] = [
     title: "Recognised at Henley Business School",
     text: "V-Vet won the Best Idea for China category at IDEAFEST 2026, Henley Business School's business idea competition.",
     stage: "done",
+    awardLogoKey: "henley",
   },
   {
     when: "2026",
     title: "Winner of the NVIDIA AI Day Competition",
     text: "V-Vet won the NVIDIA AI Day Competition, sponsored by NVIDIA, Henley Business School, SCG and Softcat.",
     stage: "done",
+    awardLogoKey: "nvidia",
   },
   {
     when: "2026",
@@ -53,6 +58,7 @@ const MILESTONES: Milestone[] = [
     title: "Just Imagine If 2026 winner, and a funded pilot",
     text: "V-Vet was one of the winners of the University of Reading's Just Imagine If award. The seed funding is paying for our first pilot with farmers.",
     stage: "done",
+    awardLogoKey: "reading",
   },
   {
     when: "Now",
@@ -69,8 +75,8 @@ const MILESTONES: Milestone[] = [
 ];
 
 const STAGE_STYLES: Record<Stage, { dot: string; chip: string; label: string }> = {
-  done: { dot: "bg-landing-button", chip: "bg-landing-paper text-landing-muted", label: "" },
-  now: { dot: "bg-landing-accent ring-4 ring-landing-mint", chip: "bg-landing-mint text-landing-pine", label: "In progress" },
+  done: { dot: "bg-landing-pine", chip: "bg-landing-paper text-landing-muted", label: "" },
+  now: { dot: "bg-landing-pine ring-4 ring-landing-mint", chip: "bg-landing-mint text-landing-pine", label: "In progress" },
   next: { dot: "bg-white ring-2 ring-inset ring-landing-line", chip: "bg-landing-sky text-landing-ink", label: "Coming up" },
 };
 
@@ -84,6 +90,7 @@ function Timeline() {
         <ol className="relative mt-12 space-y-10 before:absolute before:bottom-2 before:left-[9px] before:top-2 before:w-px before:bg-landing-line">
           {MILESTONES.map((milestone) => {
             const style = STAGE_STYLES[milestone.stage];
+            const award = AWARDS.find((a) => a.logoKey === milestone.awardLogoKey);
             return (
               <li key={milestone.title} className="relative pl-12">
                 <span className={`absolute left-0 top-1.5 h-[19px] w-[19px] rounded-full ${style.dot}`} aria-hidden="true" />
@@ -97,6 +104,11 @@ function Timeline() {
                   {milestone.title}
                 </h3>
                 <p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed text-landing-muted">{milestone.text}</p>
+                {award && (
+                  <span className="mt-4 inline-flex h-16 items-center rounded-2xl bg-white px-4 ring-1 ring-landing-line">
+                    <AwardMark award={award} className="h-11 max-w-[180px]" />
+                  </span>
+                )}
               </li>
             );
           })}
@@ -136,6 +148,8 @@ export default function Journey() {
           </>
         }
         lead="How V-Vet went from a question about farmers and WhatsApp to a working product, three awards and our first pilot."
+        image={heroImage}
+        imagePosition="50% 25%"
       />
       <Timeline />
       <AwardsSection />
@@ -145,7 +159,7 @@ export default function Journey() {
             Be part of <span className="text-landing-leaf">the next chapter</span>
           </>
         }
-        lead="Our first pilot in Zimbabwe is funded and being prepared. Partner with us, or join the team building it."
+        lead="Our first pilot in Zimbabwe is funded and we're getting it ready. Come and partner with us, or join the team building it."
       >
         <a href={PARTNER_MAILTO} className={pillPrimaryOnDark}>
           <Mail size={16} aria-hidden="true" />

@@ -151,10 +151,30 @@
 
 /* Public landing page */
 .landing {
+  --landing-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   font-family: 'Figtree', 'Inter', sans-serif;
   color: #242220;
-  background: #ffffff;
+  background: #FCFBF8;
   font-variant-numeric: tabular-nums;
+  isolation: isolate;
+}
+
+/* Paper grain on the page ground. It sits behind everything, so tiles and panels cover it. */
+.landing::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--landing-noise);
+  opacity: 0.05;
+}
+
+/* Grain on the green grounds (hero, closing band). Used through the Grain component. */
+.landing-grain {
+  background-image: var(--landing-noise);
+  mix-blend-mode: overlay;
+  opacity: 0.55;
 }
 
 .landing ::selection {
@@ -164,7 +184,7 @@
 
 .landing a:focus-visible,
 .landing button:focus-visible {
-  outline: 2px solid #2E936F;
+  outline: 2px solid #1B6549;
   outline-offset: 3px;
 }
 

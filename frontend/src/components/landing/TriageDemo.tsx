@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Image as ImageIcon } from "lucide-react";
 import {
   FollowUpThread,
+  PhotoAttachedBubble,
   TierPills,
+  TriageReason,
   VetCaseCard,
   VoiceNoteBubble,
 } from "@/components/landing/CaseVisuals";
@@ -42,29 +43,18 @@ const AUTO_ADVANCE_MS = 4500;
 function StepPanel({ stepId }: { stepId: string }) {
   if (stepId === "reported") {
     return (
-      <div className="space-y-3">
+      <div className="space-y-2 rounded-2xl bg-wa-chat p-3">
         <VoiceNoteBubble />
-        <div className="flex items-center gap-2 rounded-2xl bg-white px-3.5 py-3 text-sm text-landing-ink ring-1 ring-black/5">
-          <ImageIcon size={16} className="text-landing-muted" aria-hidden="true" />
-          1 photo attached
-        </div>
+        <PhotoAttachedBubble />
       </div>
     );
   }
 
   if (stepId === "triaged") {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         <TierPills activeIndex={2} />
-        <div className="rounded-2xl bg-white p-4 text-sm leading-relaxed text-landing-ink ring-1 ring-black/5">
-          <p className="font-semibold">Why this was flagged</p>
-          <p className="mt-1 text-landing-muted">
-            Not eating for 2 days, weakness, getting worse. A vet should see this case today.
-          </p>
-          <p className="mt-3 text-xs font-medium text-landing-muted">
-            Confidence: moderate. Each alert says how sure V-Vet is.
-          </p>
-        </div>
+        <TriageReason />
       </div>
     );
   }
@@ -100,7 +90,7 @@ export default function TriageDemo() {
 
   return (
     <div className="grid gap-6 rounded-[28px] bg-landing-paper p-4 sm:p-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:gap-10 md:p-10">
-      <div role="tablist" aria-label="Example case steps" className="flex flex-col gap-1.5">
+      <div role="tablist" aria-label="Case steps" className="flex flex-col gap-1.5">
         {STEPS.map((step, index) => {
           const isActive = index === activeIndex;
           return (
@@ -122,7 +112,7 @@ export default function TriageDemo() {
                 <span
                   className={
                     isActive
-                      ? "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-landing-button text-xs font-semibold text-white"
+                      ? "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-landing-pine text-xs font-semibold text-white"
                       : "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-xs font-semibold text-landing-muted ring-1 ring-landing-line"
                   }
                 >
@@ -142,7 +132,7 @@ export default function TriageDemo() {
               {isActive && isAutoPlaying && !prefersReducedMotion && (
                 <motion.span
                   key={`progress-${activeIndex}`}
-                  className="absolute bottom-0 left-0 h-[3px] bg-landing-accent"
+                  className="absolute bottom-0 left-0 h-[3px] bg-landing-pine"
                   initial={{ width: "0%" }}
                   animate={{ width: "100%" }}
                   transition={{ duration: AUTO_ADVANCE_MS / 1000, ease: "linear" }}
@@ -158,11 +148,8 @@ export default function TriageDemo() {
         id="triage-panel"
         role="tabpanel"
         aria-labelledby={`triage-tab-${activeStep.id}`}
-        className="relative flex min-h-[300px] flex-col justify-center rounded-[22px] bg-landing-mint p-5 sm:p-8"
+        className="relative flex min-h-[320px] flex-col justify-center rounded-[22px] bg-landing-sky p-5 sm:p-8"
       >
-        <span className="absolute right-4 top-4 rounded-full bg-white/80 px-2.5 py-1 text-xs font-medium text-landing-muted">
-          Example case
-        </span>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={activeStep.id}
@@ -170,7 +157,7 @@ export default function TriageDemo() {
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             exit={prefersReducedMotion ? undefined : { opacity: 0, y: -8, filter: "blur(4px)" }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-            className="mx-auto w-full max-w-sm pt-6"
+            className="mx-auto w-full max-w-sm"
           >
             <StepPanel stepId={activeStep.id} />
           </motion.div>

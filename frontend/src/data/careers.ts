@@ -37,7 +37,7 @@ export const ROLES: Role[] = [
       "You've built something on top of LLMs, such as tool calling, structured output or prompt design, in a job or a serious side project.",
       "You're comfortable working with APIs. Experience with the WhatsApp Business API is a bonus.",
       "You write Python and JavaScript or TypeScript.",
-      "You have 1 to 2 years of development experience, or projects that show you can do the work.",
+      "You have at least 1 to 2 years of development experience, or projects that show you can do the work.",
       "You live in Zimbabwe.",
     ],
     strongPlus: [
@@ -45,7 +45,7 @@ export const ROLES: Role[] = [
     ],
     howYouWork: [
       "You're comfortable with ambiguity and can make progress without detailed instructions.",
-      "You write tests and care that things work, not only that they run.",
+      "You write tests and check that things actually work.",
       "You communicate clearly in writing, because we work remotely.",
       "You work well independently in a small team and ask for help when you need it.",
       "You're curious about farmers and how they actually use the product.",

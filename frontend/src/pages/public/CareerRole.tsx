@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import ApplicationForm from "@/components/landing/ApplicationForm";
 import HiringSteps from "@/components/landing/HiringSteps";
 import { getRole } from "@/data/careers";
+import heroImage from "@/assets/help-farmer-phone.webp";
 import { Accent, CheckList, PageHero, PublicPage, balance, pillPrimaryOnDark, sectionHeading } from "@/components/landing/Site";
 
 const subHeading = "font-display text-[1.75rem] font-semibold leading-tight tracking-[-0.01em] text-landing-ink";
@@ -22,7 +23,7 @@ export default function CareerRole() {
 
   return (
     <PublicPage>
-      <PageHero title={role.title} lead={role.summary}>
+      <PageHero title={role.title} lead={role.summary} image={heroImage} imagePosition="50% 25%">
         <a href="#apply" className={pillPrimaryOnDark}>
           Apply now
           <ArrowRight size={16} aria-hidden="true" />

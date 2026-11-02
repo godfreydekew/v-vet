@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Mail } from "lucide-react";
-import { ExampleChip } from "@/components/landing/CaseVisuals";
-import { AWARDS } from "@/components/landing/Awards";
+import { ArrowRight, Bug, Clock, Mail, MapPin } from "lucide-react";
+import { AWARDS, AwardMark } from "@/components/landing/Awards";
+import heroImage from "@/assets/problem-farmer-check.webp";
 import {
   Accent,
   ClosingBand,
@@ -17,42 +17,49 @@ import {
 
 const PROBLEM_FACTS = [
   {
-    figure: "60–67%",
+    figure: "60 to 67%",
+    icon: Bug,
     text: "of livestock deaths in Zimbabwe are caused by tick-borne diseases.",
     tileClass: "bg-landing-rose",
   },
   {
-    figure: "24–48 hours",
+    figure: "24 to 48 hours",
+    icon: Clock,
     text: "is all it can take for January Disease to kill an animal once a fever sets in.",
     tileClass: "bg-landing-sand",
   },
   {
-    figure: "Too far",
-    text: "Many farmers can't reach a vet in time, so a treatable illness becomes a lost animal and lost income.",
+    figure: "Hours away",
+    icon: MapPin,
+    text: "is how far the nearest vet can be for many farmers, so an illness that could be treated ends in a lost animal.",
     tileClass: "bg-landing-sky",
   },
 ];
 
 const BELIEFS = [
   {
-    title: "Decisions over records",
-    text: "Records are the means, not the goal. Every part of V-Vet should help someone save an animal or protect their income.",
+    title: "Help people decide",
+    text: "Everything we build should help someone save an animal or protect their income. Good records are how we make that easier.",
   },
   {
-    title: "Meet farmers where they are",
-    text: "WhatsApp, their own language, as little typing as possible. No new app to download and learn.",
+    title: "Go where farmers already are",
+    text: "Farmers already use WhatsApp, so that's where V-Vet lives. They can write or talk in their own language, with as little typing as possible.",
   },
   {
     title: "Explain the reasoning",
     text: "When V-Vet flags something, it says why, and how confident it is.",
   },
   {
-    title: "Prevention matters as much as reaction",
-    text: "Reminders for dipping, vaccination and deworming help stop problems before an animal gets sick.",
+    title: "Catch problems early",
+    text: "Reminders for dipping, vaccination and deworming help keep animals healthy in the first place.",
   },
   {
-    title: "Support vets, never replace them",
-    text: "V-Vet helps each vet reach more farmers, faster, with the animal's history already in front of them.",
+    title: "Make vets' time go further",
+    text: "Cases reach vets sorted by urgency, with the animal's history attached, so each vet can help more farmers.",
+  },
+  {
+    title: "Build it with the people who use it",
+    text: "We test V-Vet with farmers and vets, and change it based on what they tell us.",
   },
 ];
 
@@ -79,6 +86,9 @@ function ProblemSection() {
         <ul className="mt-12 grid gap-4 md:grid-cols-3">
           {PROBLEM_FACTS.map((fact) => (
             <li key={fact.figure} className={`rounded-[24px] p-7 ${fact.tileClass}`}>
+              <span className="mb-6 flex h-11 w-11 items-center justify-center rounded-full bg-white text-landing-ink ring-1 ring-black/5">
+                <fact.icon size={20} strokeWidth={1.75} aria-hidden="true" />
+              </span>
               <p className="font-display text-[2.5rem] font-semibold leading-none tracking-[-0.02em] text-landing-ink">
                 {fact.figure}
               </p>
@@ -114,7 +124,7 @@ function StartedSection() {
           {["The idea", "Recognised by three competitions", "A working product on WhatsApp", "A funded pilot"].map(
             (step, index) => (
               <li key={step} className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3 ring-1 ring-black/5">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-landing-button text-sm font-semibold text-white">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-landing-pine text-sm font-semibold text-white">
                   {index + 1}
                 </span>
                 <span className="text-[15px] font-medium text-landing-ink">{step}</span>
@@ -140,7 +150,7 @@ function BeliefsSection() {
           {BELIEFS.map((belief, index) => (
             <li
               key={belief.title}
-              className={`rounded-[24px] p-7 ${["bg-landing-mint", "bg-landing-sky", "bg-landing-sand", "bg-landing-rose", "bg-landing-mint"][index]}`}
+              className={`rounded-[24px] p-7 ${["bg-landing-mint", "bg-landing-sky", "bg-landing-sand", "bg-landing-rose", "bg-landing-sand", "bg-landing-mint"][index]}`}
             >
               <h3 className="font-display text-[1.375rem] font-semibold leading-snug text-landing-ink">{belief.title}</h3>
               <p className="mt-2 text-[15px] leading-relaxed text-landing-ink/80">{belief.text}</p>
@@ -168,7 +178,10 @@ function BelieversSection() {
         <ul className="mt-12 grid gap-4 md:grid-cols-3">
           {AWARDS.map((award) => (
             <li key={award.competition} className={`flex flex-col rounded-[24px] p-7 ${award.tileClass}`}>
-              <p className="font-display text-[1.75rem] font-semibold leading-tight tracking-[-0.01em] text-landing-ink">
+              <span className="flex h-24 items-center justify-center rounded-2xl bg-white px-4">
+                <AwardMark award={award} className="h-14 max-w-full" />
+              </span>
+              <p className="mt-5 font-display text-[1.75rem] font-semibold leading-tight tracking-[-0.01em] text-landing-ink">
                 {award.organisation}
               </p>
               <p className="mt-2 text-[15px] leading-relaxed text-landing-ink/80">{award.competition}</p>
@@ -202,33 +215,30 @@ function BuildingNowSection() {
             questions in plain language and works out how urgently a vet is needed.
           </p>
           <p className="mt-4 max-w-[56ch] text-[17px] leading-relaxed text-landing-muted">
-            Every change to the engine is approved by a vet, and every decision can be traced back
-            to the rule that made it. It supports vets' judgement. It doesn't replace it.
+            Vets approve every change to the engine, and every decision can be traced back to the
+            rule that made it.
           </p>
         </div>
-        <div className="relative rounded-[28px] bg-landing-mint p-6 sm:p-10">
-          <span className="absolute right-4 top-4">
-            <ExampleChip label="Example case" />
-          </span>
-          <ol className="space-y-2.5 pt-6">
+        <div className="relative rounded-[28px] bg-landing-sky p-6 sm:p-10">
+          <ol className="space-y-2.5">
             {ENGINE_PATH.map((step) => (
               <li
                 key={step.question}
-                className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-sm text-landing-ink shadow-[0_10px_30px_-14px_rgba(17,33,17,0.3)] ring-1 ring-black/5"
+                className="flex items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 font-app text-sm text-app-ink shadow-[0_10px_30px_-14px_rgba(17,33,17,0.3)] ring-1 ring-app-line"
               >
                 {step.question}
-                <span className="shrink-0 rounded-full bg-landing-paper px-2.5 py-1 text-xs font-semibold text-landing-muted">
+                <span className="shrink-0 rounded-md bg-app-bg px-2 py-0.5 text-xs font-semibold text-app-muted">
                   {step.answer}
                 </span>
               </li>
             ))}
           </ol>
-          <div className="mt-4 rounded-2xl bg-white p-4 shadow-[0_10px_30px_-14px_rgba(17,33,17,0.3)] ring-1 ring-black/5">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
+          <div className="mt-4 rounded-xl bg-white p-4 font-app shadow-[0_10px_30px_-14px_rgba(17,33,17,0.3)] ring-1 ring-app-line">
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
               <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" />
               Vet within 12 hours
             </span>
-            <p className="mt-2 text-[13px] leading-snug text-landing-ink">
+            <p className="mt-2 text-[13px] leading-snug text-app-ink">
               These signs may point to January Disease. Rule applied: lumps with a possible fever,
               escalate early.
             </p>
@@ -248,7 +258,9 @@ export default function About() {
             Built for the farmers <span className="text-landing-leaf">who feed Zimbabwe</span>
           </>
         }
-        lead="V-Vet is livestock decision support that works inside WhatsApp, so smallholder farmers can get guidance in their own language and reach a vet when it matters."
+        lead="V-Vet helps smallholder farmers look after their animals through WhatsApp, in their own language, and gets them to a vet when it matters."
+        image={heroImage}
+        imagePosition="50% 30%"
       />
       <ProblemSection />
       <StartedSection />

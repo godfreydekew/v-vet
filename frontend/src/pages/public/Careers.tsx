@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { ROLES } from "@/data/careers";
+import heroImage from "@/assets/help-farmer-phone.webp";
 import HiringSteps from "@/components/landing/HiringSteps";
 import { Accent, PageHero, PublicPage, balance, pillPrimaryOnDark, sectionHeading } from "@/components/landing/Site";
 
@@ -32,6 +33,8 @@ export default function Careers() {
           </>
         }
         lead="We're a small team building livestock decision support on WhatsApp. If you want your work to help farmers keep their animals alive, we'd like to hear from you."
+        image={heroImage}
+        imagePosition="50% 25%"
       >
         <a href="#roles" className={pillPrimaryOnDark}>
           See open roles

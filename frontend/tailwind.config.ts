@@ -16,6 +16,10 @@ export default {
       fontFamily: {
         sans: ["Inter", "sans-serif"],
         display: ["Figtree", "Inter", "sans-serif"],
+        // Product fragments on the public site: WhatsApp renders in the phone's system font,
+        // the web app in Inter. They must not use the marketing font (Figtree).
+        chat: ["-apple-system", "BlinkMacSystemFont", '"Segoe UI"', "Roboto", "Helvetica", "Arial", "sans-serif"],
+        app: ["Inter", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -73,13 +77,29 @@ export default {
           paper: "#F7F5F2",
           forest: "#112111",
           pine: "#1B6549",
-          button: "#1F7A5A",
-          accent: "#2E936F",
           leaf: "#8FD19E",
           mint: "#DEEDE0",
           sky: "#E4ECF2",
           sand: "#F2EBE1",
           rose: "#F2E6EC",
+        },
+        // The web app's light theme (src/index.css :root) as fixed hex values, so product
+        // fragments on the public site look like the real app whatever the app theme is.
+        app: {
+          ink: "#1C3117",
+          primary: "#2A4922",
+          muted: "#60705C",
+          line: "#E0DAD1",
+          bg: "#F4EFE6",
+        },
+        // WhatsApp's light chat colours, for WhatsApp fragments only.
+        wa: {
+          ink: "#111B21",
+          meta: "#667781",
+          chat: "#EFEAE2",
+          out: "#D9FDD3",
+          green: "#25D366",
+          teal: "#008069",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
