@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Mail } from "lucide-react";
 import { AWARDS, AwardList, AwardMark } from "@/components/landing/Awards";
-import heroImage from "@/assets/landing-hero.jpg";
+import heroImage from "@/assets/landing-hero.webp";
 import {
   Accent,
   ClosingBand,

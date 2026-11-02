@@ -18,7 +18,7 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import farmerCheckImage from "@/assets/problem-farmer-check.webp";
 import farmerPhoneImage from "@/assets/help-farmer-phone.webp";
-import farmerImage from "@/assets/landing-hero.jpg";
+import farmerImage from "@/assets/landing-hero.webp";
 import whatsappScreenshot from "@/assets/whatsapp-screenshot.jpg";
 import TriageDemo from "@/components/landing/TriageDemo";
 import {
