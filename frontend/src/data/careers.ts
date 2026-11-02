@@ -9,6 +9,7 @@ export type Role = {
   about: string[];
   youWill: string[];
   lookingFor: string[];
+  // Nice to have, not required.
   strongPlus: string[];
   howYouWork: string[];
   stack: string[];
@@ -36,12 +37,13 @@ export const ROLES: Role[] = [
       "You care about solving real problems in Zimbabwe.",
       "You've built something on top of LLMs, such as tool calling, structured output or prompt design, in a job or a serious side project.",
       "You're comfortable working with APIs. Experience with the WhatsApp Business API is a bonus.",
-      "You write Python and JavaScript or TypeScript.",
+      "You write Python.",
+      "You speak Shona or Ndebele. Farmers talk to V-Vet in their own language, so you'll help with testing, wording and catching mistakes.",
       "You have at least 1 to 2 years of development experience, or projects that show you can do the work.",
       "You live in Zimbabwe.",
     ],
     strongPlus: [
-      "You speak Shona or Ndebele. Farmers talk to V-Vet in their own language, so this helps with testing, wording and catching mistakes.",
+      "You also write JavaScript or TypeScript, for our React dashboards.",
     ],
     howYouWork: [
       "You're comfortable with ambiguity and can make progress without detailed instructions.",

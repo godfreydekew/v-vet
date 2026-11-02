@@ -88,6 +88,7 @@ def test_failed_team_email_returns_error(client: TestClient) -> None:
     [
         (_form(role="chief-cow-officer"), _cv(), 404),
         (_form(lives_in_zimbabwe="false"), _cv(), 422),
+        (_form(languages="English"), _cv(), 422),
         (_form(accepted_privacy_notice="false"), _cv(), 422),
         (_form(), _cv(name="cv.exe"), 422),
         (_form(), _cv(data=b""), 422),

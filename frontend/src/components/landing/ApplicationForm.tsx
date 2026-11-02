@@ -32,6 +32,9 @@ export default function ApplicationForm({ roleId }: { roleId: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
 
+  const speaksRequiredLanguage =
+    languages.includes("Shona") || languages.includes("Ndebele") || /shona|ndebele/i.test(otherLanguage);
+
   function toggleLanguage(language: string) {
     setLanguages((current) =>
       current.includes(language) ? current.filter((l) => l !== language) : [...current, language],
@@ -58,6 +61,10 @@ export default function ApplicationForm({ roleId }: { roleId: string }) {
     }
     if (answer.trim().length < MIN_ANSWER_LENGTH) {
       setError("Please tell us a little more in your answer about building with an LLM.");
+      return;
+    }
+    if (!speaksRequiredLanguage) {
+      setError("This role needs someone who speaks Shona or Ndebele.");
       return;
     }
     if (!livesInZimbabwe) {
@@ -131,6 +138,7 @@ export default function ApplicationForm({ roleId }: { roleId: string }) {
 
       <fieldset>
         <legend className={authLabelClass}>Languages you speak</legend>
+        <p className={`${authHintClass} mt-1`}>You need to speak Shona or Ndebele for this role.</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {LANGUAGE_OPTIONS.map((language) => {
             const checked = languages.includes(language);

@@ -13,6 +13,14 @@ const SITE_URL = "https://vvet.org";
 // and the app then loads as normal.
 const PAGE_PREVIEWS = [
   {
+    path: "careers/software-engineer/apply",
+    title: "Apply to be our Software Engineer | V-Vet",
+    description:
+      "Build the tech that helps Zimbabwe's farmers keep their animals alive. Contract, remote within Zimbabwe.",
+    image: "/og/software-engineer.jpg",
+    imageAlt: "V-Vet is hiring a Software Engineer. Contract, remote within Zimbabwe.",
+  },
+  {
     path: "careers/software-engineer",
     title: "We're hiring a Software Engineer | V-Vet",
     description:

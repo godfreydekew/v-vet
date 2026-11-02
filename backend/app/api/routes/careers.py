@@ -1,4 +1,5 @@
 import logging
+import re
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -54,6 +55,11 @@ def submit_application(
         raise HTTPException(
             status_code=422,
             detail="Please confirm you've read the privacy notice.",
+        )
+    if not re.search(r"shona|ndebele", languages, re.IGNORECASE):
+        raise HTTPException(
+            status_code=422,
+            detail="This role needs someone who speaks Shona or Ndebele.",
         )
     if not lives_in_zimbabwe:
         raise HTTPException(

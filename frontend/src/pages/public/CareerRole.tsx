@@ -1,10 +1,18 @@
 import { Link, Navigate, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import ApplicationForm from "@/components/landing/ApplicationForm";
 import HiringSteps from "@/components/landing/HiringSteps";
 import { getRole } from "@/data/careers";
 import heroImage from "@/assets/help-farmer-phone.webp";
-import { Accent, CheckList, PageHero, PublicPage, balance, pillPrimaryOnDark, sectionHeading } from "@/components/landing/Site";
+import {
+  Accent,
+  CheckList,
+  PageHero,
+  PublicPage,
+  balance,
+  pillPrimary,
+  pillPrimaryOnDark,
+  sectionHeading,
+} from "@/components/landing/Site";
 
 const subHeading = "font-display text-[1.75rem] font-semibold leading-tight tracking-[-0.01em] text-landing-ink";
 
@@ -20,14 +28,15 @@ export default function CareerRole() {
   const role = getRole(roleId);
 
   if (!role) return <Navigate to="/careers" replace />;
+  const applyPath = `/careers/${role.id}/apply`;
 
   return (
     <PublicPage>
       <PageHero title={role.title} lead={role.summary} image={heroImage} imagePosition="50% 25%">
-        <a href="#apply" className={pillPrimaryOnDark}>
+        <Link to={applyPath} className={pillPrimaryOnDark}>
           Apply now
           <ArrowRight size={16} aria-hidden="true" />
-        </a>
+        </Link>
       </PageHero>
 
       <section className="px-4 py-16 sm:px-6 md:py-24">
@@ -68,7 +77,7 @@ export default function CareerRole() {
                 <CheckList items={role.lookingFor} />
               </div>
               <div className="mt-6 rounded-[24px] bg-landing-sand p-6">
-                <h3 className="font-display text-xl font-semibold text-landing-ink">A strong plus</h3>
+                <h3 className="font-display text-xl font-semibold text-landing-ink">Nice to have</h3>
                 <ul className="mt-2 space-y-2 text-[15px] leading-relaxed text-landing-ink">
                   {role.strongPlus.map((item) => (
                     <li key={item}>{item}</li>
@@ -100,6 +109,10 @@ export default function CareerRole() {
               <div className="mt-5">
                 <CheckList items={APPLY_WITH} />
               </div>
+              <Link to={applyPath} className={`${pillPrimary} mt-8`}>
+                Apply for this role
+                <ArrowRight size={16} aria-hidden="true" />
+              </Link>
             </div>
           </div>
         </div>
@@ -111,24 +124,11 @@ export default function CareerRole() {
             How we <Accent>hire</Accent>
           </h2>
           <div className="mt-12">
-            <HiringSteps />
+            <HiringSteps applyTo={applyPath} />
           </div>
         </div>
       </section>
 
-      <section id="apply" className="scroll-mt-24 px-4 pb-24 sm:px-6 md:pb-32">
-        <div className="mx-auto max-w-[760px] rounded-[28px] bg-landing-paper p-6 sm:p-10 md:p-14">
-          <h2 className={sectionHeading} style={balance}>
-            Apply for <Accent>this role</Accent>
-          </h2>
-          <p className="mt-5 text-[17px] leading-relaxed text-landing-muted">
-            It takes about ten minutes. Straight after you apply, we'll email you a short coding task.
-          </p>
-          <div className="mt-10">
-            <ApplicationForm roleId={role.id} />
-          </div>
-        </div>
-      </section>
     </PublicPage>
   );
 }
