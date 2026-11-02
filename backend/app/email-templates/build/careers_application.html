@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="und" dir="auto" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+
+<head>
+  <title></title>
+  <!--[if !mso]><!-->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <!--<![endif]-->
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style type="text/css">
+    #outlook a {
+      padding: 0;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+
+    table,
+    td {
+      border-collapse: collapse;
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+    }
+
+    img {
+      border: 0;
+      height: auto;
+      line-height: 100%;
+      outline: none;
+      text-decoration: none;
+      -ms-interpolation-mode: bicubic;
+    }
+
+    p {
+      display: block;
+      margin: 13px 0;
+    }
+
+  </style>
+  <!--[if mso]>
+    <noscript>
+    <xml>
+    <o:OfficeDocumentSettings>
+      <o:AllowPNG/>
+      <o:PixelsPerInch>96</o:PixelsPerInch>
+    </o:OfficeDocumentSettings>
+    </xml>
+    </noscript>
+    <![endif]-->
+  <!--[if lte mso 11]>
+    <style type="text/css">
+      .mj-outlook-group-fix { width:100% !important; }
+    </style>
+    <![endif]-->
+  <style type="text/css">
+    @media only screen and (min-width:480px) {
+      .mj-column-per-100 {
+        width: 100% !important;
+        max-width: 100%;
+      }
+    }
+
+  </style>
+  <style media="screen and (min-width:480px)">
+    .moz-text-html .mj-column-per-100 {
+      width: 100% !important;
+      max-width: 100%;
+    }
+
+  </style>
+</head>
+
+<body style="word-spacing:normal;background-color:#f7f5f2;">
+  <div style="background-color:#f7f5f2;" lang="und" dir="auto">
+    <!--[if mso | IE]><table align="center" border="0" cellpadding="0" cellspacing="0" class="" role="presentation" style="width:600px;" width="600" bgcolor="#ffffff" ><tr><td style="line-height:0px;font-size:0px;mso-line-height-rule:exactly;"><![endif]-->
+    <div style="background:#ffffff;background-color:#ffffff;margin:0px auto;max-width:600px;">
+      <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff;background-color:#ffffff;width:100%;">
+        <tbody>
+          <tr>
+            <td style="direction:ltr;font-size:0px;padding:32px 32px 24px;text-align:center;">
+              <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td class="" style="vertical-align:top;width:536px;" ><![endif]-->
+              <div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
+                <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
+                  <tbody>
+                    <tr>
+                      <td align="left" style="font-size:0px;padding:10px 25px;padding-bottom:4px;word-break:break-word;">
+                        <div style="font-family:Arial, Helvetica, sans-serif;font-size:22px;font-weight:bold;line-height:1.6;text-align:left;color:#242220;">New application: {{ role_title|e }}</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="left" style="font-size:0px;padding:10px 25px;padding-bottom:16px;word-break:break-word;">
+                        <div style="font-family:Arial, Helvetica, sans-serif;font-size:15px;line-height:1.6;text-align:left;color:#5C5A56;">The CV is attached. Reply to this email to write to the applicant.</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="left" style="font-size:0px;padding:10px 25px;word-break:break-word;">
+                        <table cellpadding="6px" cellspacing="0" width="100%" border="0" style="color:#242220;font-family:Arial, Helvetica, sans-serif;font-size:15px;line-height:1.5;table-layout:auto;width:100%;border:none;">
+                          <tr>
+                            <td style="width:150px;color:#5C5A56;vertical-align:top;">Name</td>
+                            <td>{{ full_name|e }}</td>
+                          </tr>
+                          <tr>
+                            <td style="color:#5C5A56;vertical-align:top;">Email</td>
+                            <td>{{ email|e }}</td>
+                          </tr>
+                          <tr>
+                            <td style="color:#5C5A56;vertical-align:top;">Phone</td>
+                            <td>{{ phone|e }}</td>
+                          </tr>
+                          <tr>
+                            <td style="color:#5C5A56;vertical-align:top;">Location</td>
+                            <td>{{ location|e }}</td>
+                          </tr>
+                          <tr>
+                            <td style="color:#5C5A56;vertical-align:top;">Languages</td>
+                            <td>{{ languages|e }}</td>
+                          </tr>
+                          <tr>
+                            <td style="color:#5C5A56;vertical-align:top;">LinkedIn</td>
+                            <td>{{ linkedin_url|e }}</td>
+                          </tr>
+                          <tr>
+                            <td style="color:#5C5A56;vertical-align:top;">Coding task email</td>
+                            <td>{% if task_sent %}Sent{% else %}<strong style="color:#B91C1C;">Failed to send. Please send the task manually.</strong>{% endif %}</td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center" style="font-size:0px;padding:16px 0;word-break:break-word;">
+                        <p style="border-top:solid 1px #E7E4DF;font-size:1px;margin:0px auto;width:100%;">
+                        </p>
+                        <!--[if mso | IE]><table align="center" border="0" cellpadding="0" cellspacing="0" style="border-top:solid 1px #E7E4DF;font-size:1px;margin:0px auto;width:536px;" role="presentation" width="536px" ><tr><td style="height:0;line-height:0;"> &nbsp;
+</td></tr></table><![endif]-->
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="left" style="font-size:0px;padding:10px 25px;word-break:break-word;">
+                        <div style="font-family:Arial, Helvetica, sans-serif;font-size:15px;font-weight:bold;line-height:1.6;text-align:left;color:#242220;">Projects, GitHub or portfolio</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="left" class="pre" style="font-size:0px;padding:10px 25px;word-break:break-word;">
+                        <div style="font-family:Arial, Helvetica, sans-serif;font-size:15px;line-height:1.6;text-align:left;color:#242220;">
+                          <div style="white-space:pre-wrap;">{{ portfolio_links|e }}</div>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="left" style="font-size:0px;padding:10px 25px;padding-top:12px;word-break:break-word;">
+                        <div style="font-family:Arial, Helvetica, sans-serif;font-size:15px;font-weight:bold;line-height:1.6;text-align:left;color:#242220;">Tell us about something you built on top of an LLM. What went wrong, and how did you fix it?</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="left" style="font-size:0px;padding:10px 25px;word-break:break-word;">
+                        <div style="font-family:Arial, Helvetica, sans-serif;font-size:15px;line-height:1.6;text-align:left;color:#242220;">
+                          <div style="white-space:pre-wrap;">{{ llm_project_answer|e }}</div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <!--[if mso | IE]></td></tr></table><![endif]-->
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!--[if mso | IE]></td></tr></table><![endif]-->
+  </div>
+</body>
+
+</html>

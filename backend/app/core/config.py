@@ -118,6 +118,9 @@ class Settings(BaseSettings):
 
     EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48
 
+    # Job applications from the public careers page are sent here.
+    CAREERS_INBOX_EMAIL: EmailStr = "projectsfreelance1@gmail.com"
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def emails_enabled(self) -> bool:

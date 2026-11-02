@@ -1,10 +1,7 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion, type MotionProps } from "framer-motion";
 import {
   ArrowRight,
-  ArrowUpRight,
-  Check,
   HeartPulse,
   Play,
   TrendingDown,
@@ -12,8 +9,6 @@ import {
   Languages,
   LogIn,
   Mail,
-  MapPinned,
-  MessageCircle,
   Mic,
   Smartphone,
   Stethoscope,
@@ -32,17 +27,23 @@ import {
   RegistrationForm,
   VetQueue,
 } from "@/components/landing/CaseVisuals";
-
-const WHATSAPP_LINK = "https://wa.me/447519132951?text=Hello";
-const PARTNER_EMAIL = "info@vvet.org";
-const PARTNER_MAILTO = `mailto:${PARTNER_EMAIL}?subject=${encodeURIComponent("Partnering with V-Vet")}`;
-
-const NAV_LINKS = [
-  { label: "How it works", href: "#farmers" },
-  { label: "Triage", href: "#triage" },
-  { label: "For vets", href: "#vets" },
-  { label: "Awards", href: "#awards" },
-];
+import { AwardList } from "@/components/landing/Awards";
+import WhatsAppIcon from "@/components/landing/WhatsAppIcon";
+import {
+  Accent,
+  CheckList,
+  ClosingBand,
+  PARTNER_EMAIL,
+  PARTNER_MAILTO,
+  PublicPage,
+  WHATSAPP_LINK,
+  balance,
+  pillPrimary,
+  pillPrimaryOnDark,
+  pillSecondary,
+  pillSecondaryOnDark,
+  sectionHeading,
+} from "@/components/landing/Site";
 
 const TRUST_MARQUEE = [
   { icon: Languages, label: "Shona, Ndebele and English" },
@@ -79,149 +80,6 @@ const VET_GETS = [
   "A way to send the diagnosis, treatment plan and follow-up date back to the farmer",
 ];
 
-type Award = {
-  name: string;
-  result: string;
-  detail?: string;
-  link?: string;
-  tileClass: string;
-};
-
-const AWARDS: Award[] = [
-  {
-    name: "NVIDIA AI Day Competition",
-    result: "Winner, awarded an NVIDIA DGX Spark AI supercomputer.",
-    detail: "Sponsored by NVIDIA, Henley Business School, SCG and Softcat.",
-    tileClass: "bg-landing-mint",
-  },
-  {
-    name: "Henley Business School Student Business Idea Competition",
-    result: "First place, with £2,000 for V-Vet.",
-    link: "https://live.henley.ac.uk/news/13206940",
-    tileClass: "bg-landing-sky",
-  },
-  {
-    name: "Just Imagine If 2026, University of Reading",
-    result: "Winner, with £5,000 to run V-Vet's first pilot programme.",
-    link: "https://www.reading.ac.uk/just-imagine-if/2026-winners",
-    tileClass: "bg-landing-sand",
-  },
-];
-
-const CLOSING_POINTS = [
-  { icon: Stethoscope, label: "Vets stay in the loop" },
-  { icon: Languages, label: "Built for local languages" },
-  { icon: MessageCircle, label: "Works inside WhatsApp" },
-  { icon: MapPinned, label: "Starting in Zimbabwe" },
-];
-
-const pillPrimaryOnDark =
-  "inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-[15px] font-semibold text-landing-forest transition-colors hover:bg-landing-mint";
-const pillSecondaryOnDark =
-  "inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-semibold text-white ring-1 ring-inset ring-white/35 transition-colors hover:bg-white/10";
-const pillPrimary =
-  "inline-flex items-center justify-center gap-2 rounded-full bg-landing-button px-6 py-3.5 text-[15px] font-semibold text-white transition-colors hover:bg-landing-pine";
-const pillSecondary =
-  "inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-semibold text-landing-ink ring-1 ring-inset ring-landing-line transition-colors hover:bg-landing-paper";
-
-const sectionHeading =
-  "font-display text-[2.125rem] font-semibold leading-[1.1] tracking-[-0.02em] text-landing-ink sm:text-[2.75rem] md:text-5xl";
-
-function Accent({ children }: { children: React.ReactNode }) {
-  return <span className="text-landing-accent">{children}</span>;
-}
-
-function CheckList({ items }: { items: string[] }) {
-  return (
-    <ul className="space-y-3">
-      {items.map((item) => (
-        <li key={item} className="flex items-start gap-3 text-[15px] leading-relaxed text-landing-ink">
-          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-landing-button text-white">
-            <Check size={12} strokeWidth={3} aria-hidden="true" />
-          </span>
-          {item}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function SiteHeader() {
-  const [isScrolled, setIsScrolled] = useState(false);
-
-  useEffect(() => {
-    function handleScroll() {
-      setIsScrolled(window.scrollY > 24);
-    }
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  return (
-    <header
-      className={
-        isScrolled
-          ? "fixed inset-x-0 top-0 z-50 border-b border-landing-line bg-white/90 backdrop-blur-md transition-colors"
-          : "fixed inset-x-0 top-0 z-50 border-b border-transparent bg-transparent transition-colors"
-      }
-    >
-      <div className="mx-auto flex h-[72px] max-w-[1160px] items-center justify-between px-4 sm:px-6">
-        <a href="#top" className="flex items-center" aria-label="V-Vet home">
-          <span
-            className={
-              isScrolled
-                ? "font-display text-xl font-bold tracking-tight text-landing-ink"
-                : "font-display text-xl font-bold tracking-tight text-white"
-            }
-          >
-            V-Vet
-          </span>
-        </a>
-
-        <nav aria-label="Main" className="hidden items-center gap-8 md:flex">
-          {NAV_LINKS.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className={
-                isScrolled
-                  ? "text-[15px] font-medium text-landing-muted transition-colors hover:text-landing-ink"
-                  : "text-[15px] font-medium text-white/80 transition-colors hover:text-white"
-              }
-            >
-              {link.label}
-            </a>
-          ))}
-        </nav>
-
-        <div className="flex items-center gap-2 sm:gap-4">
-          <Link
-            to="/login"
-            className={
-              isScrolled
-                ? "hidden text-[15px] font-medium text-landing-ink sm:inline"
-                : "hidden text-[15px] font-medium text-white sm:inline"
-            }
-          >
-            Sign in
-          </Link>
-          <a
-            href={PARTNER_MAILTO}
-            className={
-              isScrolled
-                ? "rounded-full bg-landing-button px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-landing-pine"
-                : "rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-landing-forest transition-colors hover:bg-landing-mint"
-            }
-          >
-            Partner with us
-          </a>
-        </div>
-      </div>
-    </header>
-  );
-}
-
 function Hero() {
   const prefersReducedMotion = useReducedMotion();
   const entrance = (delay: number): MotionProps =>
@@ -239,7 +97,7 @@ function Hero() {
         <motion.h1
           {...entrance(0)}
           className="mx-auto max-w-[24ch] font-display text-[2.6rem] font-semibold leading-[1.04] tracking-[-0.03em] sm:text-6xl md:text-[4.25rem]"
-          style={{ textWrap: "balance" } as React.CSSProperties}
+          style={balance}
         >
           Animal health, <br className="hidden sm:block" />
           <span className="text-landing-leaf">one WhatsApp message</span> away.
@@ -263,6 +121,7 @@ function Hero() {
             <ArrowRight size={16} aria-hidden="true" />
           </a>
           <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className={pillSecondaryOnDark}>
+            <WhatsAppIcon size={16} />
             Start on WhatsApp
           </a>
         </motion.div>
@@ -383,7 +242,7 @@ function ProblemSection() {
           />
           <div className="relative">
             {/* <p className="text-[15px] font-semibold text-landing-muted">The problem</p> */}
-            <h2 className={`${sectionHeading} mt-4`} style={{ textWrap: "balance" } as React.CSSProperties}>
+            <h2 className={`${sectionHeading} mt-4`} style={balance}>
               Livestock losses are costing farmers <Accent>their livelihoods.</Accent>
             </h2>
             <p className="mt-6 max-w-[52ch] text-[17px] leading-relaxed text-landing-muted">
@@ -405,7 +264,7 @@ function ProblemSection() {
           />
           <div className="relative md:order-last">
             <p className="text-[15px] font-semibold text-landing-pine">How V-Vet helps</p>
-            <h2 className={`${sectionHeading} mt-4`} style={{ textWrap: "balance" } as React.CSSProperties}>
+            <h2 className={`${sectionHeading} mt-4`} style={balance}>
               Better livestock health starts with <Accent>better access to guidance.</Accent>
             </h2>
             <p className="mt-6 max-w-[52ch] text-[17px] leading-relaxed text-landing-muted">
@@ -432,7 +291,7 @@ function FarmersSection() {
     <section id="farmers" className="scroll-mt-24 px-4 pb-24 sm:px-6 md:pb-32">
       <div className="mx-auto grid max-w-[1100px] items-start gap-x-16 gap-y-10 md:grid-cols-[5fr_7fr]">
         <div className="md:col-start-2 md:row-start-1">
-          <h2 className={sectionHeading} style={{ textWrap: "balance" } as React.CSSProperties}>
+          <h2 className={sectionHeading} style={balance}>
             Farmers use V-Vet <Accent>in their own words</Accent>
           </h2>
           <p className="mt-5 max-w-[60ch] text-[17px] leading-relaxed text-landing-muted">
@@ -486,6 +345,7 @@ function FarmersSection() {
             </div>
           </div>
           <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className={`${pillPrimary} mt-7`}>
+            <WhatsAppIcon size={16} />
             Start on WhatsApp
           </a>
         </div>
@@ -499,7 +359,7 @@ function TriageSection() {
     <section id="triage" className="scroll-mt-24 px-4 pb-24 sm:px-6 md:pb-32">
       <div className="mx-auto max-w-[1100px]">
         <div className="mx-auto max-w-[720px] text-center">
-          <h2 className={sectionHeading} style={{ textWrap: "balance" } as React.CSSProperties}>
+          <h2 className={sectionHeading} style={balance}>
             Decisions, <Accent>not just records</Accent>
           </h2>
           <p className="mx-auto mt-5 max-w-[60ch] text-[17px] leading-relaxed text-landing-muted">
@@ -521,7 +381,7 @@ function VetsSection() {
     <section id="vets" className="scroll-mt-24 px-4 pb-24 sm:px-6 md:pb-32">
       <div className="mx-auto grid max-w-[1100px] items-center gap-14 md:grid-cols-[6fr_5fr] md:gap-16">
         <div>
-          <h2 className={sectionHeading} style={{ textWrap: "balance" } as React.CSSProperties}>
+          <h2 className={sectionHeading} style={balance}>
             Vets get every case <Accent>with its history</Accent>
           </h2>
           <p className="mt-5 max-w-[56ch] text-[17px] leading-relaxed text-landing-muted">
@@ -607,40 +467,25 @@ function AwardsSection() {
     <section id="awards" className="scroll-mt-24 px-4 pb-24 sm:px-6 md:pb-32">
       <div className="mx-auto max-w-[1100px]">
         <div className="mx-auto max-w-[720px] text-center">
-          <h2 className={sectionHeading} style={{ textWrap: "balance" } as React.CSSProperties}>
-            Awards
+          <h2 className={sectionHeading} style={balance}>
+            Recognised by <Accent>names you know</Accent>
           </h2>
           <p className="mx-auto mt-5 max-w-[56ch] text-[17px] leading-relaxed text-landing-muted">
-            V-Vet has won three pitch competitions. The most recent award funds our first pilot
-            with farmers.
+            V-Vet has won three competitions. The most recent is funding our first pilot with
+            farmers in Zimbabwe.
           </p>
         </div>
 
-        <ul className="mt-14 grid gap-4 md:grid-cols-3">
-          {AWARDS.map((award) => (
-            <li key={award.name} className={`flex flex-col rounded-[24px] ${award.tileClass}`}>
-              <div className="flex flex-1 flex-col p-7">
-                <h3 className="font-display text-xl font-semibold leading-snug text-landing-ink">{award.name}</h3>
-                <p className="mt-2 text-[15px] leading-relaxed text-landing-ink">{award.result}</p>
-                {award.detail && (
-                  <p className="mt-1 text-sm leading-relaxed text-landing-muted">{award.detail}</p>
-                )}
-                <span className="flex-1" />
-                {award.link && (
-                  <a
-                    href={award.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-landing-pine hover:text-landing-forest"
-                  >
-                    Read the announcement
-                    <ArrowUpRight size={15} aria-hidden="true" />
-                  </a>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-14">
+          <AwardList />
+        </div>
+
+        <div className="mt-10 text-center">
+          <Link to="/journey" className={pillSecondary}>
+            See our journey so far
+            <ArrowRight size={16} aria-hidden="true" />
+          </Link>
+        </div>
       </div>
     </section>
   );
@@ -651,7 +496,7 @@ function StartSection() {
     <section id="start" className="scroll-mt-24 px-4 pb-24 sm:px-6 md:pb-32">
       <div className="mx-auto grid max-w-[1100px] items-center gap-10 rounded-[28px] bg-landing-paper p-6 sm:p-10 md:grid-cols-[7fr_5fr] md:p-14">
         <div>
-          <h2 className={sectionHeading} style={{ textWrap: "balance" } as React.CSSProperties}>
+          <h2 className={sectionHeading} style={balance}>
             Farmers and vets, <Accent>start here</Accent>
           </h2>
           <p className="mt-5 max-w-[52ch] text-[17px] leading-relaxed text-landing-muted">
@@ -660,7 +505,7 @@ function StartSection() {
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className={pillPrimary}>
-              <MessageCircle size={16} aria-hidden="true" />
+              <WhatsAppIcon size={16} />
               Chat on WhatsApp
             </a>
             <Link to="/login" className={pillSecondary}>
@@ -697,124 +542,36 @@ function StartSection() {
 
 function PartnerSection() {
   return (
-    <section className="px-4 pb-20 sm:px-6">
-      <div className="relative mx-auto max-w-[1100px] overflow-hidden rounded-[32px] bg-[linear-gradient(166deg,#1B6549_0%,#112111_100%)] px-6 py-16 text-center text-white sm:px-12 md:py-24">
-        <p
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 -bottom-[0.32em] select-none text-center font-display text-[22vw] font-bold leading-none tracking-[-0.04em] text-white/[0.045] md:text-[15rem]"
-        >
-          V-VET
-        </p>
-        <div className="relative">
-          <h2
-            className="mx-auto max-w-[18ch] font-display text-[2.125rem] font-semibold leading-[1.08] tracking-[-0.02em] sm:text-5xl md:text-[3.5rem]"
-            style={{ textWrap: "balance" } as React.CSSProperties}
-          >
-            Help us take <span className="whitespace-nowrap">V-Vet</span>{" "}
-            <span className="text-landing-leaf">to more farmers</span>
-          </h2>
-          <p className="mx-auto mt-6 max-w-[56ch] text-[17px] leading-relaxed text-white/85">
-            Our first pilot in Zimbabwe is funded and being prepared. We'd like to hear from NGOs,
-            programmes, vets and funders who want to help it reach further.
-          </p>
-          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a href={PARTNER_MAILTO} className={pillPrimaryOnDark}>
-              <Mail size={16} aria-hidden="true" />
-              Email {PARTNER_EMAIL}
-            </a>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ClosingPoints() {
-  return (
-    <div className="border-y border-landing-line">
-      <ul className="mx-auto grid max-w-[1160px] grid-cols-2 md:grid-cols-4">
-        {CLOSING_POINTS.map((point, index) => (
-          <li
-            key={point.label}
-            className={
-              index < CLOSING_POINTS.length - 1
-                ? "flex items-center gap-3 border-landing-line px-4 py-6 text-sm font-semibold text-landing-ink sm:px-6 md:border-r [&:nth-child(odd)]:border-r"
-                : "flex items-center gap-3 px-4 py-6 text-sm font-semibold text-landing-ink sm:px-6"
-            }
-          >
-            <point.icon size={20} strokeWidth={1.75} aria-hidden="true" />
-            {point.label}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function SiteFooter() {
-  return (
-    <footer className="px-4 py-12 sm:px-6">
-      <div className="mx-auto max-w-[1100px]">
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="font-display text-xl font-bold tracking-tight text-landing-ink">V-Vet</span>
-          </div>
-          <ul className="flex flex-wrap gap-2.5">
-            <li>
-              <a
-                href={PARTNER_MAILTO}
-                className="inline-flex items-center gap-2 rounded-full bg-landing-paper px-4 py-2.5 text-sm font-medium text-landing-ink transition-colors hover:bg-landing-mint"
-              >
-                <Mail size={16} aria-hidden="true" /> {PARTNER_EMAIL}
-              </a>
-            </li>
-            <li>
-              <a
-                href={WHATSAPP_LINK}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-landing-paper px-4 py-2.5 text-sm font-medium text-landing-ink transition-colors hover:bg-landing-mint"
-              >
-                <MessageCircle size={16} aria-hidden="true" /> WhatsApp
-              </a>
-            </li>
-            <li>
-              <Link
-                to="/login"
-                className="inline-flex items-center gap-2 rounded-full bg-landing-paper px-4 py-2.5 text-sm font-medium text-landing-ink transition-colors hover:bg-landing-mint"
-              >
-                <LogIn size={16} aria-hidden="true" /> Sign in
-              </Link>
-            </li>
-          </ul>
-        </div>
-        <div className="mt-10 flex flex-col gap-2 border-t border-landing-line pt-6 text-sm text-landing-muted md:flex-row md:justify-between">
-          <p>© 2026 V-Vet. Livestock health intelligence.</p>
-          <p>Farmer photography on this page is illustrative. Product screens show an example case.</p>
-        </div>
-      </div>
-    </footer>
+    <ClosingBand
+      title={
+        <>
+          Help us take <span className="whitespace-nowrap">V-Vet</span>{" "}
+          <span className="text-landing-leaf">to more farmers</span>
+        </>
+      }
+      lead="Our first pilot in Zimbabwe is funded and being prepared. We'd like to hear from NGOs, programmes, vets and funders who want to help it reach further."
+    >
+      <a href={PARTNER_MAILTO} className={pillPrimaryOnDark}>
+        <Mail size={16} aria-hidden="true" />
+        Email {PARTNER_EMAIL}
+      </a>
+    </ClosingBand>
   );
 }
 
 export default function LandingPage() {
   return (
-    <div className="landing min-h-screen overflow-x-clip">
-      <SiteHeader />
-      <main>
-        <Hero />
-        <TrustMarquee />
-        <ProblemSection />
-        <FarmersSection />
-        <TriageSection />
-        <VetsSection />
-        <GroundworkSection />
-        <AwardsSection />
-        <StartSection />
-        <PartnerSection />
-      </main>
-      <ClosingPoints />
-      <SiteFooter />
-    </div>
+    <PublicPage>
+      <Hero />
+      <TrustMarquee />
+      <ProblemSection />
+      <FarmersSection />
+      <TriageSection />
+      <VetsSection />
+      <GroundworkSection />
+      <AwardsSection />
+      <StartSection />
+      <PartnerSection />
+    </PublicPage>
   );
 }

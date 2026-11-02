@@ -1,0 +1,44 @@
+<mjml>
+  <mj-head>
+    <mj-attributes>
+      <mj-all font-family="Arial, Helvetica, sans-serif" />
+      <mj-text font-size="15px" color="#242220" line-height="1.6" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f7f5f2">
+    <mj-section background-color="#ffffff" padding="32px 32px 24px">
+      <mj-column>
+        <mj-text font-size="22px" font-weight="bold" padding-bottom="4px">
+          New application: {{ role_title|e }}
+        </mj-text>
+        <mj-text color="#5C5A56" padding-bottom="16px">
+          The CV is attached. Reply to this email to write to the applicant.
+        </mj-text>
+
+        <mj-table font-size="15px" color="#242220" line-height="1.5" cellpadding="6px">
+          <tr><td style="width:150px;color:#5C5A56;vertical-align:top;">Name</td><td>{{ full_name|e }}</td></tr>
+          <tr><td style="color:#5C5A56;vertical-align:top;">Email</td><td>{{ email|e }}</td></tr>
+          <tr><td style="color:#5C5A56;vertical-align:top;">Phone</td><td>{{ phone|e }}</td></tr>
+          <tr><td style="color:#5C5A56;vertical-align:top;">Location</td><td>{{ location|e }}</td></tr>
+          <tr><td style="color:#5C5A56;vertical-align:top;">Languages</td><td>{{ languages|e }}</td></tr>
+          <tr><td style="color:#5C5A56;vertical-align:top;">LinkedIn</td><td>{{ linkedin_url|e }}</td></tr>
+          <tr><td style="color:#5C5A56;vertical-align:top;">Coding task email</td><td>{% if task_sent %}Sent{% else %}<strong style="color:#B91C1C;">Failed to send. Please send the task manually.</strong>{% endif %}</td></tr>
+        </mj-table>
+
+        <mj-divider border-color="#E7E4DF" border-width="1px" padding="16px 0" />
+
+        <mj-text font-weight="bold">Projects, GitHub or portfolio</mj-text>
+        <mj-text css-class="pre">
+          <div style="white-space:pre-wrap;">{{ portfolio_links|e }}</div>
+        </mj-text>
+
+        <mj-text font-weight="bold" padding-top="12px">
+          Tell us about something you built on top of an LLM. What went wrong, and how did you fix it?
+        </mj-text>
+        <mj-text>
+          <div style="white-space:pre-wrap;">{{ llm_project_answer|e }}</div>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
