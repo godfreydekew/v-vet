@@ -5,14 +5,14 @@ import { ArrowLeft } from "lucide-react";
 // It uses the landing page's visual world: a green brand panel beside a white form column.
 
 export const authInputClass =
-  "h-12 w-full rounded-xl bg-white px-4 text-[15px] text-landing-ink ring-1 ring-inset ring-landing-line transition-shadow placeholder:text-landing-muted hover:ring-[#D4D0C9] focus:outline-none focus:ring-2 focus:ring-landing-accent disabled:cursor-not-allowed disabled:opacity-60";
+  "h-12 w-full rounded-xl bg-white px-4 text-[15px] text-landing-ink ring-1 ring-inset ring-landing-line transition-shadow placeholder:text-landing-muted hover:ring-[#D4D0C9] focus:outline-none focus:ring-2 focus:ring-landing-pine disabled:cursor-not-allowed disabled:opacity-60";
 
 export const authLabelClass = "block text-sm font-medium text-landing-ink";
 
 export const authHintClass = "text-sm leading-relaxed text-landing-muted";
 
 export const authSubmitClass =
-  "inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-landing-button px-6 text-[15px] font-semibold text-white transition-colors hover:bg-landing-pine disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-landing-pine px-6 text-[15px] font-semibold text-white transition-colors hover:bg-landing-forest disabled:cursor-not-allowed disabled:opacity-60";
 
 export const authLinkClass =
   "font-medium text-landing-pine underline decoration-landing-line underline-offset-4 transition-colors hover:decoration-landing-pine";

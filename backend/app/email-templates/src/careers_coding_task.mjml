@@ -1,0 +1,131 @@
+<mjml>
+  <mj-head>
+    <mj-attributes>
+      <mj-all font-family="Arial, Helvetica, sans-serif" />
+      <mj-text font-size="15px" color="#242220" line-height="1.6" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f7f5f2">
+    <!-- Brand header -->
+    <mj-section background-color="#1B6549" padding="28px 24px">
+      <mj-column>
+        <mj-text align="center" font-size="26px" font-weight="bold" color="#ffffff">
+          V-Vet
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Main card -->
+    <mj-section background-color="#ffffff" padding="36px 32px 8px">
+      <mj-column>
+        <mj-text font-size="22px" font-weight="bold" padding-bottom="12px">
+          Thanks for applying, {{ full_name|e }}
+        </mj-text>
+        <mj-text>
+          We've received your application for the <strong>{{ role_title|e }}</strong> role.
+          The next step is a short coding task. We review your application and your task
+          together, so please send the task even while we're still reading your application.
+        </mj-text>
+
+        <mj-divider border-color="#E7E4DF" border-width="1px" padding="20px 0" />
+
+        <mj-text font-size="18px" font-weight="bold">
+          The task: a symptom extraction service
+        </mj-text>
+        <mj-text>
+          Farmers describe sick animals to V-Vet on WhatsApp, in their own words. Before we can
+          decide how urgent a case is, we turn those words into structured findings from a fixed
+          list of signs. You'll build a small version of that.
+        </mj-text>
+        <mj-text>
+          Build a small Python API (FastAPI preferred) with one endpoint,
+          <code>POST /extract</code>, that takes <code>{"message": "..."}</code> and returns:
+        </mj-text>
+        <mj-text font-family="Menlo, Consolas, monospace" font-size="13px" container-background-color="#f7f5f2" padding="16px 20px">
+          {<br />
+          &nbsp;&nbsp;"findings": [<br />
+          &nbsp;&nbsp;&nbsp;&nbsp;{"sign_id": "...", "value": "yes | no | not_sure", "quote": "..."}<br />
+          &nbsp;&nbsp;],<br />
+          &nbsp;&nbsp;"escalate": true,<br />
+          &nbsp;&nbsp;"reason": "..."<br />
+          }
+        </mj-text>
+
+        <mj-text font-weight="bold" padding-top="16px">The signs (sign_id: what it means)</mj-text>
+        <mj-text>
+          <ul style="margin:0;padding-left:20px;">
+            <li><code>reduced_appetite</code>: eating less, or has stopped eating or grazing</li>
+            <li><code>weakness</code>: dull, weak, lying down more than usual</li>
+            <li><code>swelling</code>: a lump below the ear, under the jaw, or in front of the shoulder (farmers may call it <em>mbandabvu</em>)</li>
+            <li><code>rapid_breathing</code>: breathing fast while resting</li>
+            <li><code>cloudy_eye</code>: the eye looks white, grey or milky</li>
+            <li><code>froth_nose_mouth</code>: foam or froth from the nose or mouth</li>
+            <li><code>red_urine</code>: urine that is red, brown, or the colour of strong tea</li>
+            <li><code>unable_to_stand</code>: cannot get up or stay standing</li>
+            <li><code>ticks</code>: ticks can be seen on the animal</li>
+          </ul>
+        </mj-text>
+
+        <mj-text font-weight="bold" padding-top="16px">Requirements</mj-text>
+        <mj-text>
+          <ol style="margin:0;padding-left:20px;">
+            <li>Use an LLM to extract the findings. Any provider is fine, including free tiers. Validate the model's output so that only the sign IDs above can come back.</li>
+            <li>Only report signs the message actually mentions. Use <code>not_sure</code> when the farmer sounds unsure.</li>
+            <li>Decide <code>escalate</code> in plain code, not with the LLM: escalate when <code>froth_nose_mouth</code>, <code>unable_to_stand</code> or <code>cloudy_eye</code> is <code>yes</code> or <code>not_sure</code>.</li>
+            <li>Write tests that run without a network connection or API key (mock the LLM).</li>
+            <li>Include a README covering how to run it, the decisions you made, how you would measure whether the extraction is accurate, and what you would do with more time.</li>
+          </ol>
+        </mj-text>
+
+        <mj-text font-weight="bold" padding-top="16px">Sample messages to try</mj-text>
+        <mj-text>
+          <ol style="margin:0;padding-left:20px;">
+            <li>"My cow has not been eating since yesterday and she is breathing very fast."</li>
+            <li>"There's foam coming from her nose and she can't get up."</li>
+            <li>"I think the eyes look a bit cloudy but I'm not sure. She has mbandabvu under the ear."</li>
+            <li>"The calf is fine, just lots of ticks on the ears."</li>
+            <li>"Mombe yangu haisi kudya, and her urine is dark like tea."</li>
+          </ol>
+        </mj-text>
+
+        <mj-text font-weight="bold" padding-top="16px">Time and tools</mj-text>
+        <mj-text>
+          Aim for about 3 to 4 hours, and don't over-polish: we care more about how you think than
+          about finishing everything. You're welcome to use AI coding assistants. Tell us in the
+          README how you used them, because we'll go through your code together at the interview.
+        </mj-text>
+
+        <mj-divider border-color="#E7E4DF" border-width="1px" padding="20px 0" />
+
+        <mj-text font-size="18px" font-weight="bold">How to submit</mj-text>
+        <mj-text>
+          <ol style="margin:0;padding-left:20px;">
+            <li>Push your code to a public GitHub repository. Don't commit any API keys.</li>
+            <li>Email the link to <a href="mailto:{{ careers_email }}" style="color:#1B6549;">{{ careers_email }}</a> with the subject <strong>Coding task: {{ full_name|e }}</strong>.</li>
+            <li>Please send it within 7 days of receiving this email.</li>
+          </ol>
+        </mj-text>
+
+        <mj-text font-size="18px" font-weight="bold" padding-top="16px">What happens next</mj-text>
+        <mj-text>
+          Once your task arrives, we review it together with your application. If it's a good
+          fit, we'll invite you to an interview, where we go through your code with you, do some
+          live coding (you can use AI tools) and talk about how you work. We'll let you know
+          either way.
+        </mj-text>
+        <mj-text padding-bottom="28px">
+          Questions? Reply to this email. Good luck, and thank you for your interest in V-Vet.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- Footer -->
+    <mj-section background-color="#f7f5f2" padding="20px 24px">
+      <mj-column>
+        <mj-text align="center" font-size="12px" color="#5C5A56">
+          &copy; V-Vet 2026. Livestock health intelligence.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

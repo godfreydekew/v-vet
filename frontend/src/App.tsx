@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, matchPath, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import AppLayout from "@/components/layout/AppLayout";
@@ -12,6 +12,12 @@ import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import LandingPage from "@/pages/LandingPage";
 import NotFound from "@/pages/NotFound";
+import About from "@/pages/public/About";
+import Journey from "@/pages/public/Journey";
+import Careers from "@/pages/public/Careers";
+import CareerRole from "@/pages/public/CareerRole";
+import CareerApply from "@/pages/public/CareerApply";
+import Privacy from "@/pages/public/Privacy";
 import { Loader2 } from "lucide-react";
 import { Analytics } from "@vercel/analytics/react";
 
@@ -43,8 +49,29 @@ import AdminEmail from "@/pages/admin/Email";
 
 const queryClient = new QueryClient();
 
+// Public marketing pages, open to everyone whether or not they're signed in.
+const PUBLIC_PATHS = ["/about", "/journey", "/careers", "/careers/:roleId", "/careers/:roleId/apply", "/privacy"];
+
+function PublicRoutes() {
+  return (
+    <Routes>
+      <Route path="/about" element={<About />} />
+      <Route path="/journey" element={<Journey />} />
+      <Route path="/careers" element={<Careers />} />
+      <Route path="/careers/:roleId" element={<CareerRole />} />
+      <Route path="/careers/:roleId/apply" element={<CareerApply />} />
+      <Route path="/privacy" element={<Privacy />} />
+    </Routes>
+  );
+}
+
 function AppRoutes() {
   const { isAuthenticated, user, isLoading } = useAuth();
+  const { pathname } = useLocation();
+
+  if (PUBLIC_PATHS.some((path) => matchPath(path, pathname))) {
+    return <PublicRoutes />;
+  }
 
   if (isLoading) {
     return (

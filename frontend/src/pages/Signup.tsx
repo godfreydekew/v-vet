@@ -22,7 +22,7 @@ import AuthShell, {
   authLinkClass,
   authSubmitClass,
 } from "@/components/landing/AuthShell";
-import { ExampleChip, WhatsAppWelcome } from "@/components/landing/CaseVisuals";
+import { WhatsAppWelcome } from "@/components/landing/CaseVisuals";
 
 export default function Signup() {
   const { login } = useAuth();
@@ -88,7 +88,7 @@ export default function Signup() {
     <AuthShell
       title={
         <>
-          Create your <span className="text-landing-accent">web account</span>
+          Create your <span className="text-landing-pine">web account</span>
         </>
       }
       subtitle="For farmers already using V-Vet on WhatsApp."
@@ -101,7 +101,6 @@ export default function Signup() {
       panelText="Sign up with the WhatsApp number you already chat with V-Vet on. You can keep using WhatsApp for everything."
       panelVisual={
         <div className="space-y-3">
-          <ExampleChip />
           <div className="h-[132px] overflow-hidden rounded-[18px] shadow-[0_10px_30px_-12px_rgba(17,33,17,0.6)]">
             <WhatsAppWelcome />
           </div>
@@ -143,7 +142,7 @@ export default function Signup() {
           <div className="flex gap-2">
             <Select value={countryIso} onValueChange={setCountryIso}>
               <SelectTrigger
-                className="h-12 w-28 shrink-0 rounded-xl border-0 bg-white px-4 text-[15px] text-landing-ink ring-1 ring-inset ring-landing-line ring-offset-0 focus:ring-2 focus:ring-landing-accent focus:ring-offset-0"
+                className="h-12 w-28 shrink-0 rounded-xl border-0 bg-white px-4 text-[15px] text-landing-ink ring-1 ring-inset ring-landing-line ring-offset-0 focus:ring-2 focus:ring-landing-pine focus:ring-offset-0"
                 aria-label="Country code"
               >
                 <SelectValue>+{selectedCountry.dialCode}</SelectValue>

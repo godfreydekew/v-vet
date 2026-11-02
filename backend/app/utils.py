@@ -30,18 +30,30 @@ def render_email_template(*, template_name: str, context: dict[str, Any]) -> str
     return html_content
 
 
+@dataclass
+class EmailAttachment:
+    filename: str
+    data: bytes
+
+
 def send_email(
     *,
     email_to: str,
     subject: str = "",
     html_content: str = "",
-) -> None:
+    reply_to: str | None = None,
+    attachments: list[EmailAttachment] | None = None,
+) -> bool:
+    """Send an email. Returns True if the SMTP server accepted it."""
     assert settings.emails_enabled, "no provided configuration for email variables"
     message = emails.Message(
         subject=subject,
         html=html_content,
         mail_from=(settings.EMAILS_FROM_NAME, settings.EMAILS_FROM_EMAIL),
+        headers={"Reply-To": reply_to} if reply_to else None,
     )
+    for attachment in attachments or []:
+        message.attach(data=attachment.data, filename=attachment.filename)
     smtp_options = {"host": settings.SMTP_HOST, "port": settings.SMTP_PORT}
     if settings.SMTP_TLS:
         smtp_options["tls"] = True
@@ -53,6 +65,7 @@ def send_email(
         smtp_options["password"] = settings.SMTP_PASSWORD
     response = message.send(to=email_to, smtp=smtp_options)
     logger.info(f"send email result: {response}")
+    return bool(response.success)
 
 
 def generate_test_email(email_to: str) -> EmailData:

@@ -10,7 +10,7 @@ import AuthShell, {
   authLinkClass,
   authSubmitClass,
 } from "@/components/landing/AuthShell";
-import { ExampleChip, VetCaseCard } from "@/components/landing/CaseVisuals";
+import { VetCaseCard } from "@/components/landing/CaseVisuals";
 
 const PARTNER_EMAIL = "info@vvet.org";
 
@@ -51,7 +51,7 @@ export default function Login() {
     <AuthShell
       title={
         <>
-          Sign in to <span className="text-landing-accent">V-Vet</span>
+          Sign in to <span className="text-landing-pine">V-Vet</span>
         </>
       }
       subtitle="For farmers, vets and admins using the web app."
@@ -64,7 +64,6 @@ export default function Login() {
       panelText="Symptoms, photos and the animal's record arrive together, sorted by urgency."
       panelVisual={
         <div className="space-y-3">
-          <ExampleChip label="Example case" />
           <VetCaseCard />
         </div>
       }

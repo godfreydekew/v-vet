@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Link preview: Software Engineer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<!--
+  Link preview image (Open Graph) for /careers/software-engineer, 1200 x 630.
+  Render from the frontend folder with:
+    google-chrome --headless=new --hide-scrollbars --window-size=1200,630 --virtual-time-budget=5000 \
+      --allow-file-access-from-files --screenshot=/tmp/og.png "file://$PWD/og-src/software-engineer.html"
+  then save it as public/og/software-engineer.jpg (JPEG keeps it under WhatsApp's 300 KB limit).
+-->
+<style>
+  :root {
+    --forest: #112111; --pine: #1B6549; --leaf: #8FD19E; --line: #E7E4DF;
+    --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body { font-family: 'Figtree', sans-serif; background: var(--forest); color: #fff; }
+  .card { position: relative; width: 1200px; height: 630px; overflow: hidden; isolation: isolate; padding: 52px 60px; }
+  .photo { position: absolute; top: 0; right: 0; z-index: -3; width: 62%; height: 100%; object-fit: cover; object-position: 50% 22%; opacity: .75; mix-blend-mode: luminosity; }
+  .shade { position: absolute; inset: 0; z-index: -2; background: linear-gradient(90deg, #112111 30%, rgba(17,33,17,.82) 52%, rgba(27,101,73,.6) 100%); }
+  .grain { position: absolute; inset: 0; z-index: -1; background-image: var(--noise); mix-blend-mode: overlay; opacity: .55; }
+
+  .brand { display: flex; align-items: center; gap: 16px; }
+  .brand img { width: 64px; height: 64px; }
+  .brand span { font-weight: 700; font-size: 36px; letter-spacing: -0.025em; }
+  .hiring { display: inline-flex; align-items: center; gap: 10px; margin-top: 44px; background: #fff; color: var(--forest); font-weight: 600; font-size: 22px; padding: 10px 20px; border-radius: 999px; }
+  .hiring svg { width: 22px; height: 22px; color: var(--pine); }
+  h1 { margin-top: 20px; font-weight: 600; font-size: 92px; line-height: .98; letter-spacing: -0.035em; }
+  .lead { margin-top: 18px; font-size: 29px; line-height: 1.3; font-weight: 500; max-width: 23ch; color: rgba(255,255,255,.92); }
+  .lead span { color: var(--leaf); }
+  .terms { position: absolute; left: 60px; bottom: 52px; display: flex; gap: 10px; }
+  .terms li { list-style: none; white-space: nowrap; font-size: 20px; font-weight: 600; padding: 9px 18px; border-radius: 999px; background: rgba(255,255,255,.1); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.3); }
+
+  .apply { position: absolute; right: 60px; bottom: 52px; display: flex; flex-direction: column; align-items: flex-end; gap: 14px; }
+  .apply .cta { background: #fff; color: var(--forest); font-weight: 700; font-size: 24px; padding: 14px 24px; border-radius: 999px; }
+  .apply .cta b { color: var(--pine); }
+  .logos { display: flex; gap: 12px; align-items: center; background: #fff; border-radius: 999px; padding: 8px 18px; }
+  .logos span { width: 1.5px; height: 24px; background: var(--line); }
+  .logos img { height: 30px; width: auto; display: block; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <img class="photo" src="../src/assets/help-farmer-phone.webp" alt="" />
+    <div class="shade"></div>
+    <div class="grain"></div>
+
+    <div class="brand"><img src="../public/icon.png" alt="" /><span>V-Vet</span></div>
+    <div class="hiring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg>We're hiring</div>
+    <h1>Software Engineer</h1>
+    <p class="lead">Build the tech that helps <span>Zimbabwe's farmers</span> keep their animals alive.</p>
+    <ul class="terms">
+      <li>Contract</li>
+      <li>Remote, within Zimbabwe</li>
+    </ul>
+
+    <div class="apply">
+      <div class="logos">
+        <img src="../src/assets/awards/nvidia.png" alt="NVIDIA" />
+        <span></span>
+        <img src="../src/assets/awards/henley.png" alt="Henley Business School" />
+        <span></span>
+        <img src="../src/assets/awards/reading.png" alt="University of Reading" />
+      </div>
+      <div class="cta">Apply at <b>vvet.org/careers</b></div>
+    </div>
+  </div>
+</body>
+</html>
