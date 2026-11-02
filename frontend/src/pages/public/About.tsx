@@ -63,12 +63,6 @@ const BELIEFS = [
   },
 ];
 
-const ENGINE_PATH = [
-  { question: "Froth from the nose?", answer: "No" },
-  { question: "Lumps below the ear?", answer: "Yes" },
-  { question: "Does the animal feel hot?", answer: "Not sure" },
-];
-
 function ProblemSection() {
   return (
     <section className="px-4 py-24 sm:px-6 md:py-32">
@@ -190,59 +184,10 @@ function BelieversSection() {
           ))}
         </ul>
         <div className="mt-10 text-center">
-          <Link to="/journey#awards" className={pillSecondary}>
+          <Link to="/#awards" className={pillSecondary}>
             Read about our awards
             <ArrowRight size={16} aria-hidden="true" />
           </Link>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function BuildingNowSection() {
-  return (
-    <section className="px-4 pb-24 sm:px-6 md:pb-32">
-      <div className="mx-auto grid max-w-[1100px] items-center gap-14 md:grid-cols-[6fr_5fr] md:gap-16">
-        <div>
-          <h2 className={sectionHeading} style={balance}>
-            Now: a triage engine <Accent>built with vets</Accent>
-          </h2>
-          <p className="mt-5 max-w-[56ch] text-[17px] leading-relaxed text-landing-muted">
-            We're turning vet-written knowledge into a decision engine for livestock disease,
-            starting with January Disease (theileriosis) in cattle. Vets wrote the signs, the
-            questions and the rules for when to escalate. The engine asks farmers the right
-            questions in plain language and works out how urgently a vet is needed.
-          </p>
-          <p className="mt-4 max-w-[56ch] text-[17px] leading-relaxed text-landing-muted">
-            Vets approve every change to the engine, and every decision can be traced back to the
-            rule that made it.
-          </p>
-        </div>
-        <div className="relative rounded-[28px] bg-landing-sky p-6 sm:p-10">
-          <ol className="space-y-2.5">
-            {ENGINE_PATH.map((step) => (
-              <li
-                key={step.question}
-                className="flex items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 font-app text-sm text-app-ink shadow-[0_10px_30px_-14px_rgba(17,33,17,0.3)] ring-1 ring-app-line"
-              >
-                {step.question}
-                <span className="shrink-0 rounded-md bg-app-bg px-2 py-0.5 text-xs font-semibold text-app-muted">
-                  {step.answer}
-                </span>
-              </li>
-            ))}
-          </ol>
-          <div className="mt-4 rounded-xl bg-white p-4 font-app shadow-[0_10px_30px_-14px_rgba(17,33,17,0.3)] ring-1 ring-app-line">
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" />
-              Vet within 12 hours
-            </span>
-            <p className="mt-2 text-[13px] leading-snug text-app-ink">
-              These signs may point to January Disease. Rule applied: lumps with a possible fever,
-              escalate early.
-            </p>
-          </div>
         </div>
       </div>
     </section>
@@ -266,7 +211,6 @@ export default function About() {
       <StartedSection />
       <BeliefsSection />
       <BelieversSection />
-      <BuildingNowSection />
       <ClosingBand
         title={
           <>

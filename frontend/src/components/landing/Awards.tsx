@@ -67,21 +67,21 @@ export function AwardMark({ award, className = "h-5" }: { award: Award; classNam
 
 export function AwardList() {
   return (
-    <ul className="space-y-4">
+    <ul className="space-y-3">
       {AWARDS.map((award) => (
         <li
           key={award.competition}
-          className={`grid items-center gap-6 rounded-[28px] p-5 sm:p-8 md:grid-cols-[5fr_6fr] md:gap-12 ${award.tileClass}`}
+          className={`grid items-center gap-5 rounded-[28px] p-5 sm:p-6 md:grid-cols-[280px_1fr] md:gap-10 ${award.tileClass}`}
         >
-          <div className="flex h-full flex-col justify-center rounded-[20px] bg-white px-6 py-8 sm:px-10 sm:py-10">
-            <AwardMark award={award} className="mx-auto h-20 max-w-full sm:h-24" />
+          <div className="flex h-full flex-col justify-center rounded-[20px] bg-white px-6 py-6 sm:px-8">
+            <AwardMark award={award} className="mx-auto h-12 max-w-full sm:h-14" />
           </div>
-          <div className="flex flex-col py-1 md:py-4 md:pr-4">
+          <div className="flex flex-col py-1 md:pr-4">
             <p className="inline-flex w-fit items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-sm font-semibold text-landing-ink ring-1 ring-black/5">
               <Trophy size={15} className="fill-[#F2C744] text-[#B8860B]" aria-hidden="true" />
               {award.position}
             </p>
-            <h3 className="mt-4 font-display text-[1.75rem] font-semibold leading-tight tracking-[-0.01em] text-landing-ink">
+            <h3 className="mt-3 font-display text-[1.5rem] font-semibold leading-tight tracking-[-0.01em] text-landing-ink">
               {award.competition}
             </h3>
             <p className="mt-2 text-[15px] leading-relaxed text-landing-ink/80">{award.about}</p>
@@ -90,7 +90,7 @@ export function AwardList() {
                 href={award.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-5 inline-flex w-fit items-center gap-1 text-[15px] font-semibold text-landing-pine hover:text-landing-forest"
+                className="mt-3 inline-flex w-fit items-center gap-1 text-[15px] font-semibold text-landing-pine hover:text-landing-forest"
               >
                 Read more
                 <span className="sr-only"> about {award.competition} (opens in a new tab)</span>

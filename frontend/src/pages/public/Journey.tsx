@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { Mail } from "lucide-react";
-import { AWARDS, AwardList, AwardMark } from "@/components/landing/Awards";
 import heroImage from "@/assets/landing-hero.webp";
 import {
   Accent,
@@ -21,8 +20,6 @@ type Milestone = {
   title: string;
   text: string;
   stage: Stage;
-  // Shows that award's logo under the milestone.
-  awardLogoKey?: string;
 };
 
 // Newest last. Keep dates to what we can back up.
@@ -38,14 +35,12 @@ const MILESTONES: Milestone[] = [
     title: "Recognised at Henley Business School",
     text: "V-Vet won the Best Idea for China category at IDEAFEST 2026, Henley Business School's business idea competition.",
     stage: "done",
-    awardLogoKey: "henley",
   },
   {
     when: "2026",
     title: "Winner of the NVIDIA AI Day Competition",
     text: "V-Vet won the NVIDIA AI Day Competition, sponsored by NVIDIA, Henley Business School, SCG and Softcat.",
     stage: "done",
-    awardLogoKey: "nvidia",
   },
   {
     when: "2026",
@@ -58,7 +53,6 @@ const MILESTONES: Milestone[] = [
     title: "Just Imagine If 2026 winner, and a funded pilot",
     text: "V-Vet was one of the winners of the University of Reading's Just Imagine If award. The seed funding is paying for our first pilot with farmers.",
     stage: "done",
-    awardLogoKey: "reading",
   },
   {
     when: "Now",
@@ -90,7 +84,6 @@ function Timeline() {
         <ol className="relative mt-12 space-y-10 before:absolute before:bottom-2 before:left-[9px] before:top-2 before:w-px before:bg-landing-line">
           {MILESTONES.map((milestone) => {
             const style = STAGE_STYLES[milestone.stage];
-            const award = AWARDS.find((a) => a.logoKey === milestone.awardLogoKey);
             return (
               <li key={milestone.title} className="relative pl-12">
                 <span className={`absolute left-0 top-1.5 h-[19px] w-[19px] rounded-full ${style.dot}`} aria-hidden="true" />
@@ -104,35 +97,10 @@ function Timeline() {
                   {milestone.title}
                 </h3>
                 <p className="mt-2 max-w-[60ch] text-[15px] leading-relaxed text-landing-muted">{milestone.text}</p>
-                {award && (
-                  <span className="mt-4 inline-flex h-16 items-center rounded-2xl bg-white px-4 ring-1 ring-landing-line">
-                    <AwardMark award={award} className="h-11 max-w-[180px]" />
-                  </span>
-                )}
               </li>
             );
           })}
         </ol>
-      </div>
-    </section>
-  );
-}
-
-function AwardsSection() {
-  return (
-    <section id="awards" className="scroll-mt-24 px-4 pb-24 sm:px-6 md:pb-32">
-      <div className="mx-auto max-w-[1100px]">
-        <div className="mx-auto max-w-[720px] text-center">
-          <h2 className={sectionHeading} style={balance}>
-            Our <Accent>awards</Accent>
-          </h2>
-          <p className="mx-auto mt-5 max-w-[56ch] text-[17px] leading-relaxed text-landing-muted">
-            The competitions that have backed V-Vet, and what each one is about.
-          </p>
-        </div>
-        <div className="mt-14">
-          <AwardList />
-        </div>
       </div>
     </section>
   );
@@ -152,7 +120,6 @@ export default function Journey() {
         imagePosition="50% 25%"
       />
       <Timeline />
-      <AwardsSection />
       <ClosingBand
         title={
           <>
