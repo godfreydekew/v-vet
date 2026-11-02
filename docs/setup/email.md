@@ -5,7 +5,7 @@ The backend sends email for job applications, password resets and broadcast emai
 ## What happens when someone applies
 
 1. **The applicant gets an email** from `info@vvet.org` with the coding task, how to submit it (a GitHub link, within 7 days) and what happens next. Replying to it reaches `info@vvet.org`.
-2. **We get the application** at `info@vvet.org`: their details, links, their LLM answer and the CV as an attachment. Replying to it writes straight to the applicant.
+2. **We get the application** at `info@vvet.org`: their details, preferred pay, links, their LLM answer and the CV as an attachment. Replying to it writes straight to the applicant.
 
 If the applicant's email fails to send, the application still arrives, marked "Failed to send. Please send the task manually."
 

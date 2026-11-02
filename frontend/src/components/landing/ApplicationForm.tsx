@@ -22,6 +22,7 @@ export default function ApplicationForm({ roleId }: { roleId: string }) {
   const [otherLanguage, setOtherLanguage] = useState("");
   const [portfolioLinks, setPortfolioLinks] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [preferredPay, setPreferredPay] = useState("");
   const [answer, setAnswer] = useState("");
   const [cv, setCv] = useState<File | null>(null);
   const [livesInZimbabwe, setLivesInZimbabwe] = useState(false);
@@ -89,6 +90,7 @@ export default function ApplicationForm({ roleId }: { roleId: string }) {
         portfolio_links: portfolioLinks.trim(),
         llm_project_answer: answer.trim(),
         linkedin_url: linkedinUrl.trim(),
+        preferred_pay: preferredPay.trim(),
         lives_in_zimbabwe: livesInZimbabwe,
         accepted_privacy_notice: acceptedPrivacy,
         cv,
@@ -179,6 +181,11 @@ export default function ApplicationForm({ roleId }: { roleId: string }) {
       <Field label="LinkedIn (optional)" htmlFor="linkedin_url">
         <input id="linkedin_url" type="url" maxLength={300} placeholder="https://linkedin.com/in/…"
           value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} className={authInputClass} />
+      </Field>
+
+      <Field label="Preferred pay (optional)" htmlFor="preferred_pay" hint="Per month, in US dollars. A range is fine.">
+        <input id="preferred_pay" maxLength={100} placeholder="e.g. 800 to 1,200"
+          value={preferredPay} onChange={(e) => setPreferredPay(e.target.value)} className={authInputClass} />
       </Field>
 
       <Field label={LLM_QUESTION} htmlFor="llm_project_answer" hint="A few paragraphs is plenty. We read every answer.">

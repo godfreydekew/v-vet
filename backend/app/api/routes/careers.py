@@ -38,6 +38,7 @@ def submit_application(
     llm_project_answer: Annotated[str, Form(min_length=50, max_length=5000)],
     cv: Annotated[UploadFile, File()],
     linkedin_url: Annotated[str, Form(max_length=300)] = "",
+    preferred_pay: Annotated[str, Form(max_length=100)] = "",
     lives_in_zimbabwe: Annotated[bool, Form()] = False,
     accepted_privacy_notice: Annotated[bool, Form()] = False,
     # Honeypot: hidden on the form, so only bots fill it in.
@@ -102,6 +103,7 @@ def submit_application(
                 "languages": languages or "Not given",
                 "portfolio_links": portfolio_links,
                 "linkedin_url": linkedin_url or "Not given",
+                "preferred_pay": preferred_pay or "Not given",
                 "llm_project_answer": llm_project_answer,
                 "task_sent": task_sent,
                 "privacy_url": f"{settings.FRONTEND_HOST}/privacy",

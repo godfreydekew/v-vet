@@ -14,6 +14,7 @@ export interface JobApplicationPayload {
   portfolio_links: string;
   llm_project_answer: string;
   linkedin_url: string;
+  preferred_pay: string;
   lives_in_zimbabwe: boolean;
   accepted_privacy_notice: boolean;
   cv: File;

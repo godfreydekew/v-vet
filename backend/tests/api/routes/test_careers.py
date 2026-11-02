@@ -41,7 +41,7 @@ def emails_on():
 @pytest.mark.usefixtures("emails_on")
 def test_application_sends_task_and_forwards_cv(client: TestClient) -> None:
     with patch("app.api.routes.careers.send_email", return_value=True) as send:
-        r = client.post(URL, data=_form(), files=_cv())
+        r = client.post(URL, data=_form(preferred_pay="800 to 1,200"), files=_cv())
 
     assert r.status_code == 201
     task_call, team_call = send.call_args_list
@@ -50,6 +50,8 @@ def test_application_sends_task_and_forwards_cv(client: TestClient) -> None:
     assert team_call.kwargs["email_to"] == settings.CAREERS_INBOX_EMAIL
     assert team_call.kwargs["reply_to"] == "tendai@example.com"
     assert team_call.kwargs["attachments"][0].filename == "cv.pdf"
+    assert "800 to 1,200" in team_call.kwargs["html_content"]
+    assert "800 to 1,200" not in task_call.kwargs["html_content"]
 
 
 @pytest.mark.usefixtures("emails_on")
