@@ -6,6 +6,7 @@ from typing import Any
 
 import emails  # type: ignore
 import jwt
+from emails.backend.smtp.exceptions import SMTPConnectNetworkError  # type: ignore
 from jinja2 import Template
 from jwt.exceptions import InvalidTokenError
 
@@ -14,6 +15,8 @@ from app.core.config import settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+_SMTP_TIMEOUT_SECONDS = 20
 
 
 @dataclass
@@ -63,9 +66,34 @@ def send_email(
         smtp_options["user"] = settings.SMTP_USER
     if settings.SMTP_PASSWORD:
         smtp_options["password"] = settings.SMTP_PASSWORD
+    smtp_options["timeout"] = _SMTP_TIMEOUT_SECONDS
+
     response = message.send(to=email_to, smtp=smtp_options)
+    if not response.success and isinstance(response.error, SMTPConnectNetworkError):
+        _log_failed_email(email_to=email_to, response=response, retrying=True)
+        response = message.send(to=email_to, smtp=smtp_options)
+
     logger.info(f"send email result: {response}")
+    if not response.success:
+        _log_failed_email(email_to=email_to, response=response, retrying=False)
     return bool(response.success)
+
+
+def _log_failed_email(*, email_to: str, response: Any, retrying: bool) -> None:
+    """Log why an email failed: the SMTP server's reason, or the error raised before it answered."""
+    error = response.error
+    logger.error(
+        "Email to %s failed%s: error=%s errno=%s reason=%r last_command=%s refused_recipient=%s status=%s %s",
+        email_to,
+        " (retrying once)" if retrying else "",
+        type(error).__name__ if error else None,
+        getattr(error, "errno", None),
+        getattr(error, "strerror", None) or (str(error) if error else None),
+        response.last_command,
+        response.refused_recipient,
+        response.status_code,
+        response.status_text,
+    )
 
 
 def generate_test_email(email_to: str) -> EmailData:
