@@ -184,7 +184,7 @@ export default function ApplicationForm({ roleId }: { roleId: string }) {
       </Field>
 
       <Field label="Preferred pay (optional)" htmlFor="preferred_pay" hint="Per month, in US dollars. A range is fine.">
-        <input id="preferred_pay" maxLength={100} placeholder="e.g. 800 to 1,200"
+        <input id="preferred_pay" maxLength={100}
           value={preferredPay} onChange={(e) => setPreferredPay(e.target.value)} className={authInputClass} />
       </Field>
 
