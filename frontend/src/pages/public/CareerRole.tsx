@@ -124,7 +124,7 @@ export default function CareerRole() {
             How we <Accent>hire</Accent>
           </h2>
           <div className="mt-12">
-            <HiringSteps applyTo={applyPath} />
+            <HiringSteps />
           </div>
         </div>
       </section>

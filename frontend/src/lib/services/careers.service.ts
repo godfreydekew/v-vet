@@ -22,12 +22,25 @@ export interface JobApplicationPayload {
   website: string;
 }
 
+const SUBMIT_TIMEOUT_MS = 3 * 60 * 1000;
+
 export const careersService = {
-  async submitApplication(payload: JobApplicationPayload): Promise<void> {
+  /** onUploadProgress receives a whole-number percentage from 0 to 100. */
+  async submitApplication(
+    payload: JobApplicationPayload,
+    onUploadProgress?: (percent: number) => void,
+  ): Promise<void> {
     const form = new FormData();
     for (const [key, value] of Object.entries(payload)) {
       form.append(key, value instanceof File ? value : String(value));
     }
-    await api.post('/careers/applications', form);
+    await api.post('/careers/applications', form, {
+      timeout: SUBMIT_TIMEOUT_MS,
+      onUploadProgress: (event) => {
+        if (onUploadProgress && event.total) {
+          onUploadProgress(Math.round((event.loaded / event.total) * 100));
+        }
+      },
+    });
   },
 };
