@@ -1,4 +1,4 @@
-import { ArrowUpRight, Trophy } from "lucide-react";
+import { Trophy } from "lucide-react";
 
 // Official logo files go in src/assets/awards/, named by the award's logoKey
 // (nvidia, henley, reading) as .svg, .png or .webp. Until a file is added,
@@ -15,7 +15,6 @@ type Award = {
   competition: string;
   position: string;
   about: string;
-  link?: string;
   tileClass: string;
 };
 
@@ -33,10 +32,9 @@ export const AWARDS: Award[] = [
     organisation: "Henley Business School",
     logoKey: "henley",
     competition: "IDEAFEST 2026 Business Idea Competition",
-    position: "Category winner, Best Idea for China",
+    position: "Category winner",
     about:
       "Henley Business School's annual business idea competition, run by the Henley Enterprise Lab. V-Vet was recognised as an AI-powered livestock health platform for smallholder farmers.",
-    link: "https://live.henley.ac.uk/news/13206940",
     tileClass: "bg-landing-sky",
   },
   {
@@ -46,7 +44,6 @@ export const AWARDS: Award[] = [
     position: "Winner",
     about:
       "A business development award marking the University of Reading's centenary. Finalists presented their business plans to a judging panel, and the winners received seed funding, which is funding V-Vet's first pilot.",
-    link: "https://www.reading.ac.uk/just-imagine-if/2026-winners",
     tileClass: "bg-landing-sand",
   },
 ];
@@ -85,18 +82,6 @@ export function AwardList() {
               {award.competition}
             </h3>
             <p className="mt-2 text-[15px] leading-relaxed text-landing-ink/80">{award.about}</p>
-            {award.link && (
-              <a
-                href={award.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-flex w-fit items-center gap-1 text-[15px] font-semibold text-landing-pine hover:text-landing-forest"
-              >
-                Read more
-                <span className="sr-only"> about {award.competition} (opens in a new tab)</span>
-                <ArrowUpRight size={16} aria-hidden="true" />
-              </a>
-            )}
           </div>
         </li>
       ))}
