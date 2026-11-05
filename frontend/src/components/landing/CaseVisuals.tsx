@@ -106,9 +106,9 @@ export const TRIAGE_TIERS: Tier[] = [
   { name: "High risk", action: "Send to a vet", dotClass: "bg-red-600" },
 ];
 
-export function TierPills({ activeIndex }: { activeIndex: number }) {
+export function TierPills({ activeIndex, compact = false }: { activeIndex: number; compact?: boolean }) {
   return (
-    <ul className="space-y-1.5 font-app">
+    <ul className={compact ? "space-y-1 font-app" : "space-y-1.5 font-app"}>
       {TRIAGE_TIERS.map((tier, index) => {
         const isActive = index === activeIndex;
         return (
@@ -122,7 +122,9 @@ export function TierPills({ activeIndex }: { activeIndex: number }) {
           >
             <span className={`h-2 w-2 rounded-full ${tier.dotClass}`} aria-hidden="true" />
             {tier.name}
-            {isActive && <span className="ml-auto text-xs font-medium text-app-muted">{tier.action}</span>}
+            {isActive && !compact && (
+              <span className="ml-auto text-xs font-medium text-app-muted">{tier.action}</span>
+            )}
           </li>
         );
       })}
@@ -143,7 +145,7 @@ export function TriageReason() {
   );
 }
 
-export function VetCaseCard() {
+export function VetCaseCard({ compact = false }: { compact?: boolean }) {
   return (
     <div className={`rounded-xl bg-white p-4 text-left font-app ring-1 ring-app-line ${appCardShadow}`}>
       <div className="flex items-center gap-2 rounded-md bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
@@ -163,12 +165,14 @@ export function VetCaseCard() {
           </dt>
           <dd className="text-right font-medium text-app-ink">Not eating, weak</dd>
         </div>
-        <div className="flex items-center justify-between gap-3">
-          <dt className="flex items-center gap-1.5 text-app-muted">
-            <ImageIcon size={12} aria-hidden="true" /> Media
-          </dt>
-          <dd className="font-medium text-app-ink">1 photo, 1 voice note</dd>
-        </div>
+        {!compact && (
+          <div className="flex items-center justify-between gap-3">
+            <dt className="flex items-center gap-1.5 text-app-muted">
+              <ImageIcon size={12} aria-hidden="true" /> Media
+            </dt>
+            <dd className="font-medium text-app-ink">1 photo, 1 voice note</dd>
+          </div>
+        )}
       </dl>
     </div>
   );

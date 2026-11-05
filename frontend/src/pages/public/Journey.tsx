@@ -33,7 +33,7 @@ const MILESTONES: Milestone[] = [
   {
     when: "May 2026",
     title: "Recognised at Henley Business School",
-    text: "V-Vet won the Best Idea for China category at IDEAFEST 2026, Henley Business School's business idea competition.",
+    text: "V-Vet won a category at IDEAFEST 2026, Henley Business School's business idea competition.",
     stage: "done",
   },
   {
