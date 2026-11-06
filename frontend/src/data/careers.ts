@@ -21,13 +21,14 @@ export const ROLES: Role[] = [
     title: "Software Engineer",
     terms: ["Contract", "Remote, within Zimbabwe", "1-month probation"],
     summary:
-      "Build the WhatsApp conversations, triage engine and dashboards that help farmers keep their animals alive.",
+      "Build the WhatsApp conversations, triage engine and dashboards that help farmers keep their animals healthy and their herds productive.",
     about: [
-      "V-Vet helps smallholder farmers in Zimbabwe look after their livestock through WhatsApp. A farmer describes a sick animal in their own words, by text or voice note, in Shona, Ndebele or English. V-Vet asks the right follow-up questions, works out how urgent the case is and, when it matters, gets it to a vet with the animal's full history.",
+      "V-Vet helps smallholder farmers in Zimbabwe look after their livestock through WhatsApp. A farmer describes a sick animal in their own words, by text or voice note, in Shona, Ndebele or English. V-Vet asks the right follow-up questions, works out how urgent the case is and, when it matters, gets it to a vet with the animal's full history. It also helps farmers run a more productive herd, with reminders for vaccination, dipping, deworming, weaning and bull soundness before they're due, and advice on breeding and calving based on each farmer's own records.",
       "We're a small team, so you'll work across the whole product and your work will reach farmers quickly. The role starts with a one-month probation on a real piece of the product, with the potential to become a full-time role.",
     ],
     youWill: [
       "Build and improve the WhatsApp conversations farmers use to register animals, report sickness and record births.",
+      "Build the reminders and herd tools that keep routine care on time and help farmers plan breeding and calving.",
       "Work on our triage engine: turning vet-written knowledge into a versioned decision graph, and using LLMs to extract symptoms from farmers' messages.",
       "Build features in the vet and admin dashboards.",
       "Test the bot with real conversations, including in Shona and Ndebele, and improve how it understands and replies.",
@@ -37,13 +38,14 @@ export const ROLES: Role[] = [
       "You care about solving real problems in Zimbabwe.",
       "You've built something on top of LLMs, such as tool calling, structured output or prompt design, in a job or a serious side project.",
       "You're comfortable working with APIs. Experience with the WhatsApp Business API is a bonus.",
-      "You write Python.",
+      "You write Python and have built back-end services: APIs, databases and server-side frameworks (we use FastAPI and PostgreSQL).",
       "You speak Shona or Ndebele. Farmers talk to V-Vet in their own language, so you'll help with testing, wording and catching mistakes.",
       "You have at least 1 to 2 years of development experience, or projects that show you can do the work.",
       "You live in Zimbabwe.",
     ],
     strongPlus: [
       "You also write JavaScript or TypeScript, for our React dashboards.",
+      "You've built for low-bandwidth or resource-constrained environments.",
     ],
     howYouWork: [
       "You're comfortable with ambiguity and can make progress without detailed instructions.",

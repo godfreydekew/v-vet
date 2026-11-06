@@ -8,6 +8,36 @@ import WhatsAppIcon from "@/components/landing/WhatsAppIcon";
 export const WHATSAPP_LINK = "https://wa.me/447519132951?text=Hello";
 export const PARTNER_EMAIL = "info@vvet.org";
 export const PARTNER_MAILTO = `mailto:${PARTNER_EMAIL}?subject=${encodeURIComponent("Partnering with V-Vet")}`;
+export const CAREERS_MAILTO = `mailto:${PARTNER_EMAIL}?subject=${encodeURIComponent("Question about a role at V-Vet")}`;
+
+type HeaderAction = { label: string; to?: string; href?: string };
+
+// The header's call to action. Careers pages speak to candidates, every other page to partners.
+function getHeaderAction(pathname: string): HeaderAction {
+  const rolePage = pathname.match(/^\/careers\/([^/]+)\/?$/);
+  if (rolePage) {
+    return { label: "Apply now", to: `/careers/${rolePage[1]}/apply` };
+  }
+  if (pathname.startsWith("/careers")) {
+    return { label: "See open roles", to: "/careers#roles" };
+  }
+  return { label: "Partner with us", href: PARTNER_MAILTO };
+}
+
+function HeaderActionLink({ action, className }: { action: HeaderAction; className: string }) {
+  if (action.to) {
+    return (
+      <Link to={action.to} className={className}>
+        {action.label}
+      </Link>
+    );
+  }
+  return (
+    <a href={action.href} className={className}>
+      {action.label}
+    </a>
+  );
+}
 
 const NAV_LINKS = [
   { label: "How it works", to: "/#farmers" },
@@ -98,6 +128,7 @@ export function SiteHeader() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { pathname, hash } = useLocation();
+  const headerAction = getHeaderAction(pathname);
 
   useEffect(() => {
     function handleScroll() {
@@ -188,16 +219,14 @@ export function SiteHeader() {
           >
             Sign in
           </Link>
-          <a
-            href={PARTNER_MAILTO}
+          <HeaderActionLink
+            action={headerAction}
             className={
               isSolid
                 ? "hidden rounded-full bg-landing-pine px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-landing-forest sm:inline-flex"
                 : "hidden rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-landing-forest transition-colors hover:bg-landing-mint sm:inline-flex"
             }
-          >
-            Partner with us
-          </a>
+          />
           <button
             type="button"
             onClick={() => setIsMenuOpen((open) => !open)}
@@ -257,12 +286,10 @@ export function SiteHeader() {
               <WhatsAppIcon size={16} />
               Start on WhatsApp
             </a>
-            <a
-              href={PARTNER_MAILTO}
+            <HeaderActionLink
+              action={headerAction}
               className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-semibold text-landing-ink ring-1 ring-inset ring-landing-line"
-            >
-              Partner with us
-            </a>
+            />
             <Link
               to="/login"
               className="inline-flex items-center justify-center gap-2 py-2 text-[15px] font-medium text-landing-muted"
