@@ -194,23 +194,42 @@ def _next_tag_sequence(*, session: Session, user_id: uuid.UUID, year_code: str) 
     return highest_sequence + 1
 
 
+UNKNOWN_YEAR_CODE = "XX"
+
+
 def generate_livestock_tag(
-    *, session: Session, user_id: uuid.UUID, district: str, year: int
+    *, session: Session, user_id: uuid.UUID, district: str, year: int | None
 ) -> str:
     """Generate a unique tag: DISTRICT_CODE-UUID_PREFIX-YY-SEQUENCE.
 
-    YY is the year the animal was born. SEQUENCE counts the farmer's animals born
-    in that year, so each birth year starts again at 0001.
+    YY is the year the animal was born, or XX when that isn't known. SEQUENCE counts
+    the farmer's animals with the same YY, so each birth year (and XX) starts at 0001.
     """
 
     from app.data.districts import get_district_code
 
     district_code = get_district_code(district) or "UNK"
+    sequence_number = _next_tag_sequence(
+        session=session, user_id=user_id, year_code=tag_year_code(year)
+    )
+    return format_livestock_tag(
+        district_code=district_code, user_id=user_id, year=year, sequence=sequence_number
+    )
+
+
+def tag_year_code(year: int | None) -> str:
+    """The YY part of a tag: the last two digits of the birth year, or XX if it isn't known."""
+    if year is None:
+        return UNKNOWN_YEAR_CODE
+    return str(year)[-2:]
+
+
+def format_livestock_tag(
+    *, district_code: str, user_id: uuid.UUID, year: int | None, sequence: int
+) -> str:
+    """Build a tag from its parts: DISTRICT_CODE-UUID_PREFIX-YY-SEQUENCE."""
     farmer_prefix = str(user_id).replace("-", "")[:3].upper()
-    year_of_birth = str(year)[-2:]
-    sequence_number = _next_tag_sequence(session=session, user_id=user_id, year_code=year_of_birth)
-    sequence = str(sequence_number).zfill(4)
-    return f"{district_code}-{farmer_prefix}-{year_of_birth}-{sequence}"
+    return f"{district_code}-{farmer_prefix}-{tag_year_code(year)}-{str(sequence).zfill(4)}"
 
 
 def create_livestock(
@@ -222,8 +241,9 @@ def create_livestock(
 ) -> Livestock:
     tag = livestock_in.tag_number
     print(f"Generating tag for {user_id} in {district}")
-    if not tag and user_id and district and livestock_in.date_of_birth:
-        tag = generate_livestock_tag(session=session, user_id=user_id, district=district, year=livestock_in.date_of_birth.year)
+    if not tag and user_id and district:
+        birth_year = livestock_in.date_of_birth.year if livestock_in.date_of_birth else None
+        tag = generate_livestock_tag(session=session, user_id=user_id, district=district, year=birth_year)
         print(f"Generated tag: {tag}")
     livestock = Livestock.model_validate(livestock_in, update={"tag_number": tag})
     print(f"Livestock: {livestock}")
@@ -389,8 +409,6 @@ def _upsert_primary_livestock_image(
 
 
 # ---------------------------------------------------------------------------
-# Dummy hash to use for timing attack prevention when user is not found
-# This is an Argon2 hash of a random password, used to ensure constant-time comparison
 DUMMY_HASH = "$argon2id$v=19$m=65536,t=3,p=4$MjQyZWE1MzBjYjJlZTI0Yw$YTU4NGM5ZTZmYjE2NzZlZjY0ZWY3ZGRkY2U2OWFjNjk"
 
 
@@ -595,7 +613,7 @@ def create_livestock_from_whatsapp(
 ) -> Livestock:
     """Get or create the user's default farm, then create the livestock record with an auto-generated tag."""
     farm = get_or_create_default_farm(session=session, user_id=user_id)
-    birth_year = date_of_birth.year if date_of_birth else date.today().year
+    birth_year = date_of_birth.year if date_of_birth else None
     tag = generate_livestock_tag(session=session, user_id=user_id, district=district, year=birth_year)
     animal = Livestock(
         farm_id=farm.id,
