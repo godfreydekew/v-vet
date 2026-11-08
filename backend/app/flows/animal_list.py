@@ -53,7 +53,7 @@ _BUTTON_LABEL: dict[AnimalListIntent, str] = {
     "view": "View Animal",
     "sickness": "Select Animal",
     "death": "Select Animal",
-    "birth": "Select Mother Cow",
+    "birth": "Select Dam",
 }
 # Restricts the underlying query for intents that only make sense for one
 # gender — dam selection only ever shows/matches females.
