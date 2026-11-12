@@ -46,8 +46,14 @@ class ReportSicknessFlow(BaseFlow):
         )
 
     def handle_selection(self, animal_id: str, user: WhatsAppUser, session: Session) -> str:
-        """Process the farmer tapping an animal in the list sent by start() / show_more()."""
+        """Process the farmer tapping an animal in the list sent by start() / show_more().
+
+        For now this goes straight to the follow-up questions, skipping the step where the
+        farmer describes the symptoms. The questions send their own message, so an empty
+        string is returned when they started.
+        """
         from app.crud import get_livestock_by_id_for_user
+        from app.flows.report_sickness_context import TriageContextFlow
 
         try:
             parsed_id = uuid.UUID(animal_id)
@@ -68,13 +74,18 @@ class ReportSicknessFlow(BaseFlow):
         self.record_step(
             session=session,
             user=user,
-            step=STEP_DESCRIBE_SYMPTOMS,
+            step=STEP_QUESTIONS,
             data={"animal_id": str(animal.id), "animal_name": animal_name},
         )
-        return (
-            f"Thank you. I have selected **{animal_name}**. \n\n"
-            "Please describe what symptoms or health problems you have noticed (e.g. not eating, coughing, limping)"
+        sent = TriageContextFlow().start(
+            phone=user.phone,
+            user=user,
+            session=session,
+            livestock_id=animal.id,
         )
+        if not sent:
+            return "Sorry, I couldn't start the questions about this animal. Please send 'menu' and try again."
+        return ""
 
     def submit_symptoms(self, *, session: Session, user: WhatsAppUser, symptoms: str) -> str | None:
         """Hand the farmer's description to the sickness check, once the sick animal is chosen.

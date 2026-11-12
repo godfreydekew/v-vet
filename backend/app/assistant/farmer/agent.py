@@ -18,9 +18,12 @@ _ASSISTANT_DIR = _FARMER_DIR.parent
 
 # Read once when the server starts; editing these files needs a restart.
 _FACT_SHEET = (_ASSISTANT_DIR / "knowledge" / "vvet_facts.md").read_text(encoding="utf-8")
+_JD_TEMPLATE = (_ASSISTANT_DIR / "knowledge" / "january_disease_theileriosis.md").read_text(encoding="utf-8")
 _PROMPT_TEMPLATE = (_FARMER_DIR / "prompt.md").read_text(encoding="utf-8")
 
-FARMER_INSTRUCTIONS = _PROMPT_TEMPLATE.replace("{fact_sheet}", _FACT_SHEET)
+FARMER_INSTRUCTIONS = _PROMPT_TEMPLATE.replace("{fact_sheet}", _FACT_SHEET).replace(
+    "{january_disease_theileriosis}", _JD_TEMPLATE
+)
 
 _HISTORY_LIMIT = 20
 

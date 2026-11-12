@@ -33,35 +33,21 @@ class TriageContextFlow:
         user: WhatsAppUser,
         session: Session,
         livestock_id: uuid.UUID,
-        problem_description: str,
+        problem_description: str | None = None,
     ) -> bool:
+        """Start the follow-up questions for the sick animal.
+
+        problem_description is optional: for now the flow goes straight from choosing
+        the animal to these questions, without asking the farmer to describe symptoms.
+        """
         self._discard_open_sessions(user=user, session=session)
 
-        from app.assistant.farmer.danger_flags import detect_danger_flags
-
-        try:
-            danger_flags = detect_danger_flags(symptoms=problem_description)
-        except Exception:
-            logger.exception("detect_danger_flags failed; proceeding with the questionnaire")
-            danger_flags = []
-
-        if danger_flags:
-            # Skip the questionnaire entirely — a danger sign is already
-            reply = self._finalize(
-                user=user,
-                session=session,
-                livestock_id=livestock_id,
-                answers={"problem_description": problem_description},
-                danger_flags=danger_flags,
-                is_emergency_exit=True,
-            )
-            return self._send_text(phone=phone, text=reply)
-
+        answers = {"problem_description": problem_description} if problem_description else {}
         triage_session = TriageSession(
             whatsapp_user_id=user.id,
             livestock_id=livestock_id,
             current_question_id=BASIC_CONTEXT_QUESTIONS[0].id,
-            answers={"problem_description": problem_description},
+            answers=answers,
         )
         session.add(triage_session)
         session.commit()
@@ -70,7 +56,7 @@ class TriageContextFlow:
             session=session,
             user=user,
             step=STEP_QUESTIONS,
-            data={"problem_description": problem_description},
+            data=dict(answers),
         )
 
         return self._send_question(phone=phone, question=BASIC_CONTEXT_QUESTIONS[0])

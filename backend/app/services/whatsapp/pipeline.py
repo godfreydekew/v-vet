@@ -85,7 +85,9 @@ class WhatsAppConversationService:
             if isinstance(flow, ReportSicknessFlow):
                 animal_id = message_body.removeprefix("select_animal_")
                 reply = flow.handle_selection(animal_id, user, session)
-                self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
+                # An empty reply means the follow-up questions already sent their own message.
+                if reply:
+                    self._send_and_persist(session=session, user=user, phone=phone, reply=reply)
                 return
 
         # Farmer tapped "Show more animals" — herds over 9 are paginated
